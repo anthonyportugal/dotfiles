@@ -1,0 +1,3 @@
+[submodule ".config/bspwm"]
+	path = .config/bspwm
+	url = https://github.com/anthonyportugal/bspwm
