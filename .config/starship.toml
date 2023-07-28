@@ -3,11 +3,11 @@ add_newline = false
 
 [username]
 format = "[$user]($style) "
-disabled = false
+disabled = true
 show_always = true
 
 [hostname]
-ssh_only = false
+ssh_only = true
 disabled = false
 format = "[$hostname]($style) "
 
@@ -17,7 +17,7 @@ disabled = false
 format = "[$localipv4]($style) "
 
 [line_break]
-disabled = false
+disabled = true
 
 [cmd_duration]
 format = "[$duration]($style) "
