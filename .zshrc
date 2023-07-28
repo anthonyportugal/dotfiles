@@ -3,15 +3,9 @@ export ZSH=$HOME/.oh-my-zsh
 zstyle ':omz:update' mode disabled # disable automatic updates
 
 # Plugins
-plugins=(git)
-
-# sudo pacman -S zsh-autosuggestions
-autosuggestions=/usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-# sudo pacman -S zsh-syntax-highlighting
-syntax=/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
-[[ -f $autosuggestions ]] && source $autosuggestions
-[[ -f $syntax ]] && source $syntax
+# https://github.com/zsh-users/zsh-syntax-highlighting
+# https://github.com/zsh-users/zsh-autosuggestions
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
