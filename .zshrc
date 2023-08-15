@@ -125,3 +125,5 @@ esac
 # starship - https://starship.rs/
 export STARSHIP_CONFIG=~/.config/starship.toml
 eval "$(starship init zsh)"
+
+export BROWSER=brave
