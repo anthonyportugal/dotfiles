@@ -130,3 +130,10 @@ export BROWSER=brave
 
 # lvim
 export PATH="$HOME/.local/bin:$PATH"
+
+# bun completions
+[ -s "/home/anthonyportugal/.bun/_bun" ] && source "/home/anthonyportugal/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
