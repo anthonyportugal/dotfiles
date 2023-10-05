@@ -127,3 +127,6 @@ export STARSHIP_CONFIG=~/.config/starship.toml
 eval "$(starship init zsh)"
 
 export BROWSER=brave
+
+# lvim
+export PATH="$HOME/.local/bin:$PATH"
