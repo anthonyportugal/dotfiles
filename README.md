@@ -13,7 +13,7 @@
 
 ```bash
 # Install packages
-yay -S catppuccin-gtk-theme-mocha catppuccin-cursors-mocha papirus-folders-catppuccin-git playerctl flameshot stow
+yay -S catppuccin-gtk-theme-mocha catppuccin-cursors-mocha papirus-folders-catppuccin-git playerctl flameshot stow sct
 ```
 
 ### Packages repositories
