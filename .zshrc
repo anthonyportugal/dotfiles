@@ -79,8 +79,10 @@ alias gfp='git fetch --prune'
 # yarn
 alias yd='yarn dev'
 alias yl='yarn lint'
-alias yl='yarn format'
+alias yf='yarn format'
 alias yb='yarn build'
+alias yad='yarn add'
+alias yar='yarn remove'
 alias yui='yarn upgrade-interactive'
 alias yuil='yarn upgrade-interactive --latest'
 
