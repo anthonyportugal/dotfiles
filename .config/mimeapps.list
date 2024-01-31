@@ -7,7 +7,7 @@ application/smil=mpv.desktop
 application/streamingmedia=mpv.desktop
 application/vnd.rn-realmedia=mpv.desktop
 application/vnd.rn-realmedia-vbr=mpv.desktop
-application/xhtml+xml=brave-bin.desktop
+application/xhtml+xml=google-chrome.desktop
 application/x-ogg=mpv.desktop
 application/x-shellscript=nvim.desktop
 application/x-smil=mpv.desktop
@@ -72,6 +72,7 @@ image/x-portable-pixmap=feh.desktop
 image/x-tga=feh.desktop
 image/x-xbitmap=feh.desktop
 
+text/html=google-chrome.desktop
 text/x-csrc=geany.desktop;
 text/plain=geany.desktop;
 
@@ -97,3 +98,8 @@ video/x-ms-wmx=mpv.desktop
 video/x-ms-wvxvideo=mpv.desktop
 video/x-ogm+ogg=mpv.desktop
 video/x-theora=mpv.desktop
+
+x-scheme-handler/http=google-chrome.desktop
+x-scheme-handler/https=google-chrome.desktop
+x-scheme-handler/about=google-chrome.desktop
+x-scheme-handler/unknown=google-chrome.desktop
