@@ -75,6 +75,7 @@ alias gsd='git stash drop'
 alias gr='git reset'
 alias grs='git reset --soft HEAD~1'
 alias gfp='git fetch --prune'
+alias grev='git revert -m 1'
 
 # yarn
 alias yd='yarn dev'
