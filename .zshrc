@@ -107,7 +107,7 @@ alias pmcre='pnpm create'
 alias cdd='cd ~/.dotfiles'
 
 # private config
-private_zshrc=~/.zshrc_private
+private_zshrc=~/.dotfiles-private/.zshrc
 [[ -f $private_zshrc ]] && source $private_zshrc
 
 # bat
