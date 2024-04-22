@@ -1,0 +1,6 @@
+HDMI=$(xrandr -q | grep -w 'connected' | grep 'HDMI' | cut -d' ' -f1)
+DP=$(xrandr -q | grep -w 'connected' | grep 'DP' | cut -d' ' -f1)
+
+if [ -n "$HDMI" ] && [ -n "$DP" ]; then
+  xrandr --output "$DP" --primary --left-of "$HDMI"
+fi
