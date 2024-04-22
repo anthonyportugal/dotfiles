@@ -118,7 +118,7 @@ export BAT_THEME="Catppuccin-mocha"
 export NODE_OPTIONS=--max-old-space-size=4096
 
 # pnpm - https://pnpm.io/installation
-export PNPM_HOME="/home/anthonyportugal/.local/share/pnpm"
+export PNPM_HOME="$HOME/.local/share/pnpm"
 case ":$PATH:" in
 *":$PNPM_HOME:"*) ;;
 *) export PATH="$PNPM_HOME:$PATH" ;;
@@ -135,7 +135,7 @@ export BROWSER=brave
 export PATH="$HOME/.local/bin:$PATH"
 
 # bun completions
-[ -s "/home/anthonyportugal/.bun/_bun" ] && source "/home/anthonyportugal/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
