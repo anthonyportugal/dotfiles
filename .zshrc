@@ -3,9 +3,12 @@ export ZSH=$HOME/.oh-my-zsh
 zstyle ':omz:update' mode disabled # disable automatic updates
 
 # Plugins
-# https://github.com/zsh-users/zsh-syntax-highlighting
-# https://github.com/zsh-users/zsh-autosuggestions
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+ZSH_GLOBAL_PLUGINS_DIR=/usr/share/zsh/plugins
+
+plugins=(git)
+
+[[ -f $ZSH_GLOBAL_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh ]] && source $ZSH_GLOBAL_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh
+[[ -f $ZSH_GLOBAL_PLUGINS_DIR/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh ]] && source $ZSH_GLOBAL_PLUGINS_DIR/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh
 
 source $ZSH/oh-my-zsh.sh
 
