@@ -48,6 +48,14 @@ add-zsh-hook -Uz precmd rehash_precmd
 alias zshconfig="geany ~/.zshrc"
 alias ohmyzsh="thunar ~/.oh-my-zsh"
 
+# yay
+alias yayun='yay -Rns'                # uninstall package
+alias yayup='yay -Syu'                # update system/package/aur
+alias yayil='yay -Qs'                 # list installed package
+alias yayf='yay -Ss'                  # list availabe package
+alias yayruc='yay -Sc'                # remove unused cache
+alias yayrup='yay -Qtdq | yay -Rns -' # remove unused packages, also try > yay -Qqd | yay -Rsu --print -
+
 # ls
 alias l='ls -lh'
 alias ll='ls -lah'
