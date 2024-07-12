@@ -13,7 +13,7 @@
 
 ```bash
 # Install packages
-yay -S catppuccin-gtk-theme-mocha catppuccin-cursors-mocha papirus-folders-catppuccin-git playerctl flameshot stow sct
+yay -S catppuccin-gtk-theme-mocha catppuccin-cursors-mocha papirus-folders-catppuccin-git bat playerctl flameshot stow sct zsh-autosuggestions zsh-syntax-highlighting indicator-sound-switcher brave-bin
 ```
 
 ### Packages repositories
@@ -27,3 +27,5 @@ yay -S catppuccin-gtk-theme-mocha catppuccin-cursors-mocha papirus-folders-catpp
 - Playerctl https://github.com/altdesktop/playerctl
 - Flameshot https://github.com/flameshot-org/flameshot
 - Stow https://github.com/aspiers/stow
+- Starship https://github.com/starship/starship
+- Bat https://github.com/sharkdp/bat
