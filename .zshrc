@@ -48,7 +48,7 @@ add-zsh-hook -Uz precmd rehash_precmd
 alias zshconfig="geany ~/.zshrc"
 alias ohmyzsh="thunar ~/.oh-my-zsh"
 
-# yay
+# yay aliases
 alias yayun='yay -Rns'                # uninstall package
 alias yayup='yay -Syu'                # update system/package/aur
 alias yayil='yay -Qs'                 # list installed package
@@ -56,7 +56,7 @@ alias yayf='yay -Ss'                  # list availabe package
 alias yayruc='yay -Sc'                # remove unused cache
 alias yayrup='yay -Qtdq | yay -Rns -' # remove unused packages, also try > yay -Qqd | yay -Rsu --print -
 
-# ls
+# ls aliases
 alias l='ls -lh'
 alias ll='ls -lah'
 alias la='ls -A'
@@ -64,7 +64,7 @@ alias lm='ls -m'
 alias lr='ls -R'
 alias lg='ls -l --group-directories-first'
 
-# git
+# git aliases
 alias gcl='git clone'
 alias gcld='git clone --depth'
 alias gi='git init'
@@ -88,7 +88,7 @@ alias grs='git reset --soft HEAD~1'
 alias gfp='git fetch --prune'
 alias grev='git revert -m 1'
 
-# yarn
+# yarn aliases
 alias yd='yarn dev'
 alias yl='yarn lint'
 alias yf='yarn format'
@@ -98,13 +98,13 @@ alias yar='yarn remove'
 alias yui='yarn upgrade-interactive'
 alias yuil='yarn upgrade-interactive --latest'
 
-# npm
+# npm aliases
 alias nd='npm run dev'
 alias nl='npm run lint'
 alias nf='npm run format'
 alias nb='npm run build'
 
-# pnpm
+# pnpm aliases
 alias pm='pnpm'
 alias pma='pnpm add'
 alias pmi='pnpm install'
@@ -115,7 +115,7 @@ alias pmex='pnpm exec'
 alias pmdlx='pnpm dlx'
 alias pmcre='pnpm create'
 
-# dir
+# dir aliases
 alias cdd='cd ~/.dotfiles'
 
 # private config
