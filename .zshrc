@@ -77,7 +77,7 @@ alias gpd='git pull origin dev'
 alias gpm='git pull origin main'
 alias gm='git merge'
 alias gpush='git push origin'
-alias glg='git log --pretty=short --graph --decorate'
+alias glg="git log --graph --pretty=format:'%C(yellow)%h%C(reset) - %C(cyan)%an%C(reset), %C(magenta)%ar%C(reset) : %C(green)%s%C(reset)' --decorate"
 alias gsu='git stash -um'
 alias gsl='git stash list'
 alias gsa='git stash apply'
