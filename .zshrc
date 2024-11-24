@@ -116,6 +116,11 @@ alias pmimp='pnpm import'
 alias pmex='pnpm exec'
 alias pmdlx='pnpm dlx'
 alias pmcre='pnpm create'
+alias pmd='pnpm dev'
+alias pml='pnpm lint'
+alias pmf='pnpm format'
+alias pmb='pnpm build'
+alias pmds='pnpm dev:storybook'
 
 # dir aliases
 alias cdd='cd ~/.dotfiles'
