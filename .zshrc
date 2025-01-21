@@ -77,7 +77,7 @@ alias gpd='git pull origin dev'
 alias gpm='git pull origin main'
 alias gm='git merge'
 alias gpush='git push origin'
-baseLogFormat="%C(yellow)%h%C(reset) - %C(cyan)%an%C(reset), %C(magenta)%ar%C(reset) %C(red)%d%C(reset) : %C(green)%s%C(reset)"
+baseLogFormat="%C(yellow)%h%C(reset) - %C(cyan)%an%C(reset), %C(magenta)%ar%C(reset) %C(red)%d%C(reset) : %C(green)%s%C(reset) %C(blue)[%G?]%C(reset)"
 alias glg="git log --graph --pretty=format:'$baseLogFormat' --decorate"
 alias glgs="git log --graph --pretty=format:'$baseLogFormat' --decorate --stat"
 alias gsu='git stash -um'
