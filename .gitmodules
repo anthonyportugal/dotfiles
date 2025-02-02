@@ -1,3 +1,11 @@
 [submodule ".config/bspwm"]
 	path = .config/bspwm
 	url = https://github.com/anthonyportugal/bspwm
+
+[submodule ".local/share/wallpapers"]
+	path = .local/share/wallpapers
+	url = https://github.com/anthonyportugal/wallpapers
+
+[submodule ".local/share/fonts"]
+	path = .local/share/fonts
+	url = https://github.com/anthonyportugal/fonts
