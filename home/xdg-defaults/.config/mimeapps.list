@@ -1,0 +1,20 @@
+[Default Applications]
+application/ogg=mpv.desktop;
+application/pdf=org.pwmt.zathura-pdf-mupdf.desktop;
+audio/flac=mpv.desktop;
+audio/mpeg=mpv.desktop;
+audio/ogg=mpv.desktop;
+audio/opus=mpv.desktop;
+audio/wav=mpv.desktop;
+inode/directory=thunar.desktop;
+text/html=brave-browser.desktop;
+text/plain=micro.desktop;
+video/mp4=mpv.desktop;
+video/mpeg=mpv.desktop;
+video/ogg=mpv.desktop;
+video/quicktime=mpv.desktop;
+video/webm=mpv.desktop;
+video/x-matroska=mpv.desktop;
+video/x-msvideo=mpv.desktop;
+x-scheme-handler/http=brave-browser.desktop;
+x-scheme-handler/https=brave-browser.desktop;

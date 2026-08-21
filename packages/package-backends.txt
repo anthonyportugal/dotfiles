@@ -1,0 +1,5 @@
+# Orden de detección; no es un manifiesto de instalación.
+shelly
+paru
+yay
+pacman

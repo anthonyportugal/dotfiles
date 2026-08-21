@@ -1,0 +1,11 @@
+7zip
+chafa
+fd
+ffmpeg
+fzf
+imagemagick
+jq
+poppler
+resvg
+ripgrep
+zoxide

@@ -1,0 +1,9 @@
+gvfs
+mpv
+mpv-mpris
+playerctl
+thunar
+tumbler
+xdg-utils
+zathura
+zathura-pdf-mupdf

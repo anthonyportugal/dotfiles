@@ -33,8 +33,11 @@ map_symbol = true
 [git_branch]
 format = "[$symbol$branch]($style) "
 
+[bun]
+disabled = true
+
 [nodejs]
-format = "[$symbol($version )]($style)"
+disabled = true
 
 [package]
 format = "[$symbol$version]($style) "
