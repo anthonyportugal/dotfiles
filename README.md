@@ -6,8 +6,8 @@ portable, modular e independiente del Window Manager o compositor elegido.
 
 > **Estado:** migración en curso. El repositorio base ya dispone de bootstrap y
 > doctor propios, y el repositorio bspwm ya fue validado como proyecto
-> standalone. La integración opcional y la validación final desde un CachyOS
-> limpio pertenecen a fases posteriores.
+> standalone. La integración opcional entre ambos ya está disponible; la
+> validación final desde un CachyOS limpio pertenece a una fase posterior.
 
 ## Responsabilidad de este repositorio
 
@@ -30,17 +30,16 @@ No será responsable de:
 ## Repositorios relacionados
 
 - [`bspwm`](https://github.com/anthonyportugal/bspwm): proyecto público X11
-  independiente, con instalación standalone validada. El submodule que aún
-  aparece en este checkout es transitorio y se retirará durante la fase de
-  integración opcional.
+  independiente, con instalación standalone validada.
 - `mango`: futuro proyecto público e independiente para MangoWC/Wayland.
 - dotfiles privados: capa opcional e independiente para configuración personal
   o laboral no secreta. Su ausencia nunca debe romper los repositorios públicos.
 - wallpapers: fuente de assets independiente y opcional; actualmente privada y
   potencialmente pública en el futuro.
 
-La base no depende arquitectónicamente de ninguno de ellos. Más adelante podrá
-facilitar su clonación o invocar sus instaladores sin conocer sus internals.
+La base no depende arquitectónicamente de ninguno de ellos. Puede invocar el
+entrypoint público de un checkout externo, pero no lo clona, actualiza ni
+conoce sus internals.
 
 ## Dirección aprobada
 
@@ -88,12 +87,57 @@ Los perfiles y la procedencia de paquetes están documentados en
 [`packages/README.md`](packages/README.md). Son datos consumidos por el
 bootstrap y no deben ejecutarse directamente.
 
+## Organización local recomendada
+
+Los repositorios no requieren una ubicación fija, pero los ejemplos de esta
+documentación usan la siguiente estructura:
+
+```text
+~/.dotfiles/
+├── base/          # repositorio público de dotfiles
+└── wm/
+    ├── bspwm/     # repositorio público de bspwm
+    └── mangowm/   # futuro repositorio público de Mango
+```
+
+Cada directorio es un checkout Git independiente con su propio `origin` e
+historial. Compartir `~/.dotfiles/` como carpeta padre no los convierte en un
+monorepo, no crea submodules y no permite que la base lea los internals de los
+WM. También mantiene los checkouts de WM fuera de `base/`, como exige
+`--wm-path`.
+
 ## Bootstrap del repositorio base
+
+Prepara primero la carpeta contenedora:
+
+```bash
+mkdir -p "$HOME/.dotfiles"
+```
+
+Para un checkout nuevo mediante SSH:
+
+```bash
+git clone --branch refactor/modular-dotfiles \
+  git@github.com:anthonyportugal/dotfiles.git "$HOME/.dotfiles/base"
+cd "$HOME/.dotfiles/base"
+```
+
+Si sólo necesitas acceso público de lectura, la clonación equivalente por
+HTTPS es:
+
+```bash
+git clone --branch refactor/modular-dotfiles \
+  https://github.com/anthonyportugal/dotfiles.git "$HOME/.dotfiles/base"
+cd "$HOME/.dotfiles/base"
+```
+
+La rama explícita es temporal mientras esta migración no se integre en `main`;
+después podrá omitirse `--branch refactor/modular-dotfiles`.
 
 El entrypoint público es [`bin/dotfiles`](bin/dotfiles). Funciona sin bspwm,
 Mango ni configuración privada. Requiere una distribución basada en Arch con
-Bash y pacman; Git sólo es necesario para obtener el repositorio. El dry-run es
-el comportamiento predeterminado:
+Bash y pacman; Git sólo es necesario para obtener el repositorio. Desde
+`~/.dotfiles/base`, ejecuta primero el dry-run:
 
 ```bash
 ./bin/dotfiles bootstrap --profile desktop
@@ -200,6 +244,56 @@ simula; `--apply` retira los enlaces que Stow administra:
 
 La interfaz completa está disponible con `./bin/dotfiles help`.
 
+## Integración opcional con bspwm
+
+bspwm conserva su propio repositorio, perfiles, dependencias y ciclo de vida.
+La ubicación recomendada es `~/.dotfiles/wm/bspwm`. Prepara la carpeta aunque
+quieras instalar este repositorio sin la base:
+
+```bash
+mkdir -p "$HOME/.dotfiles/wm"
+```
+
+Si ya tienes una clave de GitHub configurada y piensas contribuir, clónalo
+mediante SSH:
+
+```bash
+git clone --branch refactor/standalone-bspwm \
+  git@github.com:anthonyportugal/bspwm.git "$HOME/.dotfiles/wm/bspwm"
+```
+
+Para obtener el mismo contenido público sin configurar una identidad SSH:
+
+```bash
+git clone --branch refactor/standalone-bspwm \
+  https://github.com/anthonyportugal/bspwm.git "$HOME/.dotfiles/wm/bspwm"
+```
+
+La rama explícita es necesaria mientras el trabajo standalone no se integre en
+`main`; después podrá omitirse `--branch refactor/standalone-bspwm`. La URL
+elegida sólo configura el `origin` de ese checkout y no cambia la integración.
+
+Puedes instalar bspwm por separado mediante su propio `bin/bspwm`, o componer
+ambos planes desde la base. El dry-run sigue siendo el valor predeterminado:
+
+```bash
+cd "$HOME/.dotfiles/base"
+
+./bin/dotfiles bootstrap --profile desktop \
+  --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" --wm-profile desktop
+
+./bin/dotfiles bootstrap --profile desktop \
+  --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" --wm-profile desktop --apply
+
+./bin/dotfiles doctor --profile desktop \
+  --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" --wm-profile desktop
+```
+
+El perfil del WM es independiente del perfil base. `--packages-only`,
+`--stow-only`, backend, plataforma y target se propagan a su interfaz pública.
+Antes de aplicar, la base ejecuta el preflight del WM; no hace `clone`, `pull`,
+`checkout`, `commit` ni `push` en ninguno de los dos repositorios.
+
 ### Límites y pasos manuales
 
 - Actualizar el sistema antes de reconstruir el entorno sigue siendo una
@@ -208,8 +302,8 @@ La interfaz completa está disponible con `./bin/dotfiles help`.
   fuerza `--noconfirm`.
 - Los archivos que colisionen deben revisarse, respaldarse o retirarse
   manualmente antes de volver a ejecutar el comando.
-- Display manager, GPU híbrida, servicios, secretos, repositorios de WM y capa
-  privada quedan fuera del alcance de este bootstrap.
+- Display manager, GPU híbrida, servicios, secretos, ciclo de vida Git de los
+  repositorios de WM y capa privada quedan fuera del alcance de este bootstrap.
 - La prueba final desde una instalación CachyOS no-desktop limpia pertenece a
   P10; hasta entonces, las diferencias descubiertas allí deben registrarse en
   el plan de migración.

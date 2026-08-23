@@ -35,8 +35,14 @@ CONFLICT_DIR="$TEST_ROOT/conflict"
 PARENT_CONFLICT_DIR="$TEST_ROOT/parent-conflict"
 PARENT_DESTINATION="$TEST_ROOT/parent-destination"
 FAKE_BIN="$TEST_ROOT/fake-bin"
+WM_REPO="$TEST_ROOT/external bspwm"
+WM_TARGET="$TEST_ROOT/wm target"
+WM_FAILURE_TARGET="$TEST_ROOT/wm failure target"
+WM_LOG="$TEST_ROOT/wm.log"
 mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
-  "$PARENT_DESTINATION" "$FAKE_BIN"
+  "$PARENT_DESTINATION" "$FAKE_BIN" "$WM_REPO" "$WM_TARGET" \
+  "$WM_FAILURE_TARGET" "$WM_REPO/bin"
+ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/bspwm"
 
 # Dry-run, aplicación, doctor e idempotencia sobre un home desechable.
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR"
@@ -63,6 +69,72 @@ for alias_name in l la ll lg; do
   [[ "$alias_definition" == *'ls --color=auto '* ]] ||
     fail "el alias $alias_name no activa colores sólo para terminal"
 done
+
+# La integración de WM consume únicamente un checkout externo y su entrypoint
+# público. Un apply ejecuta primero el dry-run del WM y propaga después las
+# opciones compartidas sin mezclar perfiles ni manifests.
+DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" bootstrap \
+  --profile core --stow-only --target "$WM_TARGET" \
+  --wm bspwm --wm-path "$WM_REPO" --wm-profile core --apply
+[[ $(wc -l < "$WM_LOG") == 2 ]] || \
+  fail "bootstrap no ejecutó preflight y apply del WM"
+sed -n '1p' "$WM_LOG" | grep -qv -- '--apply' || \
+  fail "el preflight del WM recibió --apply"
+sed -n '2p' "$WM_LOG" | grep -q -- '--apply' || \
+  fail "el apply del WM no recibió --apply"
+grep -q -- 'bootstrap --profile=core --backend=auto --platform=auto' "$WM_LOG" || \
+  fail "bootstrap no propagó operación, perfil o detección al WM"
+wm_target_argument=$(printf '%q' "--target=$WM_TARGET")
+grep -Fq -- "$wm_target_argument --stow-only" "$WM_LOG" || \
+  fail "bootstrap no propagó target o alcance Stow al WM"
+
+: > "$WM_LOG"
+DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" doctor \
+  --profile core --stow-only --target "$WM_TARGET" \
+  --wm bspwm --wm-path "$WM_REPO" --wm-profile desktop
+[[ $(wc -l < "$WM_LOG") == 1 ]] || fail "doctor no delegó una sola vez en el WM"
+grep -q -- 'doctor --profile=desktop' "$WM_LOG" || \
+  fail "doctor mezcló el perfil base con el perfil independiente del WM"
+
+: > "$WM_LOG"
+DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" unlink \
+  --profile core --target "$WM_TARGET" \
+  --wm bspwm --wm-path "$WM_REPO" --wm-profile core --apply
+[[ $(wc -l < "$WM_LOG") == 2 ]] || \
+  fail "unlink no ejecutó preflight y apply del WM"
+sed -n '1p' "$WM_LOG" | grep -qv -- '--apply' || \
+  fail "el preflight de unlink del WM recibió --apply"
+sed -n '2p' "$WM_LOG" | grep -q -- '--apply' || \
+  fail "el apply de unlink del WM no recibió --apply"
+
+# Si el dry-run externo falla, la base no debe llegar a crear ningún enlace.
+: > "$WM_LOG"
+if DOTFILES_WM_TEST_LOG="$WM_LOG" DOTFILES_WM_TEST_FAILURE=always \
+    "$DOTFILES" bootstrap --profile core --stow-only \
+    --target "$WM_FAILURE_TARGET" --wm bspwm --wm-path "$WM_REPO" \
+    --wm-profile core --apply > "$TEST_ROOT/wm-failure.out" 2>&1; then
+  fail "bootstrap ignoró un preflight fallido del WM"
+fi
+[[ ! -e "$WM_FAILURE_TARGET/.zshrc" ]] || \
+  fail "la base se modificó después de fallar el preflight del WM"
+grep -q 'no se modificó la base' "$TEST_ROOT/wm-failure.out" || \
+  fail "el fallo del preflight externo no fue accionable"
+
+# La interfaz rechaza opciones incompletas y checkouts anidados en la base.
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+    --wm bspwm > "$TEST_ROOT/wm-no-path.out" 2>&1; then
+  fail "--wm fue aceptado sin --wm-path"
+fi
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+    --wm-path "$WM_REPO" > "$TEST_ROOT/wm-no-name.out" 2>&1; then
+  fail "--wm-path fue aceptado sin --wm"
+fi
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+    --wm bspwm --wm-path "$REPO_ROOT" > "$TEST_ROOT/wm-nested.out" 2>&1; then
+  fail "se aceptó un checkout WM dentro del repositorio base"
+fi
+grep -q 'debe estar fuera del repositorio base' "$TEST_ROOT/wm-nested.out" || \
+  fail "no se explicó el límite de independencia del checkout WM"
 
 # Una colisión debe detenerse antes de modificar el archivo existente.
 touch "$CONFLICT_DIR/.zshrc"

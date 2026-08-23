@@ -17,6 +17,11 @@ APPLY=0
 SYSTEM_ENABLED=1
 STOW_ENABLED=1
 MODE_SELECTION="both"
+WM=""
+WM_PATH=""
+WM_PROFILE="desktop"
+WM_PROFILE_SET=0
+WM_ENTRYPOINT=""
 
 PLATFORM=""
 BACKEND=""
@@ -81,12 +86,16 @@ Opciones:
   --target DIR                    Home objetivo (default: \$HOME).
   --packages-only                 Opera o valida sólo paquetes del sistema.
   --stow-only                     Opera o valida sólo paquetes Stow.
+  --wm bspwm                      Integra opcionalmente un WM independiente.
+  --wm-path DIR                   Checkout externo del repositorio del WM.
+  --wm-profile core|desktop       Perfil propio del WM (default: desktop).
   --apply                         Aplica bootstrap/unlink; sin él hay dry-run.
   -h, --help                      Muestra esta ayuda.
 
 Ejemplos:
   $PROGRAM_NAME bootstrap --profile desktop
   $PROGRAM_NAME bootstrap --profile desktop --feature yazi-extras --apply
+  $PROGRAM_NAME bootstrap --wm bspwm --wm-path \$HOME/.dotfiles/wm/bspwm
   $PROGRAM_NAME doctor --profile desktop
   $PROGRAM_NAME unlink --profile desktop
   $PROGRAM_NAME unlink --profile desktop --apply
@@ -189,6 +198,38 @@ parse_args() {
         STOW_ENABLED=1
         shift
         ;;
+      --wm)
+        require_option_value "$1" "${2-}"
+        WM=$2
+        shift 2
+        ;;
+      --wm=*)
+        WM=${1#*=}
+        require_option_value "--wm" "$WM"
+        shift
+        ;;
+      --wm-path)
+        require_option_value "$1" "${2-}"
+        WM_PATH=$2
+        shift 2
+        ;;
+      --wm-path=*)
+        WM_PATH=${1#*=}
+        require_option_value "--wm-path" "$WM_PATH"
+        shift
+        ;;
+      --wm-profile)
+        require_option_value "$1" "${2-}"
+        WM_PROFILE=$2
+        WM_PROFILE_SET=1
+        shift 2
+        ;;
+      --wm-profile=*)
+        WM_PROFILE=${1#*=}
+        require_option_value "--wm-profile" "$WM_PROFILE"
+        WM_PROFILE_SET=1
+        shift
+        ;;
       --apply)
         APPLY=1
         shift
@@ -226,6 +267,29 @@ parse_args() {
       usage_error "plataforma no soportada: $PLATFORM_REQUEST"
       ;;
   esac
+
+  case "$WM" in
+    ""|bspwm)
+      ;;
+    *)
+      usage_error "WM no soportado: $WM"
+      ;;
+  esac
+
+  case "$WM_PROFILE" in
+    core|desktop)
+      ;;
+    *)
+      usage_error "perfil de WM no soportado: $WM_PROFILE"
+      ;;
+  esac
+
+  if [[ -n "$WM" ]]; then
+    [[ -n "$WM_PATH" ]] || usage_error "--wm $WM requiere --wm-path DIR"
+  else
+    [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
+    (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
+  fi
 
   if [[ "$COMMAND" == "doctor" && "$APPLY" == 1 ]]; then
     usage_error "doctor siempre es read-only y no acepta --apply"
@@ -532,6 +596,70 @@ format_command() {
     printf '%q ' "$argument"
   done
   printf '\n'
+}
+
+validate_wm_checkout() {
+  local base_root wm_root
+
+  [[ -n "$WM" ]] || return 0
+  command_exists realpath || die "falta el comando requerido: realpath"
+
+  base_root=$(realpath -m -- "$REPO_ROOT")
+  wm_root=$(realpath -m -- "$WM_PATH")
+  [[ -d "$wm_root" ]] || die "el checkout del WM no existe: $wm_root"
+  [[ "$wm_root" != "$base_root" && "$wm_root" != "$base_root/"* ]] || \
+    die "el checkout del WM debe estar fuera del repositorio base: $wm_root"
+
+  case "$WM" in
+    bspwm)
+      WM_ENTRYPOINT="$wm_root/bin/bspwm"
+      ;;
+  esac
+
+  [[ -f "$WM_ENTRYPOINT" && -x "$WM_ENTRYPOINT" ]] || \
+    die "el checkout de $WM no expone el entrypoint ejecutable esperado: $WM_ENTRYPOINT"
+  WM_PATH=$wm_root
+}
+
+build_wm_command() {
+  local operation=$1
+  local apply_mode=$2
+  local output_name=$3
+  local -n wm_output_ref=$output_name
+
+  wm_output_ref=(
+    "$WM_ENTRYPOINT"
+    "$operation"
+    "--profile=$WM_PROFILE"
+    "--backend=$BACKEND_REQUEST"
+    "--platform=$PLATFORM_REQUEST"
+    "--target=$TARGET_DIR"
+  )
+
+  case "$MODE_SELECTION" in
+    packages)
+      wm_output_ref+=(--packages-only)
+      ;;
+    stow)
+      wm_output_ref+=(--stow-only)
+      ;;
+  esac
+
+  if [[ "$apply_mode" == 1 && "$operation" != doctor ]]; then
+    wm_output_ref+=(--apply)
+  fi
+}
+
+run_wm_operation() {
+  local operation=$1
+  local apply_mode=$2
+  local -a wm_command=()
+
+  [[ -n "$WM" ]] || return 0
+  build_wm_command "$operation" "$apply_mode" wm_command
+  info "Delegando en el repositorio $WM ($WM_PATH)"
+  format_command "${wm_command[@]}"
+  "${wm_command[@]}"
 }
 
 # ShellCheck no puede seguir el array que se devuelve mediante nameref.
@@ -950,6 +1078,12 @@ print_plan() {
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
   print_array "Features" FEATURES
 
+  if [[ -n "$WM" ]]; then
+    printf '  %-24s %s\n' 'WM opcional:' "$WM"
+    printf '  %-24s %s\n' 'Checkout WM:' "$WM_PATH"
+    printf '  %-24s %s\n' 'Perfil WM:' "$WM_PROFILE"
+  fi
+
   if (( SYSTEM_ENABLED == 1 )); then
     printf '  %-24s %s\n' 'Plataforma:' "$PLATFORM"
     printf '  %-24s %s\n' 'Backend:' "$BACKEND"
@@ -1073,17 +1207,51 @@ unlink_dotfiles() {
   info "Unlink completado"
 }
 
+bootstrap_with_optional_wm() {
+  if [[ -n "$WM" && "$APPLY" == 1 ]]; then
+    info "Preflight del WM antes de modificar cualquiera de los dos alcances"
+    run_wm_operation bootstrap 0 || die "falló el preflight del repositorio $WM; no se modificó la base"
+  fi
+
+  bootstrap
+  run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap del repositorio $WM"
+}
+
+doctor_with_optional_wm() {
+  local result=0
+
+  if ! doctor; then
+    result=1
+  fi
+  if ! run_wm_operation doctor 0; then
+    error "Doctor: falló la validación del repositorio $WM"
+    result=1
+  fi
+  return "$result"
+}
+
+unlink_with_optional_wm() {
+  if [[ -n "$WM" && "$APPLY" == 1 ]]; then
+    info "Preflight de unlink del WM antes de modificar cualquiera de los dos alcances"
+    run_wm_operation unlink 0 || die "falló el preflight de unlink del repositorio $WM; no se modificó la base"
+  fi
+
+  unlink_dotfiles
+  run_wm_operation unlink "$APPLY" || die "falló el unlink del repositorio $WM"
+}
+
 main() {
   parse_args "$@"
+  validate_wm_checkout
   case "$COMMAND" in
     bootstrap)
-      bootstrap
+      bootstrap_with_optional_wm
       ;;
     doctor)
-      doctor
+      doctor_with_optional_wm
       ;;
     unlink)
-      unlink_dotfiles
+      unlink_with_optional_wm
       ;;
   esac
 }

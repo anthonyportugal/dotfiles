@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+: "${DOTFILES_WM_TEST_LOG:?DOTFILES_WM_TEST_LOG no está definida}"
+
+printf '%q ' "$@" >> "$DOTFILES_WM_TEST_LOG"
+printf '\n' >> "$DOTFILES_WM_TEST_LOG"
+
+case "${DOTFILES_WM_TEST_FAILURE-}" in
+  always)
+    exit 42
+    ;;
+  apply)
+    for argument in "$@"; do
+      [[ "$argument" != --apply ]] || exit 42
+    done
+    ;;
+esac

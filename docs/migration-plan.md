@@ -2,9 +2,9 @@
 
 > Estado: activo
 >
-> Última actualización: 2026-08-22
+> Última actualización: 2026-08-23
 >
-> Fase activa: P7 — pulido visual post-VM autorizado el 2026-08-22
+> Fase activa: ninguna — P8 completada el 2026-08-23
 >
 > Siguientes fases autorizadas: ninguna
 
@@ -337,9 +337,9 @@ modificar estado. Los tres comparten perfiles, features y target; bootstrap y
 doctor permiten aislar paquetes o Stow con `--packages-only` y `--stow-only`.
 Backend y plataforma tienen detección automática y override explícito.
 
-Este contrato cubre sólo el repositorio base. No se añade todavía `--wm`,
-clonación ni conocimiento de otros repositorios: la UX de orquestación O9 se
-resolverá en P8 usando entrypoints públicos, después de que bspwm sea autónomo.
+Este contrato cubría inicialmente sólo el repositorio base. D26 lo extendió en
+P8 con orquestación opt-in mediante entrypoints públicos, una vez validada la
+autonomía de bspwm; no añadió clonación ni lectura de internals.
 
 ### D20 — Polybar se conserva inicialmente en bspwm
 
@@ -512,6 +512,41 @@ el fondo de la barra y no añade tapas ni cápsula. Se priorizan así legibilida
 consistencia sobre una aproximación incompleta al radio, que Polybar no ofrece
 por label o módulo individual. D25 prevalece sobre la geometría flotante y la
 ubicación derecha del tray descritas en D23.
+
+### D26 — Orquestación explícita de checkouts independientes
+
+O9 se resuelve extendiendo `bootstrap`, `doctor` y `unlink` con integración
+opt-in mediante `--wm bspwm`, `--wm-path DIR` y un perfil independiente
+`--wm-profile core|desktop`. Sin `--wm`, el comportamiento del repositorio base
+no cambia. La ruta será obligatoria, deberá apuntar a un checkout externo al
+repositorio base y sólo se consumirá el entrypoint público ejecutable
+`bin/bspwm`; la base no leerá manifests, configuración ni metadata Git interna
+del WM.
+
+La base no clonará, actualizará, cambiará de branch ni hará push de otro
+repositorio. La clonación y la referencia elegida permanecen explícitas y
+documentadas. HTTPS será la opción universal para obtener repositorios públicos
+sin configurar una identidad de GitHub; SSH será una alternativa equivalente
+para colaboradores con llave configurada. El transporte sólo determina la URL
+de `origin` y no forma parte del contrato de orquestación.
+
+Backend, plataforma, target, selección paquetes/Stow y modo apply se propagan al
+entrypoint del WM. El perfil del WM permanece separado porque la base dispone de
+`cli` y bspwm no. Antes de una operación con `--apply`, la integración ejecutará
+el dry-run del WM para evitar mutaciones si su propio preflight ya falla. La
+composición no pretende ser transaccional entre repositorios; ambos entrypoints
+siguen siendo idempotentes y reportarán por separado cualquier fallo parcial.
+
+No se introduce todavía un archivo de composición ni gestión automática del
+ciclo de vida Git. Mango podrá adoptar el mismo contrato público en P11 si sus
+operaciones resultan equivalentes.
+
+Como convención local documentada, los ejemplos usarán
+`$HOME/.dotfiles/base` para este repositorio y
+`$HOME/.dotfiles/wm/{bspwm,mangowm}` para los checkouts de WM. Esta jerarquía
+no forma parte del contrato del bootstrap: cada hijo conserva su propio
+repositorio Git y `--wm-path` continúa aceptando cualquier checkout externo
+válido. La carpeta común no constituye un monorepo ni introduce submodules.
 
 ## 7. Decisiones descartadas por ahora
 
@@ -716,9 +751,10 @@ Propiedades obligatorias:
 - deja pasos manuales claramente identificados;
 - permite retirar symlinks de forma segura.
 
-La orquestación opcional de bspwm/Mango se añadirá sólo después de que cada repo
-pueda instalarse standalone. El contrato preferirá invocar su interfaz pública
-o clonar una referencia solicitada, no incorporarlos como submodules.
+La orquestación opcional de un WM sólo se añade después de que su repositorio
+pueda instalarse standalone. P8 implementó ese contrato para bspwm invocando la
+interfaz pública de un checkout explícito; no lo clona ni lo incorpora como
+submodule. Mango deberá cumplir primero el mismo requisito de autonomía.
 
 ## 14. Estrategia de migración
 
@@ -747,8 +783,8 @@ o clonar una referencia solicitada, no incorporarlos como submodules.
 | P4 | Configuraciones base y apps actuales. | Bat/Starship y configuraciones aceptadas tienen owner claro; `.xprofile`, Geany y MIME se conservan, migran o retiran con decisión explícita. | **Completa** |
 | P5 | Manifiestos de dependencias y perfiles. | Paquetes oficiales/AUR/externos separados, nombres validados en CachyOS y perfiles documentados; incluye apps seleccionadas. | **Completa** |
 | P6 | Bootstrap y doctor del repositorio base. | Dry-run, selección Shelly/paru/yay/pacman, instalación por perfiles, Stow y validaciones son idempotentes; base funciona sola. | **Completa** |
-| P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Activa — pulido post-VM** |
-| P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | Pendiente |
+| P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Completa** |
+| P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | **Completa** |
 | P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | Pendiente |
 | P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. | Pendiente |
 | P11 | Repositorio público Mango. | Stack decidido; MangoWC/Waybar/launcher y dependencias tienen ownership; instalación standalone y composición opcional validadas. | Pendiente |
@@ -985,12 +1021,38 @@ recibe el acento Pink. El módulo tray carga sin propiedades decorativas; queda
 pendiente comprobar `volumeicon` en la VM, porque el entorno Xvfb aislado no
 ofrece un mixer al cliente.
 
+El 2026-08-23 el usuario dio por terminado este checkpoint después de las
+pruebas en VM y autorizó comenzar P8. P7 queda completa; cualquier refinamiento
+visual posterior será mantenimiento explícito y no reabre por sí solo la
+arquitectura standalone.
+
 ### P8 — Integración de repos públicos
 
 1. Definir la interfaz de orquestación mínima.
 2. Probar base+bspwm conservando autonomía.
 3. Retirar el gitlink y la entrada restante de bspwm en `.gitmodules`.
 4. Documentar clonación/ref seleccionada sin acoplar internals.
+
+D26 fija la interfaz aprobada: checkout externo explícito, delegación exclusiva
+al entrypoint público y ningún cambio automático de Git. La implementación debe
+probar base sola, bspwm solo y composición tanto con un doble aislado como con
+el repositorio público real antes de retirar el gitlink transitorio.
+
+Resultado al 2026-08-23: `bin/dotfiles` integra de forma opt-in `bootstrap`,
+`doctor` y `unlink` mediante `--wm bspwm`, `--wm-path` y `--wm-profile`. El
+smoke test cubre propagación, perfiles independientes, paths con espacios,
+preflight fallido y operaciones dry-run/apply. La composición también se probó
+contra un clon temporal del repositorio público real en el commit `65845c2`:
+dry-run, apply, doctor, segunda aplicación idempotente y unlink terminaron sin
+colisiones ni enlaces residuales, sin instalar paquetes ni tocar el home real.
+Tras retirar el gitlink se repitió el ciclo completo con un clon SSH y el mismo
+resultado; la prueba inicial había usado HTTPS.
+
+Antes de retirar el gitlink se verificó que el checkout local estaba limpio y
+que ese commit existía en `origin/refactor/standalone-bspwm`. `.config/bspwm` y
+la `.gitmodules` ya no están versionados; README documenta tanto SSH como HTTPS
+y mantiene explícito el branch transitorio. Base y bspwm siguen instalándose de
+forma individual. Con ello se cumplen los cuatro criterios de salida de P8.
 
 ### P9 — Privado
 
@@ -1083,7 +1145,6 @@ Estas decisiones no autorizan implementación hasta resolverse en su fase:
 | O6 | Nombre, ubicación local y estructura final del repo privado. | P9 |
 | O7 | Hacer público el repositorio de wallpapers y su mecanismo opt-in. | P8/P11 |
 | O8 | Herramienta/proceso de gestión de secretos. | Cuando exista la necesidad |
-| O9 | UX exacta de la orquestación (`--wm`, archivo de perfil u otra interfaz simple). | P8 |
 
 ## 20. Seguimiento de progreso
 
@@ -1098,8 +1159,8 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P4 | **Completa** | Apps/configs base revisadas y ciclo Stow validado el 2026-08-20. |
 | P5 | **Completa** | Perfiles/fuentes validados; adiciones D23/D24 verificadas en CachyOS/Arch el 2026-08-22. |
 | P6 | **Completa** | Entrypoint, dry-run/apply, doctor, unlink, adaptadores y smoke test validados el 2026-08-20. |
-| P7 | **Activa** | D25 rectificada y validada localmente; pendiente comprobar el workspace activo y `volumeicon` en la VM. |
-| P8 | Pendiente | Requiere nueva aprobación. |
+| P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
+| P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
 | P9 | Pendiente | Requiere nueva aprobación y alcance del repo privado. |
 | P10 | Pendiente | Requiere nueva aprobación y entorno de prueba adecuado. |
 | P11 | Pendiente | Requiere nueva aprobación y creación del repo Mango. |
@@ -1146,6 +1207,10 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-22 | Implementación D25 validada localmente. | Geometría, composición multimonitor/fallback, parser, fuente exacta, indicador activo y tray XEmbed pasaron smoke tests y render bajo Xvfb; resta validar apariencia en la VM. |
 | 2026-08-22 | D25 rectificada tras la captura de la VM. | El círculo ocultaba los nombres por glifo y la cápsula no componía limpiamente con `volumeicon`; se autoriza foco Pink sobre el icono real y tray nativo. |
 | 2026-08-22 | Rectificación D25 validada localmente. | El icono activo se preservó con la fuente exacta en Xvfb; parser, sesión, Stow y smoke tests pasan, mientras `volumeicon` requiere la VM con mixer real. |
+| 2026-08-23 | P7 completada; P8 iniciada. | El usuario cerró el checkpoint probado en VM y autorizó la integración opcional; O9 continúa abierta hasta aprobar su UX concreta. |
+| 2026-08-23 | D26; O9 resuelta. | Se aprobó `--wm` con checkout externo explícito, perfil separado y delegación al entrypoint público; HTTPS y SSH son alternativas de clonación, no parte del contrato. |
+| 2026-08-23 | P8 completada. | Smoke test y composición con el repositorio bspwm real pasaron el ciclo completo; se documentaron ambos transportes y se retiraron gitlink y `.gitmodules` sin alterar el remoto. |
+| 2026-08-23 | Convención local posterior a P8. | Tras validar la integración, el usuario eligió organizar checkouts independientes bajo `~/.dotfiles/base` y `~/.dotfiles/wm/`; se actualizan sólo recomendaciones y ejemplos, no el contrato. |
 
 ## 21. Relación con otros documentos
 
