@@ -1,3 +1,5 @@
+# The Arch/CachyOS zsh-completions package installs definitions in
+# /usr/share/zsh/site-functions, already present in Zsh's default fpath.
 autoload -Uz compinit
 
 typeset dotfiles_zsh_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"

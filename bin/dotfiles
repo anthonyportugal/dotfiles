@@ -820,6 +820,81 @@ validate_zsh_syntax() {
   return "$result"
 }
 
+select_registered_zsh_shell() {
+  local shell_path
+
+  if command_exists chsh; then
+    while read -r shell_path _; do
+      [[ "${shell_path##*/}" == zsh && -x "$shell_path" ]] || continue
+      printf '%s\n' "$shell_path"
+      return 0
+    done < <(chsh --list-shells 2>/dev/null)
+  fi
+
+  if [[ -r /etc/shells ]]; then
+    while read -r shell_path _; do
+      [[ "${shell_path##*/}" == zsh && -x "$shell_path" ]] || continue
+      printf '%s\n' "$shell_path"
+      return 0
+    done < /etc/shells
+  fi
+
+  return 1
+}
+
+report_zsh_activation() {
+  local account current_home login_shell passwd_entry registered_zsh_shell
+  local target_home
+
+  (( STOW_ENABLED == 1 )) || return 0
+  command_exists zsh || return 0
+
+  current_home=$(realpath -m -- "$HOME")
+  target_home=$(realpath -m -- "$TARGET_DIR")
+  [[ "$target_home" == "$current_home" ]] || return 0
+
+  account=${USER-}
+  [[ -n "$account" ]] || account=$(id -un 2>/dev/null || true)
+  [[ -n "$account" ]] || return 0
+
+  if command_exists getent; then
+    passwd_entry=$(getent passwd "$account" 2>/dev/null || true)
+    [[ -n "$passwd_entry" ]] && login_shell=${passwd_entry##*:}
+  fi
+  login_shell=${login_shell:-${SHELL-}}
+
+  if [[ "${login_shell##*/}" != zsh ]]; then
+    warn "Zsh está instalado, pero el shell de login de '$account' es '${login_shell:-desconocido}'; Bash no carga los plugins de .zshrc"
+    if registered_zsh_shell=$(select_registered_zsh_shell); then
+      warn "prueba inmediata: exec zsh; cambio persistente: chsh -s $registered_zsh_shell (después cierre por completo la sesión)"
+    else
+      warn "no se encontró una ruta ejecutable de Zsh registrada por chsh; revise 'chsh --list-shells' antes de cambiar la cuenta"
+    fi
+  elif [[ "${SHELL##*/}" != zsh ]]; then
+    warn "el shell de login ya es Zsh, pero esta sesión conserva SHELL='${SHELL:-desconocido}'; cierre la sesión y vuelva a entrar"
+  else
+    info "Shell de login Zsh validado: $login_shell"
+  fi
+}
+
+validate_alacritty_syntax() {
+  local config_path="$STOW_DIR/alacritty/.config/alacritty/alacritty.toml"
+
+  [[ "$PROFILE" == desktop ]] || return 0
+  [[ -f "$config_path" ]] || {
+    error "falta la configuración de Alacritty: $config_path"
+    return 1
+  }
+  command_exists alacritty || return 0
+
+  if ! alacritty migrate --dry-run --skip-imports \
+      --config-file "$config_path" >/dev/null; then
+    error "configuración de Alacritty inválida: $config_path"
+    return 1
+  fi
+  info "Configuración de Alacritty validada"
+}
+
 preflight() {
   command_exists find || die "falta el comando requerido: find"
   command_exists realpath || die "falta el comando requerido: realpath"
@@ -937,7 +1012,9 @@ bootstrap() {
 
   if (( SYSTEM_ENABLED == 1 )); then
     validate_zsh_syntax || die "falló la validación de configuración"
+    validate_alacritty_syntax || die "falló la validación de configuración"
   fi
+  report_zsh_activation
   info "Bootstrap completado"
 }
 
@@ -956,6 +1033,7 @@ doctor() {
     fi
     validate_package_plan || result=1
     validate_zsh_syntax || result=1
+    validate_alacritty_syntax || result=1
   fi
 
   if (( STOW_ENABLED == 1 )); then
@@ -965,6 +1043,8 @@ doctor() {
     fi
     validate_links_installed || result=1
   fi
+
+  report_zsh_activation
 
   if (( result == 0 )); then
     info "Doctor: todo correcto para el alcance seleccionado"

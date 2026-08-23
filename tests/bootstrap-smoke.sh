@@ -23,6 +23,12 @@ trap cleanup EXIT
 command -v stow >/dev/null 2>&1 || fail "GNU Stow es necesario para este smoke test"
 [[ -x "$DOTFILES" ]] || fail "$DOTFILES no es ejecutable"
 
+if command -v alacritty >/dev/null 2>&1; then
+  alacritty migrate --dry-run --skip-imports \
+    --config-file "$REPO_ROOT/home/alacritty/.config/alacritty/alacritty.toml" \
+    >/dev/null || fail "la configuración de Alacritty no es válida"
+fi
+
 TEST_ROOT=$(mktemp -d /tmp/dotfiles-bootstrap-smoke.XXXXXX)
 TARGET_DIR="$TEST_ROOT/home with spaces"
 CONFLICT_DIR="$TEST_ROOT/conflict"
@@ -37,6 +43,26 @@ mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR" --apply
 "$DOTFILES" doctor --profile desktop --stow-only --target "$TARGET_DIR"
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR" --apply
+
+# Cuando el target es el home actual, doctor debe explicar por qué Bash no
+# activaría los plugins aunque los enlaces de Zsh sean correctos.
+ln -s "$SCRIPT_DIR/fakes/getent" "$FAKE_BIN/getent"
+ln -s "$SCRIPT_DIR/fakes/chsh" "$FAKE_BIN/chsh"
+HOME="$TARGET_DIR" SHELL=/bin/bash PATH="$FAKE_BIN:/usr/bin" \
+  "$DOTFILES" doctor --profile core --stow-only --target "$TARGET_DIR" \
+  > "$TEST_ROOT/zsh-activation.out" 2>&1
+grep -q "shell de login.*'/bin/bash'" "$TEST_ROOT/zsh-activation.out" ||
+  fail "doctor no detectó que la cuenta seguía usando Bash"
+grep -q 'chsh -s /bin/zsh' "$TEST_ROOT/zsh-activation.out" ||
+  fail "doctor no eligió una ruta Zsh registrada"
+
+for alias_name in l la ll lg; do
+  alias_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
+    dotfiles-alias-check \
+    "$REPO_ROOT/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "$alias_name")
+  [[ "$alias_definition" == *'ls --color=auto '* ]] ||
+    fail "el alias $alias_name no activa colores sólo para terminal"
+done
 
 # Una colisión debe detenerse antes de modificar el archivo existente.
 touch "$CONFLICT_DIR/.zshrc"
@@ -76,6 +102,10 @@ PATH="$FAKE_BIN:/usr/bin" "$DOTFILES" bootstrap \
   > "$TEST_ROOT/shelly.out"
 grep -q 'shelly install standard' "$TEST_ROOT/shelly.out" || \
   fail "falta el comando de repositorio para Shelly"
+grep -q 'zsh-completions' "$TEST_ROOT/shelly.out" || \
+  fail "el perfil core no resolvió zsh-completions"
+grep -q 'zsh-history-substring-search' "$TEST_ROOT/shelly.out" || \
+  fail "el perfil core no resolvió zsh-history-substring-search"
 grep -q 'shelly install aur brave-bin' "$TEST_ROOT/shelly.out" || \
   fail "falta el comando AUR para Shelly"
 

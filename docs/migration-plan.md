@@ -2,9 +2,9 @@
 
 > Estado: activo
 >
-> Última actualización: 2026-08-21
+> Última actualización: 2026-08-22
 >
-> Fase activa: ninguna — P6 completada; P7 requiere nueva aprobación
+> Fase activa: P7 — pulido visual post-VM autorizado el 2026-08-22
 >
 > Siguientes fases autorizadas: ninguna
 
@@ -197,11 +197,12 @@ simplificaciones en pasos pequeños.
 
 ### D6 — Zsh sin Oh My Zsh
 
-Oh My Zsh se eliminará. `zsh-syntax-highlighting` y
-`zsh-autosuggestions` se cargarán directamente desde paquetes del sistema, con
-comprobaciones claras. La configuración se dividirá por responsabilidad y la
-mayoría de aliases personales pasará a la capa privada. El repositorio público
-conservará sólo aliases pequeños, genéricos y ampliamente reutilizables.
+Oh My Zsh se eliminará. `zsh-autosuggestions`, `zsh-completions`,
+`zsh-history-substring-search` y `zsh-syntax-highlighting` se integrarán
+directamente desde paquetes del sistema, con comprobaciones claras. La
+configuración se dividirá por responsabilidad y la mayoría de aliases
+personales pasará a la capa privada. El repositorio público conservará sólo
+aliases pequeños, genéricos y ampliamente reutilizables.
 
 ### D7 — Apps y MIME se migran por uso real
 
@@ -340,6 +341,178 @@ Este contrato cubre sólo el repositorio base. No se añade todavía `--wm`,
 clonación ni conocimiento de otros repositorios: la UX de orquestación O9 se
 resolverá en P8 usando entrypoints públicos, después de que bspwm sea autónomo.
 
+### D20 — Polybar se conserva inicialmente en bspwm
+
+P7 mantendrá Polybar como barra X11 para conservar el comportamiento y la
+apariencia aceptados antes de proponer rediseños. La configuración será estática
+y propiedad del repositorio bspwm: no reescribirá archivos versionados para
+detectar hardware o aplicar temas. Monitores y redes se resolverán por
+capacidades; batería y backlight sólo se habilitarán cuando existan. Los módulos
+multimedia heredados de MPD/Spotify se sustituirán por integración genérica con
+Playerctl.
+
+### D21 — Ajustes de bspwm derivados de la primera VM
+
+La primera instalación standalone inició correctamente tras añadir
+`xorg-xauth`, usar Picom con backend `xrender` y definir explícitamente al menos
+un módulo derecho de Polybar. P7 incorporará `xorg-xauth` como dependencia de
+sesión. Picom conservará `glx` como default para hardware real y documentará
+`xrender` como override local de VM.
+
+Polybar mantendrá la detección por capacidades aprobada en D20, pero su launcher
+comprobará que cada instancia permanezca activa y reintentará con un conjunto
+mínimo seguro cuando la selección automática falle. El tray sólo se asignará a
+una barra por sesión. La selección explícita mediante
+`BSPWM_POLYBAR_RIGHT` seguirá teniendo precedencia y no será sustituida
+silenciosamente.
+
+La pulsación aislada de Super se recuperará con `xcape`, disponible como paquete
+binario, en lugar de restaurar la dependencia Archcraft `ksuperkey`. El power
+menu de Rofi recuperará su disposición visual en cuadrícula e iconos mediante la
+Nerd Font ya declarada, sin depender de la fuente Feather de Archcraft.
+
+### D22 — Pulido post-VM y alcance del layout X11
+
+La validación visual posterior a P7 mostró espaciado inconsistente entre
+módulos de Polybar y alineación óptica mejorable en los glifos del power menu.
+El ajuste conservará el tema Catppuccin y la configuración estática, pero
+retirará separadores decorativos redundantes, normalizará el espacio interno de
+iconos/texto y centrará explícitamente los elementos de Rofi. El aspecto del
+repositorio `tsjazil/dotfiles` se usa sólo como referencia visual; no se copian
+su configuración, sus hardcodes ni sus dependencias.
+
+La sesión bspwm ofrecerá por defecto los layouts XKB `us,latam` con
+`Alt+Space` como selector de grupo. Esta responsabilidad queda limitada a la
+sesión X11 y tendrá overrides locales y un interruptor para desactivarla; la
+configuración global del teclado, modelos físicos y políticas del sistema
+continúan fuera del ownership del repositorio. `xorg-setxkbmap` se declarará
+como dependencia consumida por bspwm.
+
+Picom adoptará un radio moderado usando la capacidad del paquete oficial ya
+declarado, sin cambiar backend ni añadir forks. Zathura no se incorpora a
+bspwm: su configuración portable será un paquete independiente del repositorio
+base en un paso posterior, para que sea compartida por X11 y Wayland sin doble
+ownership.
+
+### D23 — Traducción visual de la referencia y ownership de Alacritty
+
+La referencia `tsjazil/dotfiles` orientará el lenguaje visual de P7, no su
+implementación. Polybar adoptará una geometría flotante, la paleta Catppuccin
+usada por esa referencia y un workspace activo representado por un bloque de
+color, sin copiar scripts, hardcodes de monitor/hardware ni dependencias AUR
+antiguas. La composición predeterminada será launcher y workspaces a la
+izquierda; fecha y hora al centro; y volumen, RAM usada, almacenamiento raíz
+usado, red detectada, batería opcional, layout XKB y tray opcional a la derecha.
+El botón de apagado se retira de la barra, pero el power menu continúa accesible
+mediante `Super+X`.
+
+El borde de foco de bspwm pasa a ancho cero por defecto porque su geometría
+rectangular entra en conflicto visual con las esquinas redondeadas. Picom
+indicará el foco atenuando de forma leve las ventanas inactivas. El ancho y los
+colores del borde siguen disponibles como overrides locales para quien prefiera
+el indicador tradicional.
+
+Alacritty es una aplicación compartida entre sesiones y, por tanto, su
+configuración Catppuccin pertenece al repositorio base, no al repositorio
+bspwm. bspwm sólo declara y ejecuta el terminal, de modo que permanece
+standalone y acepta cualquier configuración de Alacritty del usuario. El perfil
+`desktop` del repo base añadirá el paquete Stow de Alacritty y su dependencia.
+La configuración de Zathura continúa pospuesta al paso común ya acordado en
+D22; no se duplica dentro de P7.
+
+### D24 — Completions e historial interactivo de Zsh
+
+Como mantenimiento explícitamente solicitado sobre P3/P5, el perfil `core`
+añadirá los paquetes binarios `zsh-completions` y
+`zsh-history-substring-search`, disponibles en `extra` de CachyOS/Arch. El
+primero instala definiciones bajo `/usr/share/zsh/site-functions`, ruta que Zsh
+ya incluye en `fpath`; el `compinit` público existente las descubrirá sin un
+segundo inicializador ni framework.
+
+El buscador substring se cargará desde la ruta suministrada por el paquete,
+después de `zsh-syntax-highlighting` como exige su integración upstream. Las
+flechas arriba/abajo se enlazarán tanto mediante `terminfo` como mediante las
+secuencias ANSI habituales. La carga seguirá siendo condicional para que la
+configuración degrade limpiamente si se usa `--stow-only` antes de instalar
+paquetes. La colección general de completions puede contener definiciones para
+comandos ausentes, pero no instala ni inicializa Node.js, npm, pnpm o Bun y no
+modifica D16.
+
+Este seguimiento no cambia la fase activa: P7 continúa esperando validación
+visual en VM, y P8 permanece sin autorización.
+
+La implementación D24 añadió ambos nombres al manifest `core`, documentó cómo
+`compinit` descubre `zsh-completions` y actualizó el orden/bindings del archivo
+de plugins. Se validaron sintaxis Zsh, orden del manifest, Bash, ShellCheck, el
+smoke test completo del bootstrap y una sesión interactiva aislada usando los
+paquetes oficiales reales, incluida la resolución de flechas normal y
+`terminfo` con `TERM=alacritty`.
+
+La comprobación posterior en VM mostró una diferencia entre instalar Zsh y
+activarlo: la terminal seguía ejecutando Bash como shell de login, por lo que
+ningún `.zshrc` podía cargar los plugins aunque sus paquetes y rutas fueran
+correctos. El bootstrap no ejecutará `chsh` automáticamente, porque cambiar el
+shell de una cuenta es una decisión explícita del usuario y requiere cerrar la
+sesión para aplicarse. En su lugar, bootstrap y doctor avisarán cuando operen
+sobre el home actual y detecten otro shell de login; README documentará tanto
+la prueba inmediata con `zsh` como el cambio persistente con `chsh`.
+
+El seguimiento se validó con las versiones actuales de los paquetes de Arch:
+autosuggestions y syntax-highlighting desde sus rutas instaladas, completions
+0.36.0 bajo el `fpath` del sistema e history-substring-search 1.1.0 después del
+highlighter. Los cuatro registraron sus funciones/widgets en una sesión Zsh
+aislada. El smoke test permanente simula ahora un home correctamente enlazado
+con `/bin/bash` como shell de login y exige que doctor explique el diagnóstico
+sin ejecutar `chsh` ni modificar la cuenta.
+
+Un segundo seguimiento de la VM precisó dos detalles de portabilidad. Primero,
+`command -v zsh` puede devolver un hardlink como `/usr/sbin/zsh` que ejecuta el
+mismo binario pero no aparece literalmente en `/etc/shells`; `chsh` rechaza esa
+ruta para un usuario no privilegiado. La recomendación y el diagnóstico deben
+seleccionar una ruta ejecutable de Zsh anunciada por `chsh --list-shells`, con
+fallback de lectura a `/etc/shells`, y nunca inferir que cualquier resultado de
+`command -v` es aceptable como shell de login.
+
+Segundo, GNU `ls` no colorea por defecto aunque `LS_COLORS` esté definido. Los
+cuatro aliases públicos añadirán `--color=auto`, que emite colores sólo cuando
+la salida es una terminal y mantiene limpias redirecciones y pipes. No se añade
+un framework ni se duplica la paleta del sistema: GNU `ls` conserva sus defaults
+o la personalización existente de `LS_COLORS`.
+
+La implementación selecciona primero una ruta ejecutable terminada en `zsh`
+desde `chsh --list-shells` y sólo recurre a `/etc/shells` si esa consulta no
+está disponible. README dejó de recomendar `command -v` para `chsh`. El smoke
+test usa un `chsh` falso que anuncia `/bin/zsh` y `/usr/bin/zsh`, exige que el
+diagnóstico elija la primera ruta registrada y rechaza cualquier invocación que
+intente cambiar realmente la cuenta. La misma prueba carga los cuatro aliases
+en Zsh y comprueba que todos conserven `--color=auto`.
+
+### D25 — Polybar anclada, foco legible y tray nativo
+
+La revisión visual en VM sustituye la geometría flotante descrita en D23:
+Polybar ocupará todo el ancho del monitor, sin offsets exteriores, borde ni
+radio en el contenedor principal. Esta decisión sólo cambia la presentación;
+se conservan la composición, la detección por capacidades y el ownership
+standalone ya aprobados.
+
+El acento común será Catppuccin Pink (`#F5C2E7`), igual que el estado
+seleccionado de Rofi. El workspace activo usará ese acento y el tray se
+mantendrá en el bloque central, inmediatamente después de fecha/hora, sólo en
+la primera barra de una sesión multimonitor.
+
+La primera implementación intentó aproximar elementos redondeados mediante
+indicadores numéricos circulares y separadores de Powerline. La prueba real
+mostró dos límites: los workspaces de esta sesión se nombran con glifos de
+aplicación, por lo que el fallback circular ocultaba su identidad, y las
+ventanas XEmbed del tray no comparten necesariamente el fondo decorativo del
+módulo. El resultado final conserva `%name%` como icono del workspace y marca
+el foco coloreando ese icono en Pink, sin fondo artificial. El tray usa el
+renderizado nativo de Polybar con tamaño y separación controlados, pero hereda
+el fondo de la barra y no añade tapas ni cápsula. Se priorizan así legibilidad y
+consistencia sobre una aproximación incompleta al radio, que Polybar no ofrece
+por label o módulo individual. D25 prevalece sobre la geometría flotante y la
+ubicación derecha del tray descritas en D23.
+
 ## 7. Decisiones descartadas por ahora
 
 | Alternativa | Motivo principal |
@@ -463,7 +636,7 @@ La configuración pública resultante tendrá responsabilidades separadas:
 
 1. entorno y PATH portables;
 2. completions y comportamiento interactivo;
-3. plugins instalados por paquetes del sistema;
+3. plugins instalados por paquetes del sistema, con orden de carga explícito;
 4. aliases públicos pequeños;
 5. inicialización condicional de herramientas disponibles;
 6. include privado opcional;
@@ -489,7 +662,7 @@ Los manifiestos deberán separar al menos:
 
 Perfiles conceptuales iniciales del repositorio base:
 
-- `core`: Git, GNU Stow, Zsh, los dos plugins requeridos y herramientas
+- `core`: Git, GNU Stow, Zsh, los plugins requeridos y herramientas
   necesarias para instalar/validar los propios dotfiles;
 - `cli`: Starship, Bat, Micro, Yazi y herramientas de terminal aceptadas;
 - `desktop`: Brave, Zathura, Thunar y asociaciones gráficas aceptadas;
@@ -570,11 +743,11 @@ o clonar una referencia solicitada, no incorporarlos como submodules.
 | P0 | Materializar este plan aprobado. | El documento captura audit, decisiones, arquitectura, fases, riesgos y progreso; no se implementan dotfiles. | **Completa** |
 | P1 | Gobernanza y límites del repositorio base. | `README.md` explica responsabilidad y estado real; `AGENTS.md` define el flujo operativo; ambos enlazan este plan y no prometen un bootstrap inexistente. | **Completa** |
 | P2 | Fundación GNU Stow del repositorio base. | Existe stow directory dedicado, paquetes mínimos y dry-run sin conflictos; las rutas movidas conservan comportamiento. | **Completa** |
-| P3 | Refactor incremental de Zsh. | Oh My Zsh eliminado; ambos plugins funcionan; responsabilidades separadas; precedencia público→privado→local validada; `zsh -n` pasa. | **Completa** |
+| P3 | Refactor incremental de Zsh. | Oh My Zsh eliminado; plugins públicos funcionan; responsabilidades separadas; precedencia público→privado→local validada; `zsh -n` pasa. | **Completa** |
 | P4 | Configuraciones base y apps actuales. | Bat/Starship y configuraciones aceptadas tienen owner claro; `.xprofile`, Geany y MIME se conservan, migran o retiran con decisión explícita. | **Completa** |
 | P5 | Manifiestos de dependencias y perfiles. | Paquetes oficiales/AUR/externos separados, nombres validados en CachyOS y perfiles documentados; incluye apps seleccionadas. | **Completa** |
 | P6 | Bootstrap y doctor del repositorio base. | Dry-run, selección Shelly/paru/yay/pacman, instalación por perfiles, Stow y validaciones son idempotentes; base funciona sola. | **Completa** |
-| P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | Pendiente |
+| P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Activa — pulido post-VM** |
 | P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | Pendiente |
 | P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | Pendiente |
 | P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. | Pendiente |
@@ -625,7 +798,7 @@ Resultado del 2026-08-20:
 1. Inventariar qué bloques son públicos, privados, locales u obsoletos.
 2. Crear la estructura modular pública.
 3. Retirar Oh My Zsh.
-4. Cargar syntax-highlighting y autosuggestions directamente.
+4. Cargar directamente los plugins públicos aprobados.
 5. Reducir aliases públicos y establecer includes/precedencia.
 6. Validar sintaxis, shell interactivo y ausencia de herramientas opcionales.
 
@@ -635,8 +808,8 @@ Resultado del 2026-08-20:
   inicialización;
 - Oh My Zsh y todos los aliases e integraciones JavaScript heredados fueron
   retirados del repositorio público;
-- autosuggestions y syntax-highlighting cargan directamente desde los paquetes
-  de Arch/CachyOS, con syntax-highlighting al final;
+- los plugins cargan directamente desde paquetes de Arch/CachyOS, con orden
+  explícito según sus requisitos de integración;
 - los únicos aliases públicos son cuatro variantes genéricas de `ls`;
 - `~/.config/zsh/private.zsh` y `~/.config/zsh/local.zsh` son opcionales y se
   aplican en ese orden después de la configuración pública;
@@ -735,6 +908,83 @@ Resultado del 2026-08-20:
 6. Añadir manifiestos, Stow/bootstrap/doctor standalone.
 7. Validar sin `/etc/skel` de Archcraft.
 
+Resultado al 2026-08-22: la implementación standalone quedó preparada en la rama
+local `refactor/standalone-bspwm`, con `backup/pre-p7-archcraft` apuntando al
+baseline previo. El audit comparativo, el layout Stow, los manifiestos, el
+entrypoint propio, los hooks locales y la configuración estática de Polybar
+están implementados. La primera VM confirmó la instalación standalone y reveló
+los ajustes D21: dependencia de Xauth, fallback de Polybar, override documentado
+de Picom y restauración de UX en Rofi/Super. Las correcciones están aplicadas y
+han pasado las validaciones aisladas del repositorio. Una segunda prueba en VM
+mostró que Polybar sólo se hacía visible cuando `BSPWM_POLYBAR_RIGHT` llegaba
+definida, aunque el log confirmaba los mismos módulos en modo automático. El
+launcher normaliza y exporta ahora el valor resuelto, limita la sonda de BlueZ
+y serializa invocaciones concurrentes. Durante esa revalidación se detectó y
+retiró un cookie de PulseAudio generado accidentalmente dentro del paquete Stow
+por una prueba local que usó el source como `$HOME`; nunca se tocó el cookie
+real del usuario. El bootstrap rechaza ahora cualquier ruta de `home/bspwm`
+fuera de `.config/bspwm`. La validación final en VM confirmó que Polybar aparece
+con selección automática y sin definir `BSPWM_POLYBAR_RIGHT` en `local.env`.
+P7 queda completa; no se inicia P8 ni se retira todavía el gitlink del
+repositorio base.
+
+Seguimiento del 2026-08-22: una revisión visual posterior reabrió P7 de forma
+acotada para normalizar el ritmo de Polybar, centrar los glifos de Rofi,
+incorporar el selector XKB `us,latam` solicitado y aplicar el radio moderado de
+Picom acordado en D22. La fase volverá a cerrarse después de las validaciones
+locales y una comprobación visual en VM; P8 permanece fuera de alcance.
+La implementación local ya pasó Bash, ShellCheck, parsers de Polybar/Rofi,
+smoke tests de bootstrap/sesión, ejecución de Picom con `xrender`, resolución
+del perfil CachyOS y controles de scope/portabilidad. Sólo queda la comprobación
+visual y física del selector de layout en la VM.
+
+Segundo seguimiento del 2026-08-22: el usuario amplió el pulido visual usando
+`tsjazil/dotfiles` como objetivo de apariencia. D23 autoriza reorganizar los
+módulos y colores de Polybar, retirar su botón de apagado, sustituir el borde de
+foco por atenuación de ventanas inactivas y añadir Alacritty Catppuccin al repo
+base bajo ownership compartido. P7 permanece activa hasta validar estos cambios
+en la VM; P8 y la configuración de Zathura no se inician.
+
+La implementación D23 ya pasó las validaciones locales de ambos repositorios:
+Bash, ShellCheck, smoke tests, ciclos Stow en homes temporales, carga real de
+los módulos nuevos de Polybar bajo Xvfb, Picom con `xrender`, parser/migración de
+Alacritty y resolución del perfil CachyOS. El perfil base administra ahora 15
+enlaces, incluido un único `alacritty.toml`. Sólo queda la comprobación visual
+en VM de geometría, tipografías, métricas y nivel de atenuación antes de cerrar
+P7.
+
+Tercer seguimiento del 2026-08-22: la prueba visual sustituyó la geometría
+flotante de D23 por la barra anclada definida en D25. El tray vuelve a ser
+obligatorio en la composición predeterminada y pasa al bloque central, a la
+derecha de fecha/hora; el workspace activo recibe un indicador circular Pink y
+el tray una cápsula Surface0. P7 continúa activa hasta validar este último
+ajuste en la VM.
+
+La implementación D25 pasó Bash, ShellCheck, los smoke tests de bootstrap y
+sesión, el parser de Polybar y una sesión bspwm real bajo Xvfb. La prueba de
+render usó temporalmente la versión exacta de `Symbols Nerd Font Mono`
+declarada y un cliente XEmbed real: confirmó geometría `1280x34+0+0`, ocho
+módulos, docking del tray y ausencia de errores de formato. El material
+temporal se retiró después de la prueba. Sólo queda la comprobación visual en
+la VM del usuario.
+
+Cuarto seguimiento del 2026-08-22: la captura de la VM reveló que el indicador
+circular era el fallback de una tabla `ws-icon` incompatible con los nombres
+por glifo de la sesión, y que las tapas decorativas del tray producían un bloque
+visual inconsistente alrededor de `volumeicon`. D25 se rectifica para preservar
+el nombre/icono real del workspace, aplicar Pink directamente al estado activo
+y usar un tray nativo sin cápsula. `volumeicon` se mantiene fuera del manifest:
+se utilizó únicamente como cliente XEmbed de prueba. P7 continúa activa hasta
+revalidar este ajuste en la VM.
+
+La rectificación pasó Bash, ShellCheck, ambos smoke tests de bspwm, el ciclo
+Stow aislado, el parser de Polybar y una sesión bspwm real bajo Xvfb. El render
+con los ocho nombres por glifo y la versión exacta de
+`Symbols Nerd Font Mono` confirmó que el workspace activo conserva su icono y
+recibe el acento Pink. El módulo tray carga sin propiedades decorativas; queda
+pendiente comprobar `volumeicon` en la VM, porque el entorno Xvfb aislado no
+ofrece un mixer al cliente.
+
 ### P8 — Integración de repos públicos
 
 1. Definir la interfaz de orquestación mínima.
@@ -828,7 +1078,6 @@ Estas decisiones no autorizan implementación hasta resolverse en su fase:
 | ID | Decisión | Momento previsto |
 | --- | --- | --- |
 | O1 | Wofi o Fuzzel como launcher Wayland. | P11 |
-| O2 | Barra de bspwm/X11: preservar Polybar inicialmente u otra opción. | P7 |
 | O3 | Visor de imágenes y asociaciones MIME restantes. | Cuando se seleccione un visor |
 | O5 | Stack mínimo definitivo de Mango además de MangoWC/Waybar. | P11 |
 | O6 | Nombre, ubicación local y estructura final del repo privado. | P9 |
@@ -845,11 +1094,11 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P0 | **Completa** | Plan materializado y validado el 2026-08-20; no modificó dotfiles. |
 | P1 | **Completa** | README y AGENTS alineados con el plan y validados el 2026-08-20. |
 | P2 | **Completa** | `home/.stow` y paquete `bat`; dry-run/install/idempotencia/unstow/conflicto validados con Stow 2.4.1 el 2026-08-20. |
-| P3 | **Completa** | Zsh modular sin Oh My Zsh; historial XDG, precedencia, plugins, sintaxis y Stow validados el 2026-08-20. |
+| P3 | **Completa** | Zsh modular sin Oh My Zsh; seguimiento D24 para completions/búsqueda substring autorizado el 2026-08-22. |
 | P4 | **Completa** | Apps/configs base revisadas y ciclo Stow validado el 2026-08-20. |
-| P5 | **Completa** | Perfiles y fuentes separados; 30 paquetes de repo más Brave/fallback validados el 2026-08-20. |
+| P5 | **Completa** | Perfiles/fuentes validados; adiciones D23/D24 verificadas en CachyOS/Arch el 2026-08-22. |
 | P6 | **Completa** | Entrypoint, dry-run/apply, doctor, unlink, adaptadores y smoke test validados el 2026-08-20. |
-| P7 | Pendiente | Requiere nueva aprobación y trabajo en repo bspwm. |
+| P7 | **Activa** | D25 rectificada y validada localmente; pendiente comprobar el workspace activo y `volumeicon` en la VM. |
 | P8 | Pendiente | Requiere nueva aprobación. |
 | P9 | Pendiente | Requiere nueva aprobación y alcance del repo privado. |
 | P10 | Pendiente | Requiere nueva aprobación y entorno de prueba adecuado. |
@@ -875,6 +1124,28 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-20 | P6 iniciada. | Autorización explícita para implementar el bootstrap y doctor del repositorio base; P7 permanece fuera de alcance. |
 | 2026-08-20 | D19 registrada y P6 completada. | Contrato `bin/dotfiles` y ciclo dry-run/apply/doctor/unlink validados; P7 queda sin autorizar. |
 | 2026-08-21 | Higiene previa al primer checkpoint. | Se retiraron ignores obsoletos y metadata de submodules sin gitlink; se preservó la licencia de Catppuccin Bat. |
+| 2026-08-21 | P7 iniciada. | Autorización explícita para convertir bspwm en un repositorio standalone antes de las pruebas en VM. |
+| 2026-08-21 | D20; O2 resuelta. | El usuario confirmó conservar Polybar inicialmente, eliminando hardcodes y herencia runtime de Archcraft. |
+| 2026-08-21 | P7 preparada para validación en VM. | Audit, ownership, bootstrap standalone y pruebas aisladas completados; la fase sigue activa hasta validar la sesión real. |
+| 2026-08-22 | D21; primera validación standalone en VM. | La sesión funcionó con `xorg-xauth`, Picom `xrender` y override de módulos Polybar; se autorizaron correcciones de UX para Super, Rofi y README. |
+| 2026-08-22 | Correcciones D21 listas para revalidar. | Xauth y Xcape declarados; Polybar limita el tray y prueba fallback/precedencia; Rofi recupera cuadrícula e iconos; bootstrap, sesión, parsers y runtimes aislados pasan. |
+| 2026-08-22 | Segundo ajuste de Polybar listo para revalidar. | La VM confirmó que los módulos cargan pero el modo automático no se muestra; se igualó el entorno automático/explícito y se protegió el launcher frente a esperas de BlueZ y carreras. |
+| 2026-08-22 | Contaminación runtime retirada del paquete bspwm. | Una prueba aislada generó `.config/pulse/cookie` dentro del source Stow; se eliminó sólo esa copia, se preservó el home real y se añadió un guard de ownership con prueba negativa. |
+| 2026-08-22 | P7 completada. | La revalidación en VM confirmó instalación standalone, inicio mediante Ly y Polybar automática sin `BSPWM_POLYBAR_RIGHT`; P8 queda pendiente y sin autorización. |
+| 2026-08-22 | P7 reabierta para pulido post-VM; D22. | El usuario solicitó corregir ritmo visual de Polybar/Rofi, recuperar `Alt+Space` para `us,latam` y usar `tsjazil/dotfiles` como referencia; Zathura permanece bajo ownership del repo base. |
+| 2026-08-22 | Pulido D22 listo para revalidar en VM. | Espaciado/icon fonts, centrado Rofi, radio Picom y XKB fueron implementados; validaciones locales completas, sin iniciar Zathura ni P8. |
+| 2026-08-22 | D23; referencia visual ampliada. | Se autoriza una Polybar flotante con métricas en unidades, foco sin borde rectangular y Alacritty Catppuccin bajo ownership del repositorio base; Zathura y P8 permanecen fuera de alcance. |
+| 2026-08-22 | Implementación D23 lista para revalidar. | Polybar, Picom, Alacritty, manifiestos y ambos ciclos Stow pasan validaciones locales; P7 espera la comprobación visual en VM. |
+| 2026-08-22 | D24; plugins Zsh ampliados. | El usuario solicitó `zsh-completions` y `zsh-history-substring-search`; se autoriza el mantenimiento acotado de P3/P5 sin cambiar la fase activa P7. |
+| 2026-08-22 | Implementación D24 validada. | Manifest `core`, completions, orden de plugins y bindings normal/terminfo pasaron pruebas con los paquetes oficiales; P7 sigue esperando la VM. |
+| 2026-08-22 | Seguimiento D24: activación del shell. | La VM seguía abriendo Bash pese a tener los paquetes; se mantiene `chsh` manual y se autoriza una advertencia accionable en bootstrap/doctor. |
+| 2026-08-22 | Activación D24 validada. | Los cuatro plugins cargan en Zsh con paquetes actuales; el smoke test reproduce Bash como login shell y verifica el aviso sin mutar la cuenta. |
+| 2026-08-22 | Segundo seguimiento D24: ruta de `chsh` y colores de `ls`. | La VM expuso un hardlink no registrado de Zsh y aliases sin `--color=auto`; se autoriza resolver sólo shells listados y recuperar colores explícitos. |
+| 2026-08-22 | Segundo seguimiento D24 validado. | Bootstrap elige una ruta anunciada por `chsh`; los cuatro aliases activan color sólo en terminal y pasan las pruebas aisladas. |
+| 2026-08-22 | D25; Polybar anclada y tray central. | El usuario reemplazó la geometría flotante por una barra sin márgenes/radio exterior, fijó Pink como acento y solicitó elementos redondeados para workspace/tray; P7 sigue activa. |
+| 2026-08-22 | Implementación D25 validada localmente. | Geometría, composición multimonitor/fallback, parser, fuente exacta, indicador activo y tray XEmbed pasaron smoke tests y render bajo Xvfb; resta validar apariencia en la VM. |
+| 2026-08-22 | D25 rectificada tras la captura de la VM. | El círculo ocultaba los nombres por glifo y la cápsula no componía limpiamente con `volumeicon`; se autoriza foco Pink sobre el icono real y tray nativo. |
+| 2026-08-22 | Rectificación D25 validada localmente. | El icono activo se preservó con la fuente exacta en Xvfb; parser, sesión, Stow y smoke tests pasan, mientras `volumeicon` requiere la VM con mixer real. |
 
 ## 21. Relación con otros documentos
 

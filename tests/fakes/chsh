@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+[[ $# == 1 && ( "$1" == --list-shells || "$1" == -l ) ]] || exit 2
+printf '%s\n' /bin/sh /bin/bash /bin/zsh /usr/bin/zsh

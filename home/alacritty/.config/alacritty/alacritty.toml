@@ -1,0 +1,69 @@
+# Shared terminal appearance for X11 and Wayland sessions.
+
+[window]
+padding = { x = 26, y = 26 }
+dynamic_padding = false
+decorations = "None"
+opacity = 1.0
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[font]
+size = 12.0
+
+[font.normal]
+family = "JetBrains Mono"
+style = "Medium"
+
+[font.bold]
+family = "JetBrains Mono"
+style = "Bold"
+
+[font.italic]
+family = "JetBrains Mono"
+style = "Light Italic"
+
+[cursor]
+style = { shape = "Block", blinking = "Off" }
+unfocused_hollow = true
+
+[colors]
+draw_bold_text_with_bright_colors = false
+
+[colors.primary]
+background = "#1E1D2F"
+foreground = "#D9E0EE"
+
+[colors.cursor]
+text = "#1E1D2F"
+cursor = "#F5E0DC"
+
+[colors.normal]
+black = "#6E6C7E"
+red = "#F28FAD"
+green = "#ABE9B3"
+yellow = "#FAE3B0"
+blue = "#96CDFB"
+magenta = "#F5C2E7"
+cyan = "#89DCEB"
+white = "#D9E0EE"
+
+[colors.bright]
+black = "#988BA2"
+red = "#F28FAD"
+green = "#ABE9B3"
+yellow = "#FAE3B0"
+blue = "#96CDFB"
+magenta = "#F5C2E7"
+cyan = "#89DCEB"
+white = "#D9E0EE"
+
+[[colors.indexed_colors]]
+index = 16
+color = "#F8BD96"
+
+[[colors.indexed_colors]]
+index = 17
+color = "#F5E0DC"

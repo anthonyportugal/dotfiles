@@ -5,8 +5,9 @@ está migrando desde una instalación dependiente de Archcraft hacia una base
 portable, modular e independiente del Window Manager o compositor elegido.
 
 > **Estado:** migración en curso. El repositorio base ya dispone de bootstrap y
-> doctor propios; la autonomía de bspwm, la integración opcional y la validación
-> final desde un CachyOS limpio pertenecen a fases posteriores.
+> doctor propios, y el repositorio bspwm ya fue validado como proyecto
+> standalone. La integración opcional y la validación final desde un CachyOS
+> limpio pertenecen a fases posteriores.
 
 ## Responsabilidad de este repositorio
 
@@ -29,8 +30,9 @@ No será responsable de:
 ## Repositorios relacionados
 
 - [`bspwm`](https://github.com/anthonyportugal/bspwm): proyecto público X11
-  independiente. El submodule que aún aparece en este checkout es transitorio y
-  será retirado después de validar su instalación standalone.
+  independiente, con instalación standalone validada. El submodule que aún
+  aparece en este checkout es transitorio y se retirará durante la fase de
+  integración opcional.
 - `mango`: futuro proyecto público e independiente para MangoWC/Wayland.
 - dotfiles privados: capa opcional e independiente para configuración personal
   o laboral no secreta. Su ausencia nunca debe romper los repositorios públicos.
@@ -47,11 +49,13 @@ facilitar su clonación o invocar sus instaladores sin conocer sus internals.
 - Precedencia de configuración: pública → privada opcional → local de máquina.
 - Bootstrap compatible con Shelly en CachyOS, además de `paru`, `yay` y
   `pacman` cuando sus capacidades correspondan.
-- Zsh sin Oh My Zsh, conservando `zsh-syntax-highlighting` y
-  `zsh-autosuggestions`.
+- Zsh sin Oh My Zsh, integrando directamente `zsh-autosuggestions`,
+  `zsh-completions`, `zsh-history-substring-search` y
+  `zsh-syntax-highlighting`.
 
 Defaults de aplicaciones ya acordados:
 
+- Alacritty con una apariencia Catppuccin compartida entre sesiones;
 - Brave como navegador;
 - Zathura con MuPDF para PDF;
 - Micro como editor de texto;
@@ -59,8 +63,8 @@ Defaults de aplicaciones ya acordados:
 - mpv con `mpv-mpris` y Playerctl para reproducción/control multimedia;
 - Waybar para Mango/Wayland.
 
-El launcher Wayland sigue pendiente entre Wofi y Fuzzel. La barra X11 de bspwm
-se decidirá separadamente porque Waybar no cubre esa sesión.
+El launcher Wayland sigue pendiente entre Wofi y Fuzzel. bspwm conserva Polybar
+para X11; Waybar pertenece al futuro repositorio Mango y no cubre esa sesión.
 
 ## Layout durante la migración
 
@@ -69,6 +73,7 @@ paquete pequeño y refleja rutas relativas al home usando sus nombres reales:
 
 ```text
 home/
+├── alacritty/
 ├── bat/
 ├── starship/
 ├── xdg-defaults/
@@ -102,6 +107,43 @@ simulación nativa de Stow cuando ya está disponible. Si el plan es correcto:
 ./bin/dotfiles bootstrap --profile desktop --apply
 ./bin/dotfiles doctor --profile desktop
 ```
+
+### Activar Zsh como shell de login
+
+Instalar Zsh y sus plugins no cambia automáticamente el shell de la cuenta.
+Comprueba qué shell ejecuta la terminal y cuál tiene registrado el usuario:
+
+```bash
+ps -p $$ -o comm=
+getent passwd "$USER" | cut -d: -f7
+```
+
+Si todavía aparece Bash, puedes probar inmediatamente la configuración pública
+reemplazando el proceso de esa terminal:
+
+```bash
+exec zsh
+```
+
+Para conservar Zsh en terminales y sesiones futuras, cambia explícitamente el
+shell de login. `chsh` exige una ruta incluida literalmente en su lista, aunque
+otra ruta como `/usr/sbin/zsh` apunte al mismo binario. Selecciona la primera
+ruta Zsh registrada y después cierra por completo la sesión de Ly antes de
+volver a entrar:
+
+```bash
+zsh_login_shell=$(chsh --list-shells | awk '/\/zsh$/ { print; exit }')
+printf 'Shell elegido: %s\n' "$zsh_login_shell"
+chsh -s "$zsh_login_shell"
+```
+
+En una instalación normal de Arch/CachyOS el resultado suele ser `/bin/zsh` o
+`/usr/bin/zsh`. No uses una variante que no aparezca en
+`chsh --list-shells`.
+
+El bootstrap y `doctor` muestran una advertencia accionable cuando operan sobre
+el home actual y detectan otro shell de login. No ejecutan `chsh` por cuenta del
+usuario ni intentan cargar `.zshrc` desde Bash.
 
 No se debe ejecutar el bootstrap completo con `sudo`: el propio backend eleva
 únicamente la instalación de paquetes y Stow siempre opera como el usuario. La
@@ -144,7 +186,9 @@ para auditar el plan o cuando las dependencias se administraron manualmente:
 ```
 
 `doctor` siempre es read-only. Comprueba paquetes, capacidad del backend,
-sintaxis Zsh y que cada target sea un symlink hacia la fuente pública esperada.
+sintaxis Zsh, el TOML de Alacritty y que cada target sea un symlink hacia la
+fuente pública esperada. Cuando el target es el home actual, también informa si
+la cuenta todavía inicia otro shell y por eso no cargaría los plugins.
 
 `unlink` tampoco elimina paquetes ni archivos ajenos. Su primer pase sólo
 simula; `--apply` retira los enlaces que Stow administra:

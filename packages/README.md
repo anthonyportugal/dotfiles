@@ -15,10 +15,14 @@ directamente.
 `package-backends.txt` es la única excepción al orden alfabético: su orden es
 semántico y representa la prioridad de detección.
 
-`repo/` contiene paquetes binarios resolubles con `pacman`. Todos fueron
-comprobados primero en el portal de paquetes de CachyOS el 2026-08-20; también
-pertenecen a los repositorios oficiales de Arch, por lo que conservan el mismo
-nombre cuando CachyOS usa sus repos sincronizados o variantes optimizadas.
+`repo/` contiene paquetes binarios resolubles con `pacman`. Se comprobaron
+primero en el portal de paquetes de CachyOS el 2026-08-20 y, para las adiciones
+de Alacritty y Zsh, el 2026-08-22. `alacritty`, `zsh-completions` y
+`zsh-history-substring-search` están publicados directamente en sus
+repositorios; `ttf-jetbrains-mono` se confirmó después en Arch Extra al no
+aparecer como coincidencia exacta en la búsqueda de CachyOS. Todos conservan el
+mismo nombre cuando CachyOS consume repos sincronizados o variantes
+optimizadas.
 
 Las fuentes que no son equivalentes se mantienen separadas:
 
@@ -51,6 +55,13 @@ no a este feature común.
 No existe un perfil de desarrollo JavaScript público: Node.js, npm, pnpm, Bun
 y sus integraciones pertenecen a los dotfiles privados.
 
+Los cuatro complementos públicos de Zsh pertenecen a `core`.
+`zsh-completions` aporta definiciones bajo el `fpath` estándar del sistema;
+`zsh-history-substring-search` se carga después de syntax-highlighting y enlaza
+las flechas arriba/abajo. Las definiciones para comandos opcionales no instalan
+esas herramientas ni las añaden al entorno. Instalar estos paquetes no cambia
+el shell de login: esa activación permanece como un paso explícito con `chsh`.
+
 ## Backends del bootstrap
 
 `package-backends.txt` registra el orden de detección aprobado. Son comandos
@@ -76,8 +87,10 @@ Stow, incluso cuando repita un paquete del sistema ya solicitado por la base.
 La idempotencia del package manager resuelve esa repetición sin importar
 manifiestos internos de otro repositorio.
 
-La base posee aplicaciones independientes de sesión como mpv, Playerctl,
-Brave, Zathura, Micro, Yazi y Thunar. bspwm poseerá sus componentes X11; Mango
-poseerá MangoWC, Waybar, launcher y utilidades específicas de Wayland. La
-orquestación futura invocará el entrypoint público de cada repositorio y no
-leerá ni modificará sus manifiestos internos.
+La base posee aplicaciones independientes de sesión como Alacritty, mpv,
+Playerctl, Brave, Zathura, Micro, Yazi y Thunar. Su perfil `desktop` instala
+Alacritty y JetBrains Mono y enlaza una única configuración Catppuccin para X11
+y Wayland. bspwm poseerá sus componentes X11; Mango poseerá MangoWC, Waybar,
+launcher y utilidades específicas de Wayland. La orquestación futura invocará
+el entrypoint público de cada repositorio y no leerá ni modificará sus
+manifiestos internos.

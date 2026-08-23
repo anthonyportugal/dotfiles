@@ -1,8 +1,10 @@
+alacritty
 gvfs
 mpv
 mpv-mpris
 playerctl
 thunar
+ttf-jetbrains-mono
 tumbler
 xdg-utils
 zathura
