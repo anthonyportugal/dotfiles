@@ -49,6 +49,15 @@ Al cerrar una fase:
 4. informar archivos cambiados, validaciones y decisiones pendientes;
 5. detenerse antes de la siguiente fase salvo autorización explícita reciente.
 
+## Convención de commits
+
+Cuando un commit esté explícitamente autorizado:
+
+- usar `emoji type(scope): subject` según gitmoji y Conventional Commits;
+- escribir el subject en inglés y en modo imperativo;
+- comenzar en minúscula la primera palabra después de `:`;
+- verificar el contenido staged y la firma antes de hacer push.
+
 ## Límites arquitectónicos
 
 - Este repositorio es la base pública y no debe depender de bspwm, Mango ni de

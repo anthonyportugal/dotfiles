@@ -4,9 +4,9 @@
 >
 > Última actualización: 2026-08-26
 >
-> Fase activa: P9 — P9.1–P9.6 completadas y validadas
+> Fase activa: ninguna — P9 completada y validada
 >
-> Siguiente checkpoint: P9.7 pendiente de aprobación explícita
+> Siguiente checkpoint: P10 pendiente de aprobación explícita
 
 ## 1. Propósito de este documento
 
@@ -701,6 +701,29 @@ y estado local. P9.6 amplía su smoke test aislado para cubrir el ciclo Stow del
 archivo global, límites de ownership y el instalador idempotente de skills sin
 tocar el home vivo.
 
+### D33 — Cierre privado, cuarentena legado y secretos fuera de dotfiles
+
+P9.7 cierra la disposición de las fuentes anteriores sin mezclarlas con el
+checkout limpio. El árbol, la historia alcanzable y los objetos locales no
+alcanzables del repositorio actual pasaron el scanner sin hallazgos. Una
+clonación bare efímera del remoto confirmó una única historia limpia y que la
+notación distinta de `origin` en el checkout anterior resuelve al mismo remoto
+actual, no a un segundo repositorio que pueda eliminarse.
+
+La historia antigua permanece sólo en un checkout local read-only. Contiene
+credenciales históricas cloud y tokens de servicios que el usuario confirmó
+revocados; ningún valor se migró ni se documenta. O11 queda resuelta mediante
+cuarentena hasta validar otra máquina y completar el plan, seguida de la
+eliminación manual exclusiva del checkout local. No se hará fetch, merge, push
+ni reescritura desde esa fuente, y el remoto actual debe conservarse.
+
+P9.8 no introduce un gestor de secretos en los dotfiles. El password manager
+existente cubre el uso humano, pero no se integra con shell, bootstrap ni
+repositorios; una solución no interactiva se evaluará sólo con un consumidor
+real. Las private keys SSH continúan siendo locales, distintas por dispositivo
+y separadas por propósito. Con ello O8 queda resuelta para el alcance actual
+sin ampliar la superficie de secretos.
+
 ## 7. Decisiones descartadas por ahora
 
 | Alternativa | Motivo principal |
@@ -939,7 +962,7 @@ submodule. Mango deberá cumplir primero el mismo requisito de autonomía.
 | P6 | Bootstrap y doctor del repositorio base. | Dry-run, selección Shelly/paru/yay/pacman, instalación por perfiles, Stow y validaciones son idempotentes; base funciona sola. | **Completa** |
 | P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Completa** |
 | P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | **Completa** |
-| P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | **Activa** |
+| P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | **Completa** |
 | P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. | Pendiente |
 | P11 | Repositorio público Mango. | Stack decidido; MangoWC/Waybar/launcher y dependencias tienen ownership; instalación standalone y composición opcional validadas. | Pendiente |
 | P12 | Cierre de migración. | Documentación estable, deuda residual y decisiones históricas revisadas; el plan se conserva, transforma o archiva deliberadamente. | Pendiente |
@@ -1224,9 +1247,12 @@ forma individual. Con ello se cumplen los cuatro criterios de salida de P8.
    portable que justifique ownership.
 6. **Completa:** probar ausencia, instalación, precedencia, idempotencia, unlink,
    ciclo criptográfico Git/SSH, límites de agentes y skills en fixtures aislados.
-7. Validar el árbol y la historia actuales, y cerrar deliberadamente la
-   disposición de las fuentes privadas anteriores.
-8. Mantener secret management como problema separado.
+7. **Completa:** validar árbol, historia alcanzable y objetos locales; mantener
+   la fuente anterior en cuarentena hasta retirarla después de la validación
+   multi-PC, sin confundir su URL alternativa con otro remoto.
+8. **Completa:** revocar credenciales históricas y mantener secret management
+   fuera de Git; password manager manual existente, SSH local por dispositivo
+   y automatización diferida hasta tener un consumidor real.
 
 ### P10 — CachyOS limpio
 
@@ -1309,8 +1335,6 @@ Estas decisiones no autorizan implementación hasta resolverse en su fase:
 | O3 | Visor de imágenes y asociaciones MIME restantes. | Cuando se seleccione un visor |
 | O5 | Stack mínimo definitivo de Mango además de MangoWC/Waybar. | P11 |
 | O7 | Hacer público el repositorio de wallpapers y su mecanismo opt-in. | P8/P11 |
-| O8 | Herramienta/proceso de gestión de secretos. | Cuando exista la necesidad |
-| O11 | Destino final de cualquier historia privada anterior tras validar el checkout limpio. | Cierre de P9 |
 | O12 | Versión exacta de Node global de respaldo; por ahora no se instala ninguna. | Cuando un proyecto la requiera |
 | O13 | Estrategia multi-cuenta y autenticación para AWS CLI y GitHub CLI. | Cuando exista un caso de uso activo |
 
@@ -1329,7 +1353,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P6 | **Completa** | Entrypoint, dry-run/apply, doctor, unlink, adaptadores y smoke test validados el 2026-08-20. |
 | P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
 | P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
-| P9 | **Activa** | P9.1–P9.6 y D31–D32: fundación, pnpm, componentes removibles, Git/SSH fail-closed y agentes/skills mínimos validados. P9.7 requiere aprobación. |
+| P9 | **Completa** | P9.1–P9.8 y D31–D33: capa privada autónoma, Git/SSH fail-closed, agentes/skills mínimos, historia limpia y límites de secretos validados. |
 | P10 | Pendiente | Requiere nueva aprobación y entorno de prueba adecuado. |
 | P11 | Pendiente | Requiere nueva aprobación y creación del repo Mango. |
 | P12 | Pendiente | Requiere nueva aprobación. |
@@ -1387,6 +1411,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-24 | P9.4 completada. | La base incorpora defaults Git portables e includes privado/local opcionales, documenta una integración agnóstica y prueba que funciona tanto sin capa privada como con precedencia local. |
 | 2026-08-25 | D31; P9.3/P9.4 endurecidas y cobertura Git/SSH de P9.6 completada. | La revisión multi-PC separa auth/sign por dispositivo, bloquea Git legacy y hosts/remotos ambiguos, añade trust multi-key, revocación, keygen/doctor y un commit firmado verificado en un fixture interno. P9.5 no se inicia. |
 | 2026-08-26 | D32; P9.5 y P9.6 completadas. | Se versiona sólo una política global portable de Codex; cuatro skills quedan declaradas con CLI fijado, fuente/ref auditadas y digest fail-closed mediante `pnpm dlx`. Auth, runtime, trust, MCP y configuración nativa de Antigravity permanecen fuera; el smoke test valida Stow, ownership, idempotencia y drift sin tocar el home real. |
+| 2026-08-26 | D33; P9.7/P9.8 y P9 completadas. | El remoto y la historia actual pasan auditoría aislada; la fuente local anterior queda en cuarentena hasta la validación multi-PC y luego se eliminará sin tocar el remoto actual. Las credenciales históricas fueron revocadas, el password manager queda manual y las claves SSH siguen locales por dispositivo. |
 
 ## 21. Relación con otros documentos
 

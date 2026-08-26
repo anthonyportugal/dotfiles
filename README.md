@@ -6,8 +6,9 @@ portable, modular e independiente del Window Manager o compositor elegido.
 
 > **Estado:** migración en curso. El repositorio base ya dispone de bootstrap y
 > doctor propios, y el repositorio bspwm ya fue validado como proyecto
-> standalone. La integración opcional entre ambos ya está disponible; la
-> validación final desde un CachyOS limpio pertenece a una fase posterior.
+> standalone. La integración opcional entre ambos y el contrato con una capa
+> privada independiente ya están cerrados; la validación desde un CachyOS limpio
+> pertenece a P10.
 
 ## Responsabilidad de este repositorio
 
