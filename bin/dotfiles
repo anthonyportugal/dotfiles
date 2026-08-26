@@ -948,6 +948,52 @@ validate_zsh_syntax() {
   return "$result"
 }
 
+validate_git_contract() {
+  local config_path="$STOW_DIR/git/.config/git/config"
+  local legacy_config="$TARGET_DIR/.gitconfig"
+  local identity_key
+  local -a include_paths=()
+
+  array_contains STOW_PACKAGES git || return 0
+  command_exists git || {
+    error "Git es necesario para validar su configuración pública"
+    return 1
+  }
+  [[ -f "$config_path" ]] || {
+    error "falta la configuración Git pública: $config_path"
+    return 1
+  }
+  git config --file "$config_path" --list --name-only >/dev/null || {
+    error "configuración Git pública inválida: $config_path"
+    return 1
+  }
+  [[ $(git config --file "$config_path" --get user.useConfigOnly || true) == true ]] || {
+    error "Git público debe usar user.useConfigOnly=true para fallar sin identidad"
+    return 1
+  }
+  for identity_key in user.name user.email user.signingKey; do
+    if git config --file "$config_path" --get "$identity_key" >/dev/null 2>&1; then
+      error "Git público no debe definir $identity_key"
+      return 1
+    fi
+  done
+  mapfile -t include_paths < <(
+    git config --file "$config_path" --get-all include.path || true
+  )
+  if (( ${#include_paths[@]} != 2 )) || \
+      [[ "${include_paths[0]-}" != \~/.config/git/private.gitconfig ]] || \
+      [[ "${include_paths[1]-}" != \~/.config/git/local.gitconfig ]]; then
+    error "los includes Git deben conservar la precedencia público → privado → local"
+    return 1
+  fi
+  if [[ -e "$legacy_config" || -L "$legacy_config" ]]; then
+    error "configuración Git legacy detectada: $legacy_config"
+    error "Git la leería después de ~/.config/git/config y podría sobrescribir el contrato nuevo; respáldela y migre sus responsabilidades antes de aplicar"
+    return 1
+  fi
+  info "Contrato Git público validado (fail-closed, sin identidad y sin ~/.gitconfig legacy)"
+}
+
 select_registered_zsh_shell() {
   local shell_path
 
@@ -1111,6 +1157,7 @@ bootstrap() {
   fi
 
   if (( STOW_ENABLED == 1 )); then
+    validate_git_contract || plan_valid=0
     ensure_no_link_collisions || plan_valid=0
     if command_exists stow; then
       info "Simulación nativa de GNU Stow"
@@ -1171,6 +1218,7 @@ doctor() {
   fi
 
   if (( STOW_ENABLED == 1 )); then
+    validate_git_contract || result=1
     if ! command_exists stow; then
       error "GNU Stow no está instalado"
       result=1

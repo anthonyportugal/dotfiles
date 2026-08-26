@@ -1,0 +1,17 @@
+# Portable Git defaults. Identity, signing and organization-specific settings
+# belong in the optional private include; machine-only overrides load last.
+
+[core]
+    editor = micro
+
+[init]
+    defaultBranch = main
+
+[user]
+    useConfigOnly = true
+
+[include]
+    path = ~/.config/git/private.gitconfig
+
+[include]
+    path = ~/.config/git/local.gitconfig

@@ -55,6 +55,13 @@ no a este feature común.
 No existe un perfil de desarrollo JavaScript público: Node.js, npm, pnpm, Bun
 y sus integraciones pertenecen a los dotfiles privados.
 
+El paquete Stow `git` pertenece a `core`. Sólo configura defaults portables y
+los includes opcionales `~/.config/git/private.gitconfig` y
+`~/.config/git/local.gitconfig`; no contiene nombre, email, signing key, hosts
+ni rutas laborales. Los archivos ausentes se ignoran de forma nativa por Git.
+También activa `user.useConfigOnly = true`, y el preflight rechaza un
+`~/.gitconfig` legacy cuya precedencia posterior pudiera debilitar el contrato.
+
 Los cuatro complementos públicos de Zsh pertenecen a `core`.
 `zsh-completions` aporta definiciones bajo el `fpath` estándar del sistema;
 `zsh-history-substring-search` se carga después de syntax-highlighting y enlaza

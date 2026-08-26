@@ -74,6 +74,7 @@ paquete pequeño y refleja rutas relativas al home usando sus nombres reales:
 home/
 ├── alacritty/
 ├── bat/
+├── git/
 ├── starship/
 ├── xdg-defaults/
 └── zsh/
@@ -243,6 +244,106 @@ simula; `--apply` retira los enlaces que Stow administra:
 ```
 
 La interfaz completa está disponible con `./bin/dotfiles help`.
+
+## Configuración privada y local opcional
+
+La base no necesita un repositorio privado para funcionar. Expone únicamente
+puntos de inclusión estables que cada persona puede completar mediante
+archivos propios o cualquier repositorio externo bajo su control:
+
+| Área | Privado opcional | Local de máquina |
+| --- | --- | --- |
+| Zsh | `~/.config/zsh/private.zsh` | `~/.config/zsh/local.zsh` |
+| Git | `~/.config/git/private.gitconfig` | `~/.config/git/local.gitconfig` |
+
+La precedencia es:
+
+```text
+defaults públicos → privado opcional → local de máquina
+```
+
+Git ignora limpiamente los includes ausentes. La configuración pública define
+editor, rama inicial y `user.useConfigOnly = true`; no contiene ni infiere
+nombre, email, firma o ajustes de organizaciones. El modo estricto hace que un
+commit sin identidad clasificada falle en vez de heredar una cuenta equivocada.
+Una capa privada puede usar `includeIf` para seleccionar identidades por
+checkout, por ejemplo:
+
+```gitconfig
+[includeIf "gitdir:~/dev/work/example/"]
+    path = ~/.config/git/identities/example.gitconfig
+```
+
+El slash final hace que la condición cubra recursivamente los repositorios bajo
+esa carpeta. Conviene evitar una identidad personal global cuando también se
+usan equipos laborales: un repo sin clasificar debería fallar antes que crear
+un commit con la identidad incorrecta.
+
+No debe coexistir un `~/.gitconfig` legacy. Git carga el archivo XDG y después
+`~/.gitconfig`, por lo que este último podría sobrescribir el contrato
+público→privado→local. `bootstrap` y `doctor` lo detectan y se detienen para que
+su migración o backup sea una decisión explícita.
+
+OpenSSH no tiene un include público porque sus hosts e identidades pertenecen a
+la capa privada o local. Una configuración privada puede administrar
+`~/.ssh/config` y fragmentos no secretos, pero las private keys, credenciales,
+`known_hosts`, sockets y estado del agente deben permanecer fuera de Git.
+Con múltiples cuentas, cada remoto debería usar un alias SSH explícito y cada
+bloque debería fijar `IdentitiesOnly yes`; los hosts canónicos ambiguos no
+deberían actuar como fallback personal.
+
+El bootstrap público no busca, clona ni ejecuta una capa privada. Si existe, se
+instala por separado y consume estos contratos; si se retira, base, bspwm y los
+futuros repositorios públicos continúan funcionando.
+
+### Integrar una capa privada propia
+
+Después de instalar la base, hay dos opciones equivalentes:
+
+1. crear manualmente sólo los archivos opcionales necesarios; o
+2. mantenerlos en un repositorio privado independiente con su propio bootstrap
+   o con GNU Stow.
+
+Un layout Stow mínimo podría ser:
+
+```text
+private-dotfiles/
+└── home/
+    ├── git-private/
+    │   └── .config/git/private.gitconfig
+    ├── ssh-private/
+    │   └── .ssh/config
+    └── zsh-private/
+        └── .config/zsh/private.zsh
+```
+
+Y se aplicaría desde ese repositorio, no desde la base pública:
+
+```bash
+stow --dir=home --target="$HOME" --no-folding \
+  git-private ssh-private zsh-private
+```
+
+Los nombres de paquetes y la herramienta del repositorio privado son libres;
+el contrato estable son las rutas de la tabla anterior. Si se usa Git por
+contexto, las condiciones deben cubrir raíces explícitas y cada identidad debe
+vivir en un archivo independiente. Para SSH, sólo deben versionarse hosts,
+opciones y registros de confianza públicos; las claves privadas —idealmente
+distintas por equipo y por propósito auth/sign— se provisionan por separado.
+
+Una comprobación breve después de integrar ambas capas es:
+
+```bash
+git config --global --show-origin --get init.defaultBranch
+git config --show-origin --get user.email   # dentro de un repo clasificado
+zsh -lic 'alias >/dev/null'
+ssh -G nombre-del-host >/dev/null
+```
+
+El archivo local de Git se carga después del privado. En OpenSSH la precedencia
+depende del orden y normalmente gana el primer valor encontrado, por lo que una
+capa privada que permita overrides de máquina debe incluirlos antes de sus
+defaults.
 
 ## Integración opcional con bspwm
 

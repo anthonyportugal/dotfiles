@@ -2,11 +2,11 @@
 
 > Estado: activo
 >
-> Última actualización: 2026-08-23
+> Última actualización: 2026-08-25
 >
-> Fase activa: ninguna — P8 completada el 2026-08-23
+> Fase activa: P9 — P9.1–P9.4 completadas; hito Git/SSH endurecido y probado
 >
-> Siguientes fases autorizadas: ninguna
+> Siguiente checkpoint: P9.5 pendiente de aprobación explícita
 
 ## 1. Propósito de este documento
 
@@ -548,6 +548,134 @@ no forma parte del contrato del bootstrap: cada hijo conserva su propio
 repositorio Git y `--wm-path` continúa aceptando cualquier checkout externo
 válido. La carpeta común no constituye un monorepo ni introduce submodules.
 
+### D27 — Repositorio privado nuevo, limpio y autónomo
+
+O6 se resuelve con un checkout Git independiente fuera de los repositorios
+públicos. Su ubicación y remoto no se registran aquí. Se crea con historia
+nueva para validar primero su contenido, guardas e instalación. Los dotfiles
+privados anteriores y los archivos vivos del home pueden servir como referencia
+read-only, pero no se modificarán ni se copiarán en bloque durante esta
+migración.
+
+El repositorio privado adopta GNU Stow con `home/` como stow directory,
+entrypoint propio, dry-run predeterminado, `--no-folding`, doctor, unlink y un
+scanner heurístico que nunca imprime el valor detectado. Su primer paquete sólo
+materializa el drop-in Zsh no secreto ya previsto por la base; identidades Git,
+hosts SSH, aliases reales, dependencias privadas y agentes se incorporarán en
+checkpoints posteriores después de revisar cada responsabilidad.
+
+No se añadirá inicialmente `--private-path` al bootstrap público. Ejecutar el
+entrypoint privado por separado mantiene autonomía y evita convertir una
+convención personal en requisito para otros usuarios. La base documentará en
+P9 el contrato de includes y la instalación opcional, sin conocer URL, remoto
+ni internals del repositorio privado.
+
+La selección o disposición final de historias privadas anteriores queda
+separada de la construcción del checkout limpio. No se reescribirá, eliminará
+ni publicará ningún remoto como efecto de esta decisión.
+
+### D28 — Primera propuesta de perfil privado (reemplazada)
+
+La primera implementación de P9.2 agrupó en `development` Node.js, npm, pnpm,
+Bun, Yarn, AWS CLI, SDKs condicionales y workflows de dos empresas. Aunque era
+instalable y no contenía credenciales, su ciclo de vida era incorrecto: dejar
+un trabajo exigía editar un paquete compartido y podía mantener aliases o
+operaciones de una organización ya inactiva. Esta decisión queda reemplazada
+por D29; se conserva aquí para documentar por qué se descartó.
+
+### D29 — pnpm standalone y contextos laborales independientes
+
+Los perfiles privados comunes siguen siendo acumulativos, pero no representan
+empresas. `core` instala el entrypoint Zsh; `development` añade únicamente
+configuración genérica, `curl` y un pnpm standalone con versión exacta. Los
+contextos laborales son componentes opt-in independientes, seleccionables con
+`--work <nombre>` y retirables de forma exacta con
+`disable-work <nombre> --apply`. Cada componente dispone de manifests propios
+de paquetes, herramientas externas y Stow. Compartir dependencias por nombre
+no implica compartir ownership de archivos.
+
+Al 2026-08-23, instalar `pnpm` mediante pacman arrastra `node-gyp`, cuya
+dependencia obligatoria `nodejs` introduciría un Node global. Por ello pnpm
+11.23.0 se instala desde el asset standalone oficial del release, con URL
+construida desde la versión y SHA-256 fijado en el repositorio. El instalador no
+usa un pipe remoto, no ejecuta `pnpm setup`, no modifica archivos del shell y
+se niega a reemplazar un binario fuera de su layout administrado.
+
+Node.js no se instala automáticamente. Cuando sea necesario se seleccionará
+mediante `pnpm runtime` con versión exacta; los proyectos deberían declarar
+`devEngines.runtime` y conservar su resolución en el lockfile. npm, Yarn, Bun,
+Flutter/FVM, Android SDK y vcpkg permanecen fuera hasta tener un consumidor
+activo. AWS CLI y GitHub CLI también se difieren hasta diseñar sus cuentas y
+credenciales por separado.
+
+El primer componente laboral privado queda limitado por ahora a navegación no
+secreta. Un contexto de un empleador anterior no se materializa como activo:
+los repositorios y commits históricos ya registran esa relación y mantener
+aliases, deploys o identidades activas aumentaría el riesgo de usar un contexto
+obsoleto. Ningún nombre, archivo vivo ni fuente privada anterior se incorpora a
+este repositorio público como efecto de la rectificación.
+
+### D30 — Git por checkout y SSH privado por unidad removible
+
+La base pública es dueña de `~/.config/git/config`: define sólo defaults
+portables y carga `private.gitconfig` seguido de `local.gitconfig`. Los includes
+ausentes no son un error. No contiene nombre, email, firma, hosts ni rutas
+personales o laborales.
+
+La capa privada activa `user.useConfigOnly` y no define identidad global. Cada
+identidad se selecciona con `includeIf gitdir` sobre raíces explícitas y
+recursivas; cada empleador dispone de un archivo propio y forma parte de su
+paquete Stow removible. Si se desactiva ese componente, sus checkouts quedan sin
+identidad y no heredan la personal. Un contexto laboral anterior no se activa:
+conservar su historial Git es suficiente hasta que exista una necesidad real
+de operar sobre esos repositorios.
+
+Las firmas usan el backend SSH de Git, claves públicas versionables y un
+`allowed-signers` por identidad. Las claves privadas, passphrases y estado del
+agente quedan fuera de Git y de Stow. OpenSSH también pertenece exclusivamente
+a la capa privada/local: un entrypoint carga primero el override de máquina y
+después fragmentos personales o laborales. Cada host fija `IdentitiesOnly yes`
+y cada componente laboral retira juntos su identidad Git, host SSH y clave
+pública sin borrar secretos locales.
+
+El bootstrap privado valida sintaxis Git, fragmentos SSH, claves públicas,
+permisos `0700`, ausencia de keys privadas, activación por ruta y retiro sin
+fallback. La documentación pública explica el contrato y una integración
+genérica, pero no registra ruta, URL, remoto ni internals del repositorio
+privado. Esta decisión completó inicialmente P9.3 y P9.4; D31 endurece ese hito
+sin adelantar la configuración de agentes separada para P9.5.
+
+### D31 — Identidades fail-closed y claves por dispositivo/propósito
+
+La revisión operativa de P9.3/P9.4 detectó que `~/.gitconfig` tiene precedencia
+posterior a `$XDG_CONFIG_HOME/git/config`, que una identidad personal sobre los
+hosts SSH canónicos permite remotos ambiguos y que versionar una signing public
+key junto a Stow acopla todos los equipos a una sola private key. El contrato se
+endurece antes de aplicarlo al home real.
+
+La base activa `user.useConfigOnly = true`, no define identidad y bloquea
+bootstrap/doctor mientras exista `~/.gitconfig`. La capa privada conserva
+`includeIf gitdir` por raíces explícitas, añade metadatos de perfil y un
+`pre-push` que permite sólo aliases declarados por la identidad efectiva. Los
+hosts `github.com` y `gitlab.com` quedan sin identity file ni agent; personal y
+cada empresa usan aliases distintos, `IdentitiesOnly yes`, agent forwarding
+deshabilitado y cache de autenticación acotada.
+
+Cada dispositivo genera dos pares Ed25519 locales y no versionados: `auth` para
+el transporte y `sign` para commits/tags. Los paths estables siguen la forma
+`~/.ssh/keys/id_ed25519_<dominio>_<perfil>_<propósito>` y el comentario público
+registra `perfil`, `propósito` y `device`. Los trust stores versionados aceptan
+múltiples signing public keys por perfil y un registro común de revocación
+permite rechazar material comprometido sin borrar su historia.
+
+`identity-keygen` es dry-run por defecto, no sobrescribe claves, no carga el
+agente ni llama a proveedores; `--register --apply` sólo añade la signing public
+key al checkout privado. `identity-doctor` valida pares, fingerprints, permisos,
+trust/revocation, aliases y opcionalmente identidad, remotos y firma de `HEAD`.
+El smoke test usa un checkout y home efímeros dentro del workspace para generar
+claves, firmar/verificar un commit, probar registro idempotente, bloquear cruces
+de push y detectar revocación. Ninguna prueba toca el home vivo.
+
 ## 7. Decisiones descartadas por ahora
 
 | Alternativa | Motivo principal |
@@ -785,7 +913,7 @@ submodule. Mango deberá cumplir primero el mismo requisito de autonomía.
 | P6 | Bootstrap y doctor del repositorio base. | Dry-run, selección Shelly/paru/yay/pacman, instalación por perfiles, Stow y validaciones son idempotentes; base funciona sola. | **Completa** |
 | P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Completa** |
 | P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | **Completa** |
-| P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | Pendiente |
+| P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | **Activa** |
 | P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. | Pendiente |
 | P11 | Repositorio público Mango. | Stack decidido; MangoWC/Waybar/launcher y dependencias tienen ownership; instalación standalone y composición opcional validadas. | Pendiente |
 | P12 | Cierre de migración. | Documentación estable, deuda residual y decisiones históricas revisadas; el plan se conserva, transforma o archiva deliberadamente. | Pendiente |
@@ -1056,11 +1184,22 @@ forma individual. Con ello se cumplen los cuatro criterios de salida de P8.
 
 ### P9 — Privado
 
-1. Definir rutas de includes para Zsh, Git, SSH y entorno.
-2. Definir repo/layout privado sin registrar su URL en público.
-3. Probar ausencia, instalación y precedencia.
-4. Añadir validaciones contra datos privados/secretos accidentales.
-5. Mantener secret management como problema separado.
+1. **Completa:** crear la fundación limpia y autónoma sin importar archivos
+   vivos.
+2. **Completa y rectificada:** migrar Zsh y entorno no secreto por
+   responsabilidad; tooling genérico y cada empresa tienen ciclos de vida
+   independientes.
+3. **Completa y endurecida:** diseñar y validar Git/SSH multi-identidad con
+   claves locales separadas por equipo/propósito, sin versionar secrets.
+4. **Completa y endurecida:** documentar en la base los includes, precedencia y
+   fail-closed sin acoplarla a un repositorio privado concreto.
+5. Separar configuración portable de Codex y Antigravity de auth/runtime/trust.
+6. **En curso:** el hito Git/SSH ya prueba ausencia, instalación, precedencia,
+   idempotencia, unlink y ciclo criptográfico; falta incorporar P9.5 al alcance
+   integral de la fase.
+7. Validar árbol e historia antes de decidir remoto o disposición de fuentes
+   anteriores.
+8. Mantener secret management como problema separado.
 
 ### P10 — CachyOS limpio
 
@@ -1142,9 +1281,11 @@ Estas decisiones no autorizan implementación hasta resolverse en su fase:
 | O1 | Wofi o Fuzzel como launcher Wayland. | P11 |
 | O3 | Visor de imágenes y asociaciones MIME restantes. | Cuando se seleccione un visor |
 | O5 | Stack mínimo definitivo de Mango además de MangoWC/Waybar. | P11 |
-| O6 | Nombre, ubicación local y estructura final del repo privado. | P9 |
 | O7 | Hacer público el repositorio de wallpapers y su mecanismo opt-in. | P8/P11 |
 | O8 | Herramienta/proceso de gestión de secretos. | Cuando exista la necesidad |
+| O11 | Destino final de cualquier historia privada anterior tras validar el checkout limpio. | Cierre de P9 |
+| O12 | Versión exacta de Node global de respaldo; por ahora no se instala ninguna. | Cuando un proyecto la requiera |
+| O13 | Estrategia multi-cuenta y autenticación para AWS CLI y GitHub CLI. | Cuando exista un caso de uso activo |
 
 ## 20. Seguimiento de progreso
 
@@ -1161,7 +1302,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P6 | **Completa** | Entrypoint, dry-run/apply, doctor, unlink, adaptadores y smoke test validados el 2026-08-20. |
 | P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
 | P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
-| P9 | Pendiente | Requiere nueva aprobación y alcance del repo privado. |
+| P9 | **Activa** | P9.1–P9.4 y D31: fundación, pnpm, componentes removibles y Git/SSH fail-closed con ciclo criptográfico aislado validados. P9.5 requiere aprobación. |
 | P10 | Pendiente | Requiere nueva aprobación y entorno de prueba adecuado. |
 | P11 | Pendiente | Requiere nueva aprobación y creación del repo Mango. |
 | P12 | Pendiente | Requiere nueva aprobación. |
@@ -1211,6 +1352,13 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-23 | D26; O9 resuelta. | Se aprobó `--wm` con checkout externo explícito, perfil separado y delegación al entrypoint público; HTTPS y SSH son alternativas de clonación, no parte del contrato. |
 | 2026-08-23 | P8 completada. | Smoke test y composición con el repositorio bspwm real pasaron el ciclo completo; se documentaron ambos transportes y se retiraron gitlink y `.gitmodules` sin alterar el remoto. |
 | 2026-08-23 | Convención local posterior a P8. | Tras validar la integración, el usuario eligió organizar checkouts independientes bajo `~/.dotfiles/base` y `~/.dotfiles/wm/`; se actualizan sólo recomendaciones y ejemplos, no el contrato. |
+| 2026-08-23 | D27; O6 resuelta y P9 iniciada. | Se autoriza una historia privada nueva fuera de los repositorios públicos; su ruta/remoto no se registran aquí y las fuentes anteriores permanecen read-only. |
+| 2026-08-23 | Fundación P9 creada. | El repo privado dispone de reglas, scanner, hook local, paquete Zsh vacío, bootstrap/doctor/unlink y smoke test aislado; Git, SSH y agentes reales siguen pendientes. |
+| 2026-08-23 | D28; P9.2 completada. | Zsh y scripts no secretos se migran por responsabilidad; perfiles y backends pasan smoke tests, el release usa dry-run/confirmaciones/perfil AWS y no se importan credenciales ni archivos vivos. |
+| 2026-08-23 | D29; P9.2 rectificada tras feedback. | Se reemplaza el perfil laboral mezclado por pnpm standalone fijado y componentes por empresa; Node/npm/Yarn/Bun/AWS/SDKs y contextos obsoletos se retiran. El smoke test prueba activación y retiro selectivos sin afectar capas comunes. |
+| 2026-08-24 | D30; P9.3 completada. | Git queda sin identidad global y selecciona archivos por raíces explícitas; SSH usa fragmentos con identidades limitadas. Keys privadas y estado de agente no se versionan; cada unidad laboral puede retirarse sin fallback personal. |
+| 2026-08-24 | P9.4 completada. | La base incorpora defaults Git portables e includes privado/local opcionales, documenta una integración agnóstica y prueba que funciona tanto sin capa privada como con precedencia local. |
+| 2026-08-25 | D31; P9.3/P9.4 endurecidas y cobertura Git/SSH de P9.6 completada. | La revisión multi-PC separa auth/sign por dispositivo, bloquea Git legacy y hosts/remotos ambiguos, añade trust multi-key, revocación, keygen/doctor y un commit firmado verificado en un fixture interno. P9.5 no se inicia. |
 
 ## 21. Relación con otros documentos
 

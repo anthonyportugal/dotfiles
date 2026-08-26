@@ -6,6 +6,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 DOTFILES="$REPO_ROOT/bin/dotfiles"
 TEST_ROOT=""
+TEST_TMP_PARENT=${DOTFILES_TEST_TMPDIR:-/tmp}
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -13,7 +14,7 @@ fail() {
 }
 
 cleanup() {
-  [[ -n "$TEST_ROOT" && "$TEST_ROOT" == /tmp/dotfiles-bootstrap-smoke.* ]] || return 0
+  [[ -n "$TEST_ROOT" && "$TEST_ROOT" == "$TEST_TMP_PARENT"/dotfiles-bootstrap-smoke.* ]] || return 0
   find "$TEST_ROOT" -mindepth 1 -delete
   find "$TEST_ROOT" -depth -type d -empty -delete
 }
@@ -29,7 +30,8 @@ if command -v alacritty >/dev/null 2>&1; then
     >/dev/null || fail "la configuración de Alacritty no es válida"
 fi
 
-TEST_ROOT=$(mktemp -d /tmp/dotfiles-bootstrap-smoke.XXXXXX)
+[[ -d "$TEST_TMP_PARENT" ]] || fail "no existe el directorio temporal: $TEST_TMP_PARENT"
+TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-bootstrap-smoke.XXXXXX")
 TARGET_DIR="$TEST_ROOT/home with spaces"
 CONFLICT_DIR="$TEST_ROOT/conflict"
 PARENT_CONFLICT_DIR="$TEST_ROOT/parent-conflict"
@@ -49,6 +51,42 @@ ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/bspwm"
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR" --apply
 "$DOTFILES" doctor --profile desktop --stow-only --target "$TARGET_DIR"
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR" --apply
+
+# Git público funciona sin includes opcionales y respeta la precedencia
+# pública → privada → local sin introducir una identidad.
+PUBLIC_GIT_CONFIG="$TARGET_DIR/.config/git/config"
+[[ -L "$PUBLIC_GIT_CONFIG" ]] || fail "core no instaló la configuración Git"
+HOME="$TARGET_DIR" XDG_CONFIG_HOME="$TARGET_DIR/.config" \
+  git config --global --get init.defaultBranch | grep -qx main || \
+  fail "Git no cargó el default público"
+HOME="$TARGET_DIR" XDG_CONFIG_HOME="$TARGET_DIR/.config" \
+  git config --global --get user.useConfigOnly | grep -qx true || \
+  fail "Git público no activó el modo fail-closed"
+if HOME="$TARGET_DIR" XDG_CONFIG_HOME="$TARGET_DIR/.config" \
+    git config --global --get user.email >/dev/null 2>&1; then
+  fail "la base pública definió una identidad Git"
+fi
+printf '%s\n' '[dotfiles-test]' '    precedence = private' \
+  > "$TARGET_DIR/.config/git/private.gitconfig"
+printf '%s\n' '[dotfiles-test]' '    precedence = local' \
+  > "$TARGET_DIR/.config/git/local.gitconfig"
+git_precedence=$(HOME="$TARGET_DIR" XDG_CONFIG_HOME="$TARGET_DIR/.config" \
+  git config --global --includes --get dotfiles-test.precedence)
+[[ "$git_precedence" == local ]] || \
+  fail "Git no respetó la precedencia público → privado → local"
+
+# ~/.gitconfig tiene precedencia posterior al archivo XDG. El preflight debe
+# bloquear ese estado legacy en lugar de instalar una configuración ambigua.
+LEGACY_TARGET="$TEST_ROOT/legacy git home"
+mkdir "$LEGACY_TARGET"
+printf '%s\n' '[user]' '    email = legacy@example.invalid' \
+  > "$LEGACY_TARGET/.gitconfig"
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$LEGACY_TARGET" \
+    > "$TEST_ROOT/legacy-git.out" 2>&1; then
+  fail "el bootstrap aceptó ~/.gitconfig con precedencia posterior"
+fi
+grep -q 'configuración Git legacy' "$TEST_ROOT/legacy-git.out" || \
+  fail "el conflicto de precedencia Git no fue accionable"
 
 # Cuando el target es el home actual, doctor debe explicar por qué Bash no
 # activaría los plugins aunque los enlaces de Zsh sean correctos.
