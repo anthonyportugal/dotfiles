@@ -91,15 +91,15 @@ conceptos generales.
 Flujo requerido, con un máximo de tres comandos por pregunta:
 
 ```bash
-npx ctx7@latest library <nombre-oficial> "<consulta específica>"
-npx ctx7@latest docs </org/proyecto> "<concepto específico>"
+pnpm dlx ctx7@latest library <nombre-oficial> "<consulta específica>"
+pnpm dlx ctx7@latest docs </org/proyecto> "<concepto específico>"
 ```
 
 Resolver siempre el ID antes de pedir documentación, salvo que el usuario haya
 dado directamente un ID `/org/proyecto`. Elegir la coincidencia oficial con
 mejor relevancia, reputación y cobertura. No incluir información sensible en
 las consultas. Si Context7 informa que se agotó la cuota, avisar y sugerir
-`npx ctx7@latest login` o `CONTEXT7_API_KEY`; no ocultar el fallback.
+`pnpm dlx ctx7@latest login` o `CONTEXT7_API_KEY`; no ocultar el fallback.
 Ejecutar estas consultas fuera del sandbox predeterminado. Ante errores DNS o
 de red, reintentar fuera del sandbox en lugar de repetir dentro de él.
 

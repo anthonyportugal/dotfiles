@@ -2,11 +2,11 @@
 
 > Estado: activo
 >
-> Última actualización: 2026-08-25
+> Última actualización: 2026-08-26
 >
-> Fase activa: P9 — P9.1–P9.4 completadas; hito Git/SSH endurecido y probado
+> Fase activa: P9 — P9.1–P9.6 completadas y validadas
 >
-> Siguiente checkpoint: P9.5 pendiente de aprobación explícita
+> Siguiente checkpoint: P9.7 pendiente de aprobación explícita
 
 ## 1. Propósito de este documento
 
@@ -676,6 +676,31 @@ El smoke test usa un checkout y home efímeros dentro del workspace para generar
 claves, firmar/verificar un commit, probar registro idempotente, bloquear cruces
 de push y detectar revocación. Ninguna prueba toca el home vivo.
 
+### D32 — Agentes mínimos y skills reproducibles
+
+P9.5 adopta una capa de agentes deliberadamente pequeña. El repositorio privado
+es dueño únicamente de un `~/.codex/AGENTS.md` global con instrucciones
+portables; las reglas específicas de un proyecto permanecen junto a ese
+proyecto. No se copian árboles nativos completos de Codex, Antigravity ni otros
+agentes.
+
+Las skills externas se declaran por nombre, fuente, commit auditado, ruta y
+digest canónico del contenido. Una versión exacta del CLI de skills.sh se
+ejecuta mediante `pnpm dlx`: descarga primero a staging y sólo promueve una
+skill si paths, modos y contenido coinciden con el SHA-256 revisado. El CLI no
+permite restaurar directamente esos commits, por lo que el ref conserva la
+trazabilidad de la revisión y el digest aplica el control fail-closed. Un cambio
+upstream o local aborta sin sobrescribir el destino; skills adicionales se
+preservan y los symlinks o tipos especiales dentro de una skill se rechazan.
+
+Quedan fuera de Stow y Git `config.toml`, rules, hooks, trust de workspaces,
+configuración nativa de Antigravity, MCP, auth, tokens, sesiones, historiales,
+memorias, logs, bases de datos y caches. Claude y MCP se difieren hasta que
+exista un caso de uso real cuya parte portable pueda separarse de credenciales
+y estado local. P9.6 amplía su smoke test aislado para cubrir el ciclo Stow del
+archivo global, límites de ownership y el instalador idempotente de skills sin
+tocar el home vivo.
+
 ## 7. Decisiones descartadas por ahora
 
 | Alternativa | Motivo principal |
@@ -748,6 +773,7 @@ su alcance, pero no requiere compartir implementación ni leer manifests ajenos.
 | Aliases personales/laborales | `dotfiles-private` | No requieren editar `.zshrc` público. |
 | Git portable | `dotfiles` | La identidad y ajustes organizacionales entran por include privado. |
 | SSH no secreto | `dotfiles-private` o local | Keys y credenciales permanecen fuera de Git. |
+| Instrucciones globales y skills de agentes | `dotfiles-private` o proyecto | Sólo contenido portable; auth, runtime, trust y MCP permanecen locales. |
 | Bat, Starship, Micro, Yazi y apps comunes | `dotfiles` | Sólo si su configuración es portable y realmente usada. |
 | Brave, Zathura, Thunar | `dotfiles` | Dependencias/app defaults opcionales, no pertenecen a un WM. |
 | `.config/bspwm` y sesión X11 | `bspwm` | Incluye scripts necesarios y elimina herencia Archcraft. |
@@ -1193,12 +1219,13 @@ forma individual. Con ello se cumplen los cuatro criterios de salida de P8.
    claves locales separadas por equipo/propósito, sin versionar secrets.
 4. **Completa y endurecida:** documentar en la base los includes, precedencia y
    fail-closed sin acoplarla a un repositorio privado concreto.
-5. Separar configuración portable de Codex y Antigravity de auth/runtime/trust.
-6. **En curso:** el hito Git/SSH ya prueba ausencia, instalación, precedencia,
-   idempotencia, unlink y ciclo criptográfico; falta incorporar P9.5 al alcance
-   integral de la fase.
-7. Validar árbol e historia antes de decidir remoto o disposición de fuentes
-   anteriores.
+5. **Completa:** separar configuración portable de Codex y skills compartidas
+   de auth, runtime, trust y MCP; Antigravity no aporta aún configuración nativa
+   portable que justifique ownership.
+6. **Completa:** probar ausencia, instalación, precedencia, idempotencia, unlink,
+   ciclo criptográfico Git/SSH, límites de agentes y skills en fixtures aislados.
+7. Validar el árbol y la historia actuales, y cerrar deliberadamente la
+   disposición de las fuentes privadas anteriores.
 8. Mantener secret management como problema separado.
 
 ### P10 — CachyOS limpio
@@ -1302,7 +1329,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P6 | **Completa** | Entrypoint, dry-run/apply, doctor, unlink, adaptadores y smoke test validados el 2026-08-20. |
 | P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
 | P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
-| P9 | **Activa** | P9.1–P9.4 y D31: fundación, pnpm, componentes removibles y Git/SSH fail-closed con ciclo criptográfico aislado validados. P9.5 requiere aprobación. |
+| P9 | **Activa** | P9.1–P9.6 y D31–D32: fundación, pnpm, componentes removibles, Git/SSH fail-closed y agentes/skills mínimos validados. P9.7 requiere aprobación. |
 | P10 | Pendiente | Requiere nueva aprobación y entorno de prueba adecuado. |
 | P11 | Pendiente | Requiere nueva aprobación y creación del repo Mango. |
 | P12 | Pendiente | Requiere nueva aprobación. |
@@ -1359,6 +1386,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-24 | D30; P9.3 completada. | Git queda sin identidad global y selecciona archivos por raíces explícitas; SSH usa fragmentos con identidades limitadas. Keys privadas y estado de agente no se versionan; cada unidad laboral puede retirarse sin fallback personal. |
 | 2026-08-24 | P9.4 completada. | La base incorpora defaults Git portables e includes privado/local opcionales, documenta una integración agnóstica y prueba que funciona tanto sin capa privada como con precedencia local. |
 | 2026-08-25 | D31; P9.3/P9.4 endurecidas y cobertura Git/SSH de P9.6 completada. | La revisión multi-PC separa auth/sign por dispositivo, bloquea Git legacy y hosts/remotos ambiguos, añade trust multi-key, revocación, keygen/doctor y un commit firmado verificado en un fixture interno. P9.5 no se inicia. |
+| 2026-08-26 | D32; P9.5 y P9.6 completadas. | Se versiona sólo una política global portable de Codex; cuatro skills quedan declaradas con CLI fijado, fuente/ref auditadas y digest fail-closed mediante `pnpm dlx`. Auth, runtime, trust, MCP y configuración nativa de Antigravity permanecen fuera; el smoke test valida Stow, ownership, idempotencia y drift sin tocar el home real. |
 
 ## 21. Relación con otros documentos
 
