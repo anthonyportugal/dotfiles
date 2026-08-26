@@ -3,10 +3,10 @@
 Fundación de una sesión Wayland pública, autónoma y orientada a CachyOS/Arch.
 MangoWM será el compositor principal, con un stack pequeño, portable y seguro.
 
-> **Estado:** scaffold inicial de P11. Las decisiones, manifiestos, esquema de
-> temas y validaciones estructurales existen; `bin/mango`, los paquetes Stow y
-> la sesión funcional todavía no están implementados. Este checkout no debe
-> usarse aún para instalar una sesión real.
+> **Estado:** bootstrap standalone disponible para P11. El ciclo dry-run/apply,
+> `doctor`, `unlink`, perfiles, features y el primer paquete Stow están
+> validados de forma aislada. La gestión completa de paquetes requiere todavía
+> la VM y la sesión gráfica completa todavía no está implementada.
 
 ## Objetivos
 
@@ -46,17 +46,22 @@ componentes de Hyprland por defecto.
 
 ```text
 .
+├── bin/mango
 ├── docs/architecture.md
-├── home/.stow
+├── home/
+│   ├── .stow
+│   └── mango/.config/mango/config.conf
 ├── packages/
-├── tests/scaffold-smoke.sh
+├── tests/
+│   ├── bootstrap-smoke.sh
+│   └── scaffold-smoke.sh
 └── themes/catppuccin-mocha-pink/palette.conf
 ```
 
-`home/` está reservado como stow directory, pero no selecciona ningún paquete
-hasta que la primera configuración funcional tenga bootstrap, doctor y pruebas
-de enlace. Los manifests documentan el plan aprobado; todavía no son
-consumidos por un entrypoint.
+`home/` es el único stow directory. El paquete `mango` administra exclusivamente
+`~/.config/mango`; su baseline desactiva blur y carga opcionalmente
+`config.local.conf` sin versionarlo. Los manifests son consumidos por
+`bin/mango` y permanecen separados por procedencia.
 
 ## Temas
 
@@ -68,20 +73,47 @@ Satty renderizarán bajo `$XDG_STATE_HOME/mangowm/theme/`. Cambiar de tema no
 modificará archivos versionados. GTK y aplicaciones compartidas pertenecen al
 repositorio base; la integración se hará después mediante entrypoints públicos.
 
-## Perfiles previstos
+## Perfiles y features
 
 - `core`: sesión mínima segura y completa;
 - `desktop`: barra, capturas, luz nocturna y compatibilidad adicional;
 - feature `laptop`: control real de backlight mediante Brightnessctl;
 - feature `recording`: grabación bajo demanda con wf-recorder.
 
-La procedencia y composición exactas viven en `packages/README.md`.
+La procedencia y composición exactas viven en `packages/README.md`. Las
+features se pueden repetir y se deduplican sin activarse por detección de
+hardware.
+
+## Bootstrap
+
+Todas las operaciones son inspeccionables. `bootstrap` y `unlink` hacen dry-run
+salvo que se proporcione `--apply`; `doctor` nunca modifica el sistema.
+
+```bash
+./bin/mango bootstrap --profile desktop
+./bin/mango bootstrap --profile desktop --feature laptop --apply
+./bin/mango doctor --profile desktop --feature laptop
+./bin/mango unlink --profile desktop
+./bin/mango unlink --profile desktop --apply
+```
+
+`--packages-only` y `--stow-only` permiten aislar responsabilidades. Los
+backends soportados son `auto`, `shelly`, `paru`, `yay` y `pacman`; Pacman falla
+antes de mutar cuando falta un paquete AUR. Nunca ejecute el entrypoint completo
+con `sudo`.
+
+El smoke test enlaza únicamente dentro de un home temporal:
+
+```bash
+./tests/scaffold-smoke.sh
+./tests/bootstrap-smoke.sh
+```
 
 ## Próximo vertical
 
-Implementar `bin/mango` con `bootstrap`, `doctor` y `unlink` dry-run por
-defecto, junto con el primer paquete Stow mínimo. Hasta entonces no se publican
-comandos de instalación ni se crea un remoto.
+Implementar la primera sesión funcional: MangoWM, Foot, Fuzzel, Waybar, Mako,
+lock/idle, portales y wrappers seguros. El bootstrap actual prepara ese trabajo,
+pero aún no constituye una sesión gráfica candidata para uso diario.
 
 ## Licencia
 

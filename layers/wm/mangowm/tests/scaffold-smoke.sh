@@ -77,6 +77,7 @@ assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" waybar
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
 assert_manifest_line "$REPO_ROOT/packages/repo/laptop.txt" brightnessctl
 assert_manifest_line "$REPO_ROOT/packages/repo/recording.txt" wf-recorder
+assert_manifest_line "$REPO_ROOT/packages/stow/core.txt" mango
 
 if grep -ERq '^(mangowc-git|mangowm-git|hyprlock|hypridle|rofi|wofi|cliphist|wl-clip-persist|python-pywal|pulsemixer|xdg-desktop-portal-gnome)$' \
     "$REPO_ROOT/packages"/{repo,aur}; then
@@ -84,8 +85,9 @@ if grep -ERq '^(mangowc-git|mangowm-git|hyprlock|hypridle|rofi|wofi|cliphist|wl-
 fi
 
 [[ -f "$REPO_ROOT/home/.stow" ]] || fail "falta el marcador home/.stow"
-[[ ! -e "$REPO_ROOT/bin/mango" ]] || \
-  fail "el scaffold no debe anunciar un entrypoint todavía no validado"
+[[ -x "$REPO_ROOT/bin/mango" ]] || fail "bin/mango no es ejecutable"
+[[ -f "$REPO_ROOT/home/mango/.config/mango/config.conf" ]] || \
+  fail "falta el primer paquete Stow de MangoWM"
 [[ -f "$REPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
 
@@ -138,9 +140,9 @@ done
 grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
 grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 
-grep -Fq 'scaffold inicial de P11' "$REPO_ROOT/README.md" || \
+grep -Fq 'bootstrap standalone disponible' "$REPO_ROOT/README.md" || \
   fail "README no comunica el estado real"
-grep -Fq 'todavía no están implementados' "$REPO_ROOT/README.md" || \
-  fail "README anuncia capacidades inexistentes"
+grep -Fq 'la sesión gráfica completa todavía no está implementada' \
+  "$REPO_ROOT/README.md" || fail "README anuncia capacidades inexistentes"
 
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'

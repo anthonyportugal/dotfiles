@@ -43,8 +43,8 @@ Cuando un commit esté autorizado:
 - `home/` será el único stow directory y usará paquetes pequeños.
 - Usar siempre `--dir`, `--target`, `--no-folding`, dry-run y detección de
   conflictos; nunca ejecutar `stow --adopt`.
-- El futuro `bin/mango` deberá exponer `bootstrap`, `doctor` y `unlink`, ser
-  dry-run por defecto e idempotente.
+- `bin/mango` expone `bootstrap`, `doctor` y `unlink`, es dry-run por defecto e
+  idempotente; preservar este contrato público.
 - No ejecutar instalación de paquetes ni Stow con privilegios globales; sólo el
   package manager podrá elevar cuando el usuario aplique un plan.
 
@@ -56,16 +56,17 @@ Cuando un commit esté autorizado:
 - Clipboard history/persistence permanece opt-in y fuera del scaffold inicial.
 - Los portales deben tener routing explícito; no iniciar backends duplicados.
 
-## Validación del scaffold
+## Validación
 
-Mientras no exista el bootstrap:
+Cuando se modifiquen el bootstrap, manifests o paquetes Stow:
 
 ```bash
-bash -n tests/scaffold-smoke.sh
-shellcheck -x tests/scaffold-smoke.sh
+bash -n bin/mango tests/bootstrap-smoke.sh tests/scaffold-smoke.sh
+shellcheck -x bin/mango tests/bootstrap-smoke.sh tests/scaffold-smoke.sh
 ./tests/scaffold-smoke.sh
+./tests/bootstrap-smoke.sh
 git diff --check
 ```
 
-Al añadir `bin/mango`, Stow o configuración de sesión, ampliar estas pruebas
-antes de documentar comandos de instalación.
+El smoke test sólo instala enlaces bajo homes temporales y usa backends falsos
+para los planes de paquetes; nunca debe instalar paquetes del host.

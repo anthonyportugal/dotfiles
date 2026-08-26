@@ -126,9 +126,9 @@ vendoriza ni instala silenciosamente el port GTK archivado de Catppuccin.
 - Brightnessctl sólo pertenecerá a la feature `laptop`; Gammastep no se tratará
   como control de backlight.
 
-## Contrato público futuro
+## Contrato público
 
-`bin/mango` expondrá:
+`bin/mango` expone:
 
 ```text
 bootstrap  dry-run por defecto; paquetes + Stow sólo con --apply
@@ -136,7 +136,12 @@ doctor     validación read-only
 unlink     dry-run por defecto; sólo retira symlinks propios
 ```
 
-Usará perfiles `core|desktop`, features `laptop|recording`, backends
+Usa perfiles `core|desktop`, features `laptop|recording`, backends
 `auto|shelly|paru|yay|pacman`, plataforma `auto|cachyos|arch`, target explícito
 y modos `--packages-only`/`--stow-only`. La base podrá delegar en este contrato
 sin leer manifests ni metadata Git de MangoWM.
+
+El primer paquete Stow materializa sólo `~/.config/mango/config.conf`. Mantiene
+un baseline pequeño, carga `config.local.conf` de forma opcional y bloquea rutas
+fuera de `.config/mango`. La sesión y los adaptadores de tema se añadirán en
+verticales posteriores sin ampliar silenciosamente este ownership.

@@ -1,1 +1,1 @@
-# No Stow package is selected until the first functional vertical is ready.
+mango

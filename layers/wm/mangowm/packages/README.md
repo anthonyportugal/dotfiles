@@ -1,8 +1,8 @@
 # Manifiestos de MangoWM
 
-Estos archivos documentan datos de entrada para el futuro `bin/mango`; todavía
-no existe un consumidor y por eso no deben ejecutarse ni tratarse como una
-instalación funcional.
+Estos archivos son datos de entrada de `bin/mango`. El entrypoint valida cada
+línea, rechaza duplicados y conserva la procedencia antes de construir cualquier
+comando de instalación.
 
 Cada línea no vacía ni comentada contiene un paquete. No se fijan versiones de
 repositorios rolling. La procedencia se separa en `repo/`, `aur/` y
@@ -17,12 +17,12 @@ repositorios rolling. La procedencia se separa en `repo/`, `aur/` y
 | feature `laptop` | Brightnessctl para backlights reales. |
 | feature `recording` | wf-recorder bajo demanda. |
 
-El perfil default futuro será `desktop`. Las features son opt-in y no se
-activan silenciosamente por detección de hardware.
+El perfil default es `desktop`. Las features son opt-in y no se activan
+silenciosamente por detección de hardware.
 
 ## Procedencia
 
-La prioridad es CachyOS binario → Arch binario → AUR. En este scaffold:
+La prioridad es CachyOS binario → Arch binario → AUR. En el estado actual:
 
 - el stack general está disponible como paquetes binarios bajo `repo/`;
 - `mangowm` estable está registrado en AUR hasta verificar un binario apropiado
@@ -51,7 +51,7 @@ declara en `desktop` porque Waybar y bindings consumirán MPRIS.
 
 ## Backends
 
-El futuro bootstrap detectará Shelly sólo en CachyOS y continuará con `paru`,
-`yay` y `pacman`. Pacman se limitará a paquetes binarios y deberá fallar antes
-de mutar si falta un paquete AUR. Shelly/paru/yay conservarán prompts de
-revisión; no se forzará confirmación automática.
+El bootstrap detecta Shelly sólo en CachyOS y continúa con `paru`, `yay` y
+`pacman`. Pacman se limita a paquetes binarios y falla antes de mutar si falta
+un paquete AUR. Shelly/paru/yay conservan prompts de revisión; no se fuerza
+confirmación automática.
