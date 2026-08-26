@@ -1,0 +1,17 @@
+foot
+fuzzel
+mako
+pipewire
+pipewire-pulse
+polkit-gnome
+stow
+swaybg
+swayidle
+swaylock
+wireplumber
+wl-clipboard
+wlopm
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+xdg-desktop-portal-wlr
+xorg-xwayland
