@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+declare -a session_units=(
+  mangowm-recording.service
+  mangowm-waybar.service
+  mangowm-swaybg.service
+  mangowm-swayidle.service
+  mangowm-mako.service
+  mangowm-polkit.service
+)
+
+command -v systemctl >/dev/null 2>&1 || exit 0
+systemctl --user stop "${session_units[@]}" >/dev/null 2>&1 || true

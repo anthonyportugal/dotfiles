@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require flock
+mangowm_require swaylock
+
+runtime_dir=$(mangowm_runtime_dir)
+theme_dir=$(mangowm_theme_dir)
+pid_file="$runtime_dir/swaylock.pid"
+guard_file="$runtime_dir/swaylock.guard"
+ready_fifo="$runtime_dir/swaylock.ready.$$"
+
+exec 9>"$guard_file"
+flock 9
+
+if [[ -r "$pid_file" ]]; then
+  read -r lock_pid < "$pid_file" || true
+  if [[ "$lock_pid" =~ ^[0-9]+$ ]] && kill -0 "$lock_pid" 2>/dev/null; then
+    exit 0
+  fi
+  rm -f -- "$pid_file"
+fi
+
+mkfifo -m 0600 -- "$ready_fifo"
+cleanup() {
+  rm -f -- "$ready_fifo"
+}
+trap cleanup EXIT
+
+exec {ready_fd}<>"$ready_fifo"
+swaylock --config "$theme_dir/swaylock.conf" --ready-fd "$ready_fd" 9>&- &
+lock_pid=$!
+printf '%s\n' "$lock_pid" > "$pid_file"
+
+if ! IFS= read -r -t 10 -u "$ready_fd"; then
+  kill "$lock_pid" 2>/dev/null || true
+  rm -f -- "$pid_file"
+  mangowm_notify critical 'Bloqueo fallido' 'Swaylock no confirmó una pantalla segura.'
+  exit 1
+fi

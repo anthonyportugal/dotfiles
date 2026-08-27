@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+export XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
+export XDG_CURRENT_DESKTOP=mango
+export XDG_SESSION_DESKTOP=mango
+export XDG_SESSION_TYPE=wayland
+
+mkdir -p -- "$XDG_STATE_HOME/mangowm" "$XDG_CACHE_HOME/mangowm"
+"$HOME/.local/bin/mango-theme" render >/dev/null
+
+cleanup() {
+  "$HOME/.local/lib/mangowm/session-stop" || true
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+mango "$@"

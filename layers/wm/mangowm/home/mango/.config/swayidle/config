@@ -1,0 +1,4 @@
+timeout 300 '$HOME/.local/lib/mangowm/lock'
+timeout 600 'wlopm --off "*"' resume 'wlopm --on "*"'
+before-sleep '$HOME/.local/lib/mangowm/lock'
+lock '$HOME/.local/lib/mangowm/lock'

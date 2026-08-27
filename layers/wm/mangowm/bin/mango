@@ -778,31 +778,45 @@ validate_links_unlinked() {
 }
 
 validate_stow_scope() {
-  local package_name package_root config_parent owned_root source_path
+  local package_name package_root source_path relative_path
   local unexpected_path=''
 
   for package_name in "${STOW_PACKAGES[@]}"; do
-    case "$package_name" in
-      mango)
-        package_root="$STOW_DIR/$package_name"
-        config_parent="$package_root/.config"
-        owned_root="$config_parent/mango"
-        while IFS= read -r -d '' source_path; do
-          case "$source_path" in
-            "$config_parent"|"$owned_root"|"$owned_root"/*)
-              ;;
-            *)
-              unexpected_path=$source_path
-              break
-              ;;
-          esac
-        done < <(find "$package_root" -mindepth 1 -print0)
-        ;;
-      *)
-        error "no existe una política de ownership para el paquete Stow: $package_name"
-        return 1
-        ;;
-    esac
+    package_root="$STOW_DIR/$package_name"
+    while IFS= read -r -d '' source_path; do
+      relative_path=${source_path#"$package_root"/}
+      case "$package_name:$relative_path" in
+        mango:.config|mango:.config/mango|mango:.config/mango/*|\
+        mango:.config/swayidle|mango:.config/swayidle/*|\
+        mango:.config/xdg-desktop-portal|\
+        mango:.config/xdg-desktop-portal/mango-portals.conf|\
+        mango:.local|mango:.local/bin|mango:.local/bin/mango-theme|\
+        mango:.local/bin/mangowm-session|mango:.local/lib|\
+        mango:.local/lib/mangowm|mango:.local/lib/mangowm/*|\
+        mango-desktop:.config|mango-desktop:.config/mango|\
+        mango-desktop:.config/mango/conf.d|\
+        mango-desktop:.config/mango/conf.d/50-desktop.conf|\
+        mango-desktop:.config/waybar|mango-desktop:.config/waybar/*|\
+        mango-desktop:.config/wlogout|mango-desktop:.config/wlogout/*|\
+        mango-desktop:.local|mango-desktop:.local/lib|\
+        mango-desktop:.local/lib/mangowm|mango-desktop:.local/lib/mangowm/*|\
+        mango-laptop:.config|mango-laptop:.config/mango|\
+        mango-laptop:.config/mango/conf.d|\
+        mango-laptop:.config/mango/conf.d/60-laptop.conf|\
+        mango-laptop:.local|mango-laptop:.local/lib|\
+        mango-laptop:.local/lib/mangowm|mango-laptop:.local/lib/mangowm/brightness|\
+        mango-recording:.config|mango-recording:.config/mango|\
+        mango-recording:.config/mango/conf.d|\
+        mango-recording:.config/mango/conf.d/60-recording.conf|\
+        mango-recording:.local|mango-recording:.local/lib|\
+        mango-recording:.local/lib/mangowm|mango-recording:.local/lib/mangowm/recording)
+          ;;
+        *)
+          unexpected_path=$source_path
+          break
+          ;;
+      esac
+    done < <(find "$package_root" -mindepth 1 -print0)
 
     if [[ -n "$unexpected_path" ]]; then
       error "contenido fuera del ownership de MangoWM: ${unexpected_path#"$package_root"/}"
@@ -810,14 +824,14 @@ validate_stow_scope() {
     fi
   done
 
-  info "Ownership Stow validado: sólo .config/mango"
+  info "Ownership Stow validado para sesión, perfil y features seleccionadas"
   return 0
 }
 
 validate_mango_config() {
   local config_path="$STOW_DIR/mango/.config/mango/config.conf"
   local local_override="$STOW_DIR/mango/.config/mango/config.local.conf"
-  local duplicate
+  local required_file
   local result=0
 
   array_contains STOW_PACKAGES mango || return 0
@@ -832,35 +846,64 @@ validate_mango_config() {
 
   if ! awk '
     /^[[:space:]]*($|#)/ { next }
-    /^(blur|blur_optimized|source-optional)=[^[:space:]]+$/ { next }
+    /^(source|source-optional)=[^[:space:]]+$/ { next }
     { exit 1 }
   ' "$config_path"; then
-    error "config.conf contiene una directiva fuera del baseline mínimo"
+    error "config.conf contiene una directiva fuera del entrypoint modular"
     result=1
   fi
 
-  duplicate=$(awk -F= '!/^[[:space:]]*($|#)/ { print $1 }' "$config_path" | \
-    LC_ALL=C sort | uniq -d | head -n 1)
-  if [[ -n "$duplicate" ]]; then
-    error "config.conf duplica la directiva $duplicate"
-    result=1
-  fi
-
-  grep -Fxq 'blur=0' "$config_path" || {
-    error "config.conf debe desactivar blur en el baseline"
-    result=1
-  }
-  grep -Fxq 'blur_optimized=1' "$config_path" || {
-    error "config.conf debe conservar blur_optimized"
-    result=1
-  }
+  for required_file in 10-session 20-input 30-layout 40-bindings; do
+    grep -Fxq "source=./conf.d/$required_file.conf" "$config_path" || {
+      error "config.conf no carga $required_file.conf"
+      result=1
+    }
+    [[ -s "$STOW_DIR/mango/.config/mango/conf.d/$required_file.conf" ]] || {
+      error "falta el módulo requerido $required_file.conf"
+      result=1
+    }
+  done
   grep -Fxq 'source-optional=./config.local.conf' "$config_path" || {
     error "config.conf debe cargar el override local de forma opcional"
     result=1
   }
+  grep -Fxq 'blur=0' "$STOW_DIR/mango/.config/mango/conf.d/30-layout.conf" || {
+    error "el layout debe desactivar blur por defecto"
+    result=1
+  }
+  grep -Fxq 'blur_optimized=1' "$STOW_DIR/mango/.config/mango/conf.d/30-layout.conf" || {
+    error "el layout debe conservar blur_optimized"
+    result=1
+  }
 
-  (( result == 0 )) && info "Configuración mínima de MangoWM validada"
+  (( result == 0 )) && info "Configuración modular de MangoWM validada"
   return "$result"
+}
+
+validate_theme_source() {
+  local renderer="$STOW_DIR/mango/.local/bin/mango-theme"
+
+  array_contains STOW_PACKAGES mango || return 0
+  [[ -f "$renderer" ]] || {
+    error "falta el renderer de tema: $renderer"
+    return 1
+  }
+  bash "$renderer" validate >/dev/null || {
+    error "la paleta o el renderer de tema no son válidos"
+    return 1
+  }
+  info "Paleta y renderer de tema validados"
+}
+
+render_theme_for_target() {
+  local renderer="$TARGET_DIR/.local/bin/mango-theme"
+
+  [[ -x "$renderer" ]] || die "el renderer instalado no es ejecutable: $renderer"
+  info "Renderizando el tema inicial bajo el XDG state del target"
+  HOME="$TARGET_DIR" \
+    XDG_STATE_HOME="$TARGET_DIR/.local/state" \
+    XDG_CONFIG_HOME="$TARGET_DIR/.config" \
+    "$renderer" render >/dev/null
 }
 
 validate_portability() {
@@ -963,6 +1006,7 @@ bootstrap() {
   if (( STOW_ENABLED == 1 )); then
     if validate_stow_scope && \
       validate_mango_config && \
+      validate_theme_source && \
       validate_portability && \
       ensure_no_link_collisions; then
       if command_exists stow; then
@@ -994,12 +1038,14 @@ bootstrap() {
     command_exists stow || die "GNU Stow no quedó disponible después de instalar paquetes"
     validate_stow_scope || die "el paquete Stow contiene rutas fuera de su ownership"
     validate_mango_config || die "la configuración de MangoWM dejó de ser válida"
+    validate_theme_source || die "la fuente del tema dejó de ser válida"
     ensure_no_link_collisions || die "apareció una colisión antes de enlazar"
     info "Última simulación de GNU Stow antes de aplicar"
     run_stow install 1 || die "la simulación de GNU Stow falló"
     info "Aplicando enlaces GNU Stow"
     run_stow install 0 || die "GNU Stow no pudo crear los enlaces"
     validate_links_installed || die "falló la validación posterior de enlaces"
+    render_theme_for_target
   fi
 
   info "Bootstrap completado"
@@ -1024,6 +1070,7 @@ doctor() {
   if (( STOW_ENABLED == 1 )); then
     validate_stow_scope || result=1
     validate_mango_config || result=1
+    validate_theme_source || result=1
     validate_portability || result=1
     if ! command_exists stow; then
       error "GNU Stow no está instalado"
@@ -1047,6 +1094,7 @@ unlink_dotfiles() {
   command_exists stow || die "GNU Stow es necesario para retirar enlaces"
   validate_stow_scope || die "el paquete Stow contiene rutas fuera de su ownership"
   validate_mango_config || die "la configuración de MangoWM no es válida"
+  validate_theme_source || die "la fuente del tema no es válida"
   info "Simulación de unlink con GNU Stow"
   run_stow delete 1 || die "la simulación de unlink falló; no se modificó nada"
 

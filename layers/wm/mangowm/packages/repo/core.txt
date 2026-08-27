@@ -8,6 +8,7 @@ stow
 swaybg
 swayidle
 swaylock
+util-linux
 wireplumber
 wl-clipboard
 wlopm

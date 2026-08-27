@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+export XDG_CURRENT_DESKTOP=mango
+export XDG_SESSION_DESKTOP=mango
+export XDG_SESSION_TYPE=wayland
+
+start_unit() {
+  local name=$1
+  shift
+
+  if systemctl --user --quiet is-active "$name.service"; then
+    return 0
+  fi
+  systemctl --user reset-failed "$name.service" >/dev/null 2>&1 || true
+  systemd-run --user --quiet --collect --unit="$name" -- "$@"
+}
+
+if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+  dbus-update-activation-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE \
+    XDG_CONFIG_HOME XDG_STATE_HOME
+fi
+
+theme_dir=$(mangowm_theme_dir)
+runtime_dir=$(mangowm_runtime_dir)
+
+start_unit mangowm-mako mako --config "$theme_dir/mako.conf"
+start_unit mangowm-swayidle swayidle -w -C "$XDG_CONFIG_HOME/swayidle/config"
+start_unit mangowm-swaybg swaybg -c "$(<"$theme_dir/background")"
+
+if [[ -r "$XDG_CONFIG_HOME/waybar/config.json" ]] && command -v waybar >/dev/null 2>&1; then
+  start_unit mangowm-waybar waybar \
+    --config "$XDG_CONFIG_HOME/waybar/config.json" \
+    --style "$theme_dir/waybar.css"
+fi
+
+polkit_agent=/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+if [[ -x "$polkit_agent" ]]; then
+  start_unit mangowm-polkit "$polkit_agent"
+else
+  mangowm_notify critical 'Polkit no disponible' \
+    'No se encontró el agente de polkit-gnome; las acciones privilegiadas pueden fallar.'
+fi
+
+if [[ -x "$HOME/.local/lib/mangowm/night-light" ]]; then
+  "$HOME/.local/lib/mangowm/night-light" restore
+fi
+
+printf '%s\n' "$$" > "$runtime_dir/session-start.pid"

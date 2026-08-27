@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+mangowm_state_home() {
+  printf '%s\n' "${XDG_STATE_HOME:-$HOME/.local/state}"
+}
+
+mangowm_runtime_dir() {
+  local runtime_root=${XDG_RUNTIME_DIR:-"$(mangowm_state_home)/runtime"}
+  local runtime_dir="$runtime_root/mangowm"
+
+  mkdir -p -- "$runtime_dir"
+  chmod 0700 -- "$runtime_dir"
+  printf '%s\n' "$runtime_dir"
+}
+
+mangowm_theme_dir() {
+  local current
+
+  current="$(mangowm_state_home)/mangowm/theme/current"
+
+  if [[ ! -d "$current" ]]; then
+    "$HOME/.local/bin/mango-theme" render >/dev/null
+  fi
+  [[ -d "$current" ]] || {
+    printf 'mangowm: no se pudo materializar el tema activo\n' >&2
+    return 1
+  }
+  printf '%s\n' "$current"
+}
+
+mangowm_notify() {
+  local urgency=$1
+  local summary=$2
+  local body=${3-}
+
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send --urgency="$urgency" --app-name=MangoWM "$summary" "$body"
+  else
+    printf '%s: %s\n' "$summary" "$body" >&2
+  fi
+}
+
+mangowm_require() {
+  command -v "$1" >/dev/null 2>&1 || {
+    mangowm_notify critical 'Componente no disponible' "Instala el comando: $1"
+    return 127
+  }
+}

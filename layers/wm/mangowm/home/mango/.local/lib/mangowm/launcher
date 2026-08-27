@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require fuzzel
+theme_dir=$(mangowm_theme_dir)
+exec fuzzel --config="$theme_dir/fuzzel.ini" "$@"

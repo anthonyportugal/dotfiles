@@ -1,8 +1,8 @@
 # Theme contract
 
 Theme sources are versioned data. They are not executable and must never be
-sourced by a shell. The future renderer will parse a strict `key=value` schema,
-validate every field and write application-specific artifacts under XDG state.
+sourced by a shell. `mango-theme` parses a strict `key=value` schema, validates
+every field and writes application-specific artifacts under XDG state.
 
 ## Schema 1
 
@@ -24,16 +24,27 @@ Generated files and the active selection will live below:
 
 ```text
 $XDG_STATE_HOME/mangowm/theme/
-├── active
-└── <theme-id>/
+├── current -> <theme-id>-<content-hash>
+└── <theme-id>-<content-hash>/
+    ├── background
     ├── foot.ini
     ├── fuzzel.ini
     ├── mako.conf
-    ├── satty.toml
+    ├── mango.conf
+    ├── metadata
     ├── swaylock.conf
     ├── waybar.css
-    └── wlogout.css
+    ├── wlogout.css
+    └── xdg-config/satty/config.toml
 ```
 
-Generation must use a temporary sibling directory followed by an atomic rename.
-No renderer may write back into `themes/` or another tracked path.
+Generation uses a temporary sibling followed by an atomic directory rename and
+an atomic `current` symlink replacement. Re-running an unchanged renderer
+reuses the same immutable revision. No renderer writes back into `themes/` or
+another tracked path.
+
+```bash
+mango-theme validate
+mango-theme render
+mango-theme path
+```
