@@ -6,10 +6,10 @@ source "$HOME/.local/lib/mangowm/common"
 
 mode=${1:-region}
 case "$mode" in
-  region|fullscreen|clipboard)
+  region|fullscreen|clipboard|annotate)
     ;;
   *)
-    printf 'Uso: %s region|fullscreen|clipboard\n' "${0##*/}" >&2
+    printf 'Uso: %s region|fullscreen|clipboard|annotate\n' "${0##*/}" >&2
     exit 2
     ;;
 esac
@@ -43,7 +43,7 @@ mkdir -p -- "$destination_dir"
 destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').png"
 
 grim_command=(grim -t ppm)
-if [[ "$mode" == region ]]; then
+if [[ "$mode" == region || "$mode" == annotate ]]; then
   grim_command+=(-g "$geometry")
 fi
 grim_command+=(-)

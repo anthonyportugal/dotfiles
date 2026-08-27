@@ -65,6 +65,11 @@ Defaults previstos:
 Los tiempos y la política de energía podrán reemplazarse en un archivo local no
 versionado. Ningún output se identificará por un nombre fijo.
 
+El layout de wlogout sigue su formato nativo: un stream de objetos JSON, sin
+corchetes de array ni comas entre objetos. La prueba de sesión valida tanto el
+formato como las cinco acciones para no confundir JSON genérico válido con una
+entrada aceptada por wlogout.
+
 ## Portales
 
 La sesión importará `WAYLAND_DISPLAY` y `XDG_CURRENT_DESKTOP=mango` en el
@@ -87,6 +92,7 @@ Grim obtiene la imagen, Slurp selecciona y Satty anota. La UX inicial será:
 - `Print`: región y Satty;
 - `Shift+Print`: pantalla completa y Satty;
 - `Ctrl+Print`: región directa al clipboard;
+- `Super+Print`: región y Satty, alias explícito para anotar;
 - `Enter` en Satty: guardar y copiar;
 - `Escape`: cancelar.
 
@@ -112,8 +118,10 @@ no un cambio Git. Foot/Fuzzel podrán usar includes nativos cuando corresponda;
 Waybar/wlogout usarán CSS y el resto recibirá un archivo generado o un path
 explícito. No habrá un daemon de temas.
 
-El tema GTK es compartido y pertenece al repositorio base. Este repositorio no
-vendoriza ni instala silenciosamente el port GTK archivado de Catppuccin.
+El tema GTK es compartido y pertenece al repositorio base. MangoWM consume sólo
+su entrypoint público opcional de preferencias al iniciar sesión; sigue siendo
+standalone cuando la base no está instalada. Este repositorio no vendoriza ni
+instala silenciosamente temas GTK externos.
 
 ## Degradación y rendimiento
 

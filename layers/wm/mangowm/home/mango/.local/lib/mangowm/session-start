@@ -30,6 +30,16 @@ fi
 theme_dir=$(mangowm_theme_dir)
 runtime_dir=$(mangowm_runtime_dir)
 
+# La preferencia GTK global pertenece al repositorio base. Este contrato
+# opcional mantiene MangoWM instalable por separado y vuelve a aplicar el
+# default de sesión sólo cuando el entrypoint público está disponible.
+if [[ -x "$HOME/.local/lib/dotfiles/session-preferences" ]]; then
+  if ! "$HOME/.local/lib/dotfiles/session-preferences" apply; then
+    printf '%s\n' \
+      'mangowm: no se pudo aplicar el modo oscuro; ejecute dotfiles doctor' >&2
+  fi
+fi
+
 start_unit mangowm-mako mako --config "$theme_dir/mako.conf"
 start_unit mangowm-swayidle swayidle -w -C "$XDG_CONFIG_HOME/swayidle/config"
 start_unit mangowm-swaybg swaybg -c "$(<"$theme_dir/background")"

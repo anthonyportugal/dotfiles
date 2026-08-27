@@ -1,32 +1,30 @@
-[
-  {
-    "label": "lock",
-    "action": "$HOME/.local/lib/mangowm/lock",
-    "text": "Lock",
-    "keybind": "l"
-  },
-  {
-    "label": "logout",
-    "action": "mmsg -q",
-    "text": "Logout",
-    "keybind": "e"
-  },
-  {
-    "label": "suspend",
-    "action": "$HOME/.local/lib/mangowm/lock && systemctl suspend",
-    "text": "Suspend",
-    "keybind": "s"
-  },
-  {
-    "label": "reboot",
-    "action": "systemctl reboot",
-    "text": "Reboot",
-    "keybind": "r"
-  },
-  {
-    "label": "shutdown",
-    "action": "systemctl poweroff",
-    "text": "Shutdown",
-    "keybind": "p"
-  }
-]
+{
+  "label": "lock",
+  "action": "$HOME/.local/lib/mangowm/lock",
+  "text": "Lock",
+  "keybind": "l"
+}
+{
+  "label": "logout",
+  "action": "mmsg -q",
+  "text": "Logout",
+  "keybind": "e"
+}
+{
+  "label": "suspend",
+  "action": "$HOME/.local/lib/mangowm/lock && systemctl suspend",
+  "text": "Suspend",
+  "keybind": "s"
+}
+{
+  "label": "reboot",
+  "action": "systemctl reboot",
+  "text": "Reboot",
+  "keybind": "r"
+}
+{
+  "label": "shutdown",
+  "action": "systemctl poweroff",
+  "text": "Shutdown",
+  "keybind": "p"
+}

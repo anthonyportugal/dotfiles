@@ -77,8 +77,23 @@ if command -v foot >/dev/null 2>&1; then
     fail 'Foot rechazó el adaptador generado'
 fi
 
-jq empty "$TARGET/.config/waybar/config.json" "$TARGET/.config/wlogout/layout" || \
-  fail 'Waybar o wlogout no contienen JSON válido'
+jq empty "$TARGET/.config/waybar/config.json" || \
+  fail 'Waybar no contiene JSON válido'
+[[ $(sed -n '/[^[:space:]]/ { s/^[[:space:]]*//; s/\(.\).*/\1/; p; q; }' \
+  "$TARGET/.config/wlogout/layout") == '{' ]] || \
+  fail 'wlogout recibió un array en lugar de un stream de objetos JSON'
+jq -s -e '
+  length == 5 and
+  all(.[];
+    type == "object" and
+    (.label as $label |
+      ["lock", "logout", "suspend", "reboot", "shutdown"] | index($label)) != null and
+    (.action | type == "string" and length > 0) and
+    (.text | type == "string" and length > 0) and
+    (.keybind | type == "string" and length == 1)
+  )
+' "$TARGET/.config/wlogout/layout" >/dev/null || \
+  fail 'el stream JSON de wlogout no cumple su contrato'
 grep -Fxq 'org.freedesktop.impl.portal.ScreenCast=wlr' \
   "$TARGET/.config/xdg-desktop-portal/mango-portals.conf" || \
   fail 'el routing de ScreenCast no selecciona wlr'
@@ -126,6 +141,14 @@ done
 grep -q 'WAYLAND_DISPLAY.*XDG_CURRENT_DESKTOP' "$LOG" || \
   fail 'session-start no importó el entorno Wayland'
 
+# MangoWM inicia sin la base y consume su entrypoint público cuando aparece.
+mkdir -p "$TARGET/.local/lib/dotfiles"
+ln -s "$REPO_ROOT/tests/fakes/desktop-command" \
+  "$TARGET/.local/lib/dotfiles/session-preferences"
+"$TARGET/.local/lib/mangowm/session-start"
+grep -q '^session-preferences apply ' "$LOG" || \
+  fail 'session-start no consumió el contrato opcional de preferencias de base'
+
 "$TARGET/.local/lib/mangowm/lock"
 read -r LOCK_PID < "$RUNTIME/mangowm/swaylock.pid"
 kill -0 "$LOCK_PID" 2>/dev/null || fail 'el lock salió antes de estar activo'
@@ -134,8 +157,13 @@ kill -0 "$LOCK_PID" 2>/dev/null || fail 'el lock salió antes de estar activo'
 
 "$TARGET/.local/lib/mangowm/screenshot" region
 "$TARGET/.local/lib/mangowm/screenshot" clipboard
-grep -q 'satty .*--output-filename' "$LOG" || fail 'la captura no llegó a Satty'
+"$TARGET/.local/lib/mangowm/screenshot" annotate
+[[ $(grep -c 'satty .*--output-filename' "$LOG") == 2 ]] || \
+  fail 'las capturas region/annotate no llegaron a Satty'
 grep -q '^wl-copy .*--type.*image/png' "$LOG" || fail 'la captura no llegó al clipboard'
+grep -Fqx "bind=SUPER,Print,spawn,\$HOME/.local/lib/mangowm/screenshot annotate" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo explícito Super+Print para anotar'
 
 "$TARGET/.local/lib/mangowm/night-light" on
 "$TARGET/.local/lib/mangowm/night-light" off
