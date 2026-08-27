@@ -60,9 +60,9 @@ Cuando un commit esté explícitamente autorizado:
 
 ## Límites arquitectónicos
 
-- Este repositorio es la base pública y no debe depender de bspwm, Mango ni de
+- Este repositorio es la base pública y no debe depender de bspwm, MangoWM ni de
   dotfiles privados.
-- `bspwm` y `mango` son repositorios públicos autónomos. No introducir nuevos
+- `bspwm` y `mangowm` son repositorios públicos autónomos. No introducir nuevos
   submodules ni acoplamiento a sus internals.
 - La integración entre repositorios debe usar interfaces documentadas y ser
   opcional.

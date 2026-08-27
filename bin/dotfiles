@@ -27,6 +27,7 @@ PLATFORM=""
 BACKEND=""
 
 declare -a FEATURES=()
+declare -a WM_FEATURES=()
 declare -a REPO_PACKAGES=()
 declare -a AUR_PACKAGES=()
 declare -a EXTERNAL_PACKAGES=()
@@ -86,9 +87,10 @@ Opciones:
   --target DIR                    Home objetivo (default: \$HOME).
   --packages-only                 Opera o valida sólo paquetes del sistema.
   --stow-only                     Opera o valida sólo paquetes Stow.
-  --wm bspwm                      Integra opcionalmente un WM independiente.
+  --wm bspwm|mangowm              Integra opcionalmente un WM independiente.
   --wm-path DIR                   Checkout externo del repositorio del WM.
   --wm-profile core|desktop       Perfil propio del WM (default: desktop).
+  --wm-feature laptop|recording   Feature de MangoWM; se puede repetir.
   --apply                         Aplica bootstrap/unlink; sin él hay dry-run.
   -h, --help                      Muestra esta ayuda.
 
@@ -96,6 +98,7 @@ Ejemplos:
   $PROGRAM_NAME bootstrap --profile desktop
   $PROGRAM_NAME bootstrap --profile desktop --feature yazi-extras --apply
   $PROGRAM_NAME bootstrap --wm bspwm --wm-path \$HOME/.dotfiles/wm/bspwm
+  $PROGRAM_NAME bootstrap --wm mangowm --wm-path \$HOME/.dotfiles/wm/mangowm
   $PROGRAM_NAME doctor --profile desktop
   $PROGRAM_NAME unlink --profile desktop
   $PROGRAM_NAME unlink --profile desktop --apply
@@ -230,6 +233,17 @@ parse_args() {
         WM_PROFILE_SET=1
         shift
         ;;
+      --wm-feature)
+        require_option_value "$1" "${2-}"
+        WM_FEATURES+=("$2")
+        shift 2
+        ;;
+      --wm-feature=*)
+        local wm_feature_value=${1#*=}
+        require_option_value "--wm-feature" "$wm_feature_value"
+        WM_FEATURES+=("$wm_feature_value")
+        shift
+        ;;
       --apply)
         APPLY=1
         shift
@@ -269,7 +283,7 @@ parse_args() {
   esac
 
   case "$WM" in
-    ""|bspwm)
+    ""|bspwm|mangowm)
       ;;
     *)
       usage_error "WM no soportado: $WM"
@@ -289,6 +303,24 @@ parse_args() {
   else
     [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
     (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
+    (( ${#WM_FEATURES[@]} == 0 )) || usage_error "--wm-feature requiere --wm mangowm"
+  fi
+
+  if (( ${#WM_FEATURES[@]} > 0 )); then
+    [[ "$WM" == mangowm ]] || usage_error "--wm-feature sólo es compatible con --wm mangowm"
+    local wm_feature
+    local -a unique_wm_features=()
+    for wm_feature in "${WM_FEATURES[@]}"; do
+      case "$wm_feature" in
+        laptop|recording)
+          append_unique unique_wm_features "$wm_feature"
+          ;;
+        *)
+          usage_error "feature de WM no soportado: $wm_feature"
+          ;;
+      esac
+    done
+    WM_FEATURES=("${unique_wm_features[@]}")
   fi
 
   if [[ "$COMMAND" == "doctor" && "$APPLY" == 1 ]]; then
@@ -614,6 +646,9 @@ validate_wm_checkout() {
     bspwm)
       WM_ENTRYPOINT="$wm_root/bin/bspwm"
       ;;
+    mangowm)
+      WM_ENTRYPOINT="$wm_root/bin/mango"
+      ;;
   esac
 
   [[ -f "$WM_ENTRYPOINT" && -x "$WM_ENTRYPOINT" ]] || \
@@ -635,6 +670,11 @@ build_wm_command() {
     "--platform=$PLATFORM_REQUEST"
     "--target=$TARGET_DIR"
   )
+
+  local wm_feature
+  for wm_feature in "${WM_FEATURES[@]}"; do
+    wm_output_ref+=("--feature=$wm_feature")
+  done
 
   case "$MODE_SELECTION" in
     packages)
@@ -1128,6 +1168,7 @@ print_plan() {
     printf '  %-24s %s\n' 'WM opcional:' "$WM"
     printf '  %-24s %s\n' 'Checkout WM:' "$WM_PATH"
     printf '  %-24s %s\n' 'Perfil WM:' "$WM_PROFILE"
+    print_array "Features WM" WM_FEATURES
   fi
 
   if (( SYSTEM_ENABLED == 1 )); then

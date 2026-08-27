@@ -45,6 +45,7 @@ mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
   "$PARENT_DESTINATION" "$FAKE_BIN" "$WM_REPO" "$WM_TARGET" \
   "$WM_FAILURE_TARGET" "$WM_REPO/bin"
 ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/bspwm"
+ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/mango"
 
 # Dry-run, aplicación, doctor e idempotencia sobre un home desechable.
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR"
@@ -127,6 +128,16 @@ grep -Fq -- "$wm_target_argument --stow-only" "$WM_LOG" || \
   fail "bootstrap no propagó target o alcance Stow al WM"
 
 : > "$WM_LOG"
+DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" bootstrap \
+  --profile core --stow-only --target "$WM_TARGET" \
+  --wm mangowm --wm-path "$WM_REPO" --wm-profile desktop \
+  --wm-feature laptop --wm-feature recording --wm-feature laptop
+grep -q -- 'bootstrap --profile=desktop' "$WM_LOG" || \
+  fail "la base no resolvió el entrypoint de MangoWM"
+grep -q -- '--feature=laptop --feature=recording' "$WM_LOG" || \
+  fail "las features de MangoWM no se propagaron o deduplicaron"
+
+: > "$WM_LOG"
 DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" doctor \
   --profile core --stow-only --target "$WM_TARGET" \
   --wm bspwm --wm-path "$WM_REPO" --wm-profile desktop
@@ -173,6 +184,14 @@ if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
 fi
 grep -q 'debe estar fuera del repositorio base' "$TEST_ROOT/wm-nested.out" || \
   fail "no se explicó el límite de independencia del checkout WM"
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+    --wm bspwm --wm-path "$WM_REPO" --wm-feature laptop \
+    > "$TEST_ROOT/wm-feature-bspwm.out" 2>&1; then
+  fail "bspwm aceptó una feature exclusiva de MangoWM"
+fi
+grep -q 'sólo es compatible con --wm mangowm' \
+  "$TEST_ROOT/wm-feature-bspwm.out" || \
+  fail "la feature de WM incompatible no produjo un error accionable"
 
 # Una colisión debe detenerse antes de modificar el archivo existente.
 touch "$CONFLICT_DIR/.zshrc"

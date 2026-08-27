@@ -7,8 +7,9 @@ portable, modular e independiente del Window Manager o compositor elegido.
 > **Estado:** migración en curso. El repositorio base ya dispone de bootstrap y
 > doctor propios, y el repositorio bspwm ya fue validado como proyecto
 > standalone. La integración opcional entre ambos y el contrato con una capa
-> privada independiente ya están cerrados; la validación desde un CachyOS limpio
-> pertenece a P10.
+> privada independiente ya están cerrados. P11 dejó una candidata MangoWM
+> standalone y composición opcional terminadas; la validación integral desde un
+> CachyOS limpio es el próximo hito P10.
 
 ## Responsabilidad de este repositorio
 
@@ -32,7 +33,9 @@ No será responsable de:
 
 - [`bspwm`](https://github.com/anthonyportugal/bspwm): proyecto público X11
   independiente, con instalación standalone validada.
-- `mango`: futuro proyecto público e independiente para MangoWC/Wayland.
+- [`mangowm`](https://github.com/anthonyportugal/dotfiles-mangowm): proyecto
+  público Wayland independiente. Su sesión, bootstrap, tema y features están
+  validados de forma aislada; falta la prueba gráfica de P10.
 - dotfiles privados: capa opcional e independiente para configuración personal
   o laboral no secreta. Su ausencia nunca debe romper los repositorios públicos.
 - wallpapers: fuente de assets independiente y opcional; actualmente privada y
@@ -61,10 +64,12 @@ Defaults de aplicaciones ya acordados:
 - Micro como editor de texto;
 - Yazi y Thunar como file managers de terminal y gráfico;
 - mpv con `mpv-mpris` y Playerctl para reproducción/control multimedia;
-- Waybar para Mango/Wayland.
+- Foot como terminal de la futura sesión MangoWM;
+- Fuzzel como launcher Wayland;
+- Waybar para MangoWM/Wayland.
 
-El launcher Wayland sigue pendiente entre Wofi y Fuzzel. bspwm conserva Polybar
-para X11; Waybar pertenece al futuro repositorio Mango y no cubre esa sesión.
+bspwm conserva Polybar y Alacritty para X11. Foot, Fuzzel y Waybar pertenecen
+al repositorio MangoWM y no cubren esa sesión.
 
 ## Layout durante la migración
 
@@ -99,7 +104,7 @@ documentación usan la siguiente estructura:
 ├── base/          # repositorio público de dotfiles
 └── wm/
     ├── bspwm/     # repositorio público de bspwm
-    └── mangowm/   # futuro repositorio público de Mango
+    └── mangowm/   # repositorio público standalone de MangoWM
 ```
 
 Cada directorio es un checkout Git independiente con su propio `origin` e
@@ -137,7 +142,7 @@ La rama explícita es temporal mientras esta migración no se integre en `main`;
 después podrá omitirse `--branch refactor/modular-dotfiles`.
 
 El entrypoint público es [`bin/dotfiles`](bin/dotfiles). Funciona sin bspwm,
-Mango ni configuración privada. Requiere una distribución basada en Arch con
+MangoWM ni configuración privada. Requiere una distribución basada en Arch con
 Bash y pacman; Git sólo es necesario para obtener el repositorio. Desde
 `~/.dotfiles/base`, ejecuta primero el dry-run:
 
@@ -396,6 +401,47 @@ El perfil del WM es independiente del perfil base. `--packages-only`,
 Antes de aplicar, la base ejecuta el preflight del WM; no hace `clone`, `pull`,
 `checkout`, `commit` ni `push` en ninguno de los dos repositorios.
 
+## Integración opcional con MangoWM
+
+MangoWM conserva el mismo contrato independiente. Puede clonarse mediante SSH:
+
+```bash
+mkdir -p "$HOME/.dotfiles/wm"
+git clone git@github.com:anthonyportugal/dotfiles-mangowm.git \
+  "$HOME/.dotfiles/wm/mangowm"
+```
+
+O mediante HTTPS para una instalación pública de sólo lectura:
+
+```bash
+git clone https://github.com/anthonyportugal/dotfiles-mangowm.git \
+  "$HOME/.dotfiles/wm/mangowm"
+```
+
+El dry-run compuesto no depende de los internals del checkout:
+
+```bash
+cd "$HOME/.dotfiles/base"
+
+./bin/dotfiles bootstrap --profile desktop \
+  --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
+  --wm-profile desktop --wm-feature laptop
+
+./bin/dotfiles bootstrap --profile desktop \
+  --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
+  --wm-profile desktop --wm-feature laptop --apply
+
+./bin/dotfiles doctor --profile desktop \
+  --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
+  --wm-profile desktop --wm-feature laptop
+```
+
+`--wm-feature laptop|recording` es exclusivo de MangoWM y se puede repetir. Las
+features de la base continúan usando `--feature`, por lo que ambos espacios de
+nombres nunca se mezclan. El entrypoint de sesión resultante es
+`~/.local/bin/mangowm-session`; conectarlo a TTY o display manager se validará
+en P10, no lo modifica este bootstrap.
+
 ### Límites y pasos manuales
 
 - Actualizar el sistema antes de reconstruir el entorno sigue siendo una
@@ -407,8 +453,8 @@ Antes de aplicar, la base ejecuta el preflight del WM; no hace `clone`, `pull`,
 - Display manager, GPU híbrida, servicios, secretos, ciclo de vida Git de los
   repositorios de WM y capa privada quedan fuera del alcance de este bootstrap.
 - La prueba final desde una instalación CachyOS no-desktop limpia pertenece a
-  P10; hasta entonces, las diferencias descubiertas allí deben registrarse en
-  el plan de migración.
+  P10 y se ejecutará después de preparar MangoWM en P11; hasta entonces, las
+  diferencias descubiertas deben registrarse en el plan de migración.
 
 ## Plan y colaboración
 

@@ -4,9 +4,9 @@
 >
 > Última actualización: 2026-08-26
 >
-> Fase activa: ninguna — P9 completada y validada
+> Última fase completada: P11 — repositorio público MangoWM
 >
-> Siguiente checkpoint: P10 pendiente de aprobación explícita
+> Siguiente checkpoint: P10 en una VM CachyOS no-desktop, pendiente de ejecución
 
 ## 1. Propósito de este documento
 
@@ -107,8 +107,8 @@ No se cambiaron remotes ni commits durante esa limpieza.
 
 1. Convertir el repositorio base en dotfiles públicos, portables y útiles sin
    depender de un WM/compositor concreto.
-2. Mantener bspwm y Mango como proyectos públicos independientes, instalables y
-   comprensibles por separado.
+2. Mantener bspwm y MangoWM como proyectos públicos independientes, instalables
+   y comprensibles por separado.
 3. Permitir una capa privada opcional sin modificar archivos públicos cada vez
    que cambie información personal o laboral.
 4. Poder reconstruir gradualmente el entorno desde CachyOS sin escritorio.
@@ -123,11 +123,11 @@ No se cambiaron remotes ni commits durante esa limpieza.
 ## 4. Non-goals
 
 - Crear un monorepo con toda la configuración.
-- Hacer que el repositorio base requiera bspwm, Mango o la capa privada.
+- Hacer que el repositorio base requiera bspwm, MangoWM o la capa privada.
 - Replicar Archcraft completo o instalar paquetes `*-settings` para recuperar
   configuración oculta.
-- Fijar en esta etapa display manager, stack final de Mango, launcher, visor de
-  imágenes o todos los MIME handlers.
+- Fijar en esta etapa display manager, visor de imágenes o todos los MIME
+  handlers.
 - Gestionar drivers Intel/NVIDIA desde los dotfiles.
 - Guardar passwords, tokens, private keys o credenciales en Git, aunque el
   repositorio sea privado.
@@ -171,7 +171,7 @@ necesidad concreta que Stow más includes explícitos no resuelva.
 
 ### D2 — Repositorios independientes, sin submodules
 
-`dotfiles`, `bspwm`, `mango` y una eventual capa privada se mantendrán como
+`dotfiles`, `bspwm`, `mangowm` y una eventual capa privada se mantendrán como
 repositorios independientes. Los submodules actuales son estado transitorio y
 se retirarán en una fase específica, no durante la fundación de Stow.
 
@@ -231,6 +231,10 @@ es una referencia funcional, no una plantilla que deba copiarse completa. Cada
 componente se aceptará por una necesidad explícita y no se heredarán scripts
 que muten el repositorio fuente.
 
+D34 materializa esta decisión, actualiza el nombre vigente a MangoWM y fija el
+stack aprobado. D10 se conserva como justificación histórica del orden de
+diseño, no como una decisión todavía abierta.
+
 ### D11 — Wallpapers como fuente de assets independiente
 
 Los wallpapers no serán un submodule obligatorio. Su repositorio seguirá
@@ -267,8 +271,8 @@ repositorio.
 - Editor de texto: Micro.
 - File managers: Yazi para terminal y Thunar para entorno gráfico.
 - Reproducción multimedia: mpv con `mpv-mpris` y Playerctl para control MPRIS.
-- Barra Wayland: Waybar, propiedad del futuro repositorio Mango.
-- Launcher Wayland: decisión pendiente entre Wofi y Fuzzel.
+- Barra Wayland: Waybar, propiedad del repositorio `mangowm`.
+- Launcher Wayland: Fuzzel, resuelto por D34.
 
 Waybar no cubre la sesión X11 de bspwm. La barra de bspwm se preservará o
 decidirá separadamente durante P7.
@@ -319,7 +323,7 @@ un feature opt-in `yazi-extras`. Los paquetes de repositorio, específicos de
 CachyOS, fallback AUR, externos y paquetes Stow se declaran en archivos
 separados de texto plano.
 
-Los repositorios bspwm y Mango declararán autónomamente sus dependencias,
+Los repositorios bspwm y MangoWM declararán autónomamente sus dependencias,
 aunque repitan nombres ya presentes en la base. La orquestación no importará
 sus manifests internos: invocará sus entrypoints públicos y dejará que el
 package manager deduplique instalaciones.
@@ -538,7 +542,7 @@ composición no pretende ser transaccional entre repositorios; ambos entrypoints
 siguen siendo idempotentes y reportarán por separado cualquier fallo parcial.
 
 No se introduce todavía un archivo de composición ni gestión automática del
-ciclo de vida Git. Mango podrá adoptar el mismo contrato público en P11 si sus
+ciclo de vida Git. MangoWM podrá adoptar el mismo contrato público en P11 si sus
 operaciones resultan equivalentes.
 
 Como convención local documentada, los ejemplos usarán
@@ -724,11 +728,78 @@ real. Las private keys SSH continúan siendo locales, distintas por dispositivo
 y separadas por propósito. Con ello O8 queda resuelta para el alcance actual
 sin ampliar la superficie de secretos.
 
+### D34 — Stack mínimo, temas y orden de validación de MangoWM
+
+P11 se ejecutará antes de la validación integral P10. La VM debe probar el
+entorno que será principal y no una composición temporal sin MangoWM; P10
+conserva su número y criterios, pero comienza después de que P11 disponga de una
+implementación standalone candidata. Esta excepción de orden fue aprobada
+explícitamente el 2026-08-26 y no autoriza P12.
+
+El proyecto y su checkout se denominarán `mangowm`; `MangoWC` y
+`mangowc-git` se consideran nombres legacy. Se preferirá un release estable
+`mangowm` desde un repositorio binario de CachyOS cuando P10 confirme su
+disponibilidad, con el paquete AUR estable como fallback inicial. La variante
+`mangowm-git` que documenta upstream será una opción edge explícita y no el
+default reproducible.
+
+O1 y O5 quedan resueltas con el siguiente stack por capacidad:
+
+| Capacidad | Selección | Alcance |
+| --- | --- | --- |
+| Terminal | Foot | Default de la sesión MangoWM; Alacritty continúa bajo ownership de la base. |
+| Launcher | Fuzzel | Wayland nativo; reemplaza Wofi/Rofi dentro de esta sesión. |
+| Barra | Waybar | Integración con tags/layout de Mango y módulos event-driven. |
+| Wallpaper | Swaybg | Fondo estático y assets externos opcionales. |
+| Notificaciones | Mako | Daemon Wayland liviano, activable por D-Bus. |
+| Bloqueo/idle | Swaylock + Swayidle | Lock manual, por inactividad y antes de suspender. |
+| Energía de outputs | Wlopm | Apaga/restaura outputs descubiertos sin nombres hardcoded. |
+| Menú de sesión | wlogout | Acciones mediante wrappers revisables. |
+| Luz nocturna | Gammastep | Toggle manual sin ubicación; 4000K activo y 6500K neutral por defecto. |
+| Clipboard | wl-clipboard | Sin persistencia ni historial por defecto. |
+| Capturas | Grim + Slurp + Satty | Selección, anotación, blur, guardado y clipboard. |
+| Portales | xdg-desktop-portal + wlr + gtk | wlr para screenshot/screencast; gtk como fallback. |
+| Polkit | polkit-gnome | Agente binario de repositorio, sin instalar un escritorio completo. |
+| Audio | PipeWire + WirePlumber | Waybar y shortcuts usarán `wpctl`; no Pulsemixer. |
+| X11 | Xorg XWayland + xwayland-satellite | Compatibilidad y escalado fraccional. |
+
+No se añade desktop shell. Hyprlock/Hypridle, Rofi, Wofi, Pywal, Pastel, MPD,
+MPC, Yad, Geany, Viewnior, Pulsemixer, `xdg-desktop-portal-gnome` y un segundo
+terminal quedan fuera mientras no exista un consumidor. `wf-recorder` será el
+feature opt-in `recording`; `brightnessctl` será el feature `laptop`. El
+historial/persistencia de clipboard no se habilita por defecto porque puede
+guardar tokens, contraseñas u otros datos copiados.
+
+La seguridad de sesión tendrá un único wrapper idempotente de lock. El default
+será lock manual con `Super+L`, lock a los cinco minutos, outputs apagados a los
+diez minutos, restauración al volver y lock antes de suspender. La suspensión
+automática permanece como política local o del sistema. La pantalla de bloqueo
+no permitirá transparencia. Los tiempos podrán reemplazarse mediante un
+override local que no se versiona.
+
+El tema inicial será Catppuccin Mocha con Pink (`#f5c2e7`) como acento. Una
+paleta semántica versionada mapeará background/surface/text/accent y estados de
+error, warning y éxito; adaptadores pequeños producirán los formatos de cada
+aplicación. Los artefactos generados y la selección activa vivirán bajo
+`$XDG_STATE_HOME`, se escribirán atómicamente y nunca modificarán el checkout.
+MangoWM será dueño de sus adaptadores para Foot, Fuzzel, Waybar, Mako,
+Swaylock, wlogout y Satty. La base será dueña de la selección GTK y de sus apps
+compartidas; una integración posterior podrá orquestar ambos entrypoints por un
+contrato público, sin leer internals.
+
+El port GTK de Catppuccin está archivado y no puede garantizar cobertura total
+de GTK4/libadwaita. Se usará Mocha/Pink de forma fijada y auditable para GTK3,
+con fallback oscuro funcional y validación real de Thunar/wlogout en P10. La
+primera UI prioriza una base consistente y usable: wallpaper estático, polling
+mínimo, blur desactivado o acotado y `blur_optimized=1`. Geometría, iconos,
+transparencia y animaciones se pulirán en iteraciones posteriores sin cambiar
+el contrato de temas.
+
 ## 7. Decisiones descartadas por ahora
 
 | Alternativa | Motivo principal |
 | --- | --- |
-| Monorepo | Reduce autonomía y mezcla ciclos de vida de base, bspwm y Mango. |
+| Monorepo | Reduce autonomía y mezcla ciclos de vida de base, bspwm y MangoWM. |
 | Git submodules | Añaden estado y acoplamiento sin ser necesarios para instalar repos independientes. |
 | Chezmoi como fuente única | Su modelo centraliza y agrega complejidad para la composición deseada. |
 | Copiar Archcraft o instalar paquetes settings | Oculta ownership y vuelve a introducir dependencias implícitas. |
@@ -750,9 +821,9 @@ bspwm (público, independiente)
 ├── dependencias, assets y scripts propios
 └── instalación/validación standalone
 
-mango (público, independiente, futuro)
+mangowm (público, independiente, P11 completa)
 ├── sesión Wayland completa bajo su ownership
-├── MangoWC, Waybar y componentes seleccionados
+├── MangoWM, Foot, Fuzzel, Waybar y componentes D34
 └── instalación/validación standalone
 
 dotfiles-private (privado, opcional)
@@ -801,8 +872,9 @@ su alcance, pero no requiere compartir implementación ni leer manifests ajenos.
 | Brave, Zathura, Thunar | `dotfiles` | Dependencias/app defaults opcionales, no pertenecen a un WM. |
 | `.config/bspwm` y sesión X11 | `bspwm` | Incluye scripts necesarios y elimina herencia Archcraft. |
 | Sxhkd/Picom/bar X11 | `bspwm` mientras sean exclusivos | La barra concreta se decide en P7. |
-| `.config/mango` y sesión Wayland | `mango` | No se mezcla con bspwm. |
-| Waybar y launcher Wayland | `mango` | Launcher pendiente entre Wofi/Fuzzel. |
+| `.config/mango` y sesión Wayland | `mangowm` | No se mezcla con bspwm. |
+| Foot, Fuzzel, Waybar y apps de sesión Wayland | `mangowm` | Stack resuelto por D34. |
+| Tema GTK y aplicaciones compartidas | `dotfiles` | Mango sólo administra adaptadores de su sesión. |
 | Playerctl | Repo consumidor | Puede declararse en más de un manifiesto sin compartir ownership de archivos. |
 | Wallpapers | Repo de assets independiente | Integración opcional. |
 | Display manager | Sistema/CachyOS | No gestionado inicialmente. |
@@ -931,7 +1003,7 @@ Propiedades obligatorias:
 La orquestación opcional de un WM sólo se añade después de que su repositorio
 pueda instalarse standalone. P8 implementó ese contrato para bspwm invocando la
 interfaz pública de un checkout explícito; no lo clona ni lo incorpora como
-submodule. Mango deberá cumplir primero el mismo requisito de autonomía.
+submodule. MangoWM deberá cumplir primero el mismo requisito de autonomía.
 
 ## 14. Estrategia de migración
 
@@ -963,8 +1035,8 @@ submodule. Mango deberá cumplir primero el mismo requisito de autonomía.
 | P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Completa** |
 | P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | **Completa** |
 | P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | **Completa** |
-| P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. | Pendiente |
-| P11 | Repositorio público Mango. | Stack decidido; MangoWC/Waybar/launcher y dependencias tienen ownership; instalación standalone y composición opcional validadas. | Pendiente |
+| P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. Se ejecuta después de P11 por D34. | Pendiente |
+| P11 | Repositorio público MangoWM. | Stack D34 implementado; MangoWM/Waybar/Fuzzel y dependencias tienen ownership; instalación standalone y composición opcional quedan listas para validar en P10. | **Completa** |
 | P12 | Cierre de migración. | Documentación estable, deuda residual y decisiones históricas revisadas; el plan se conserva, transforma o archiva deliberadamente. | Pendiente |
 
 ### P0 — Materializar el plan
@@ -1256,20 +1328,37 @@ forma individual. Con ello se cumplen los cuatro criterios de salida de P8.
 
 ### P10 — CachyOS limpio
 
+Por D34 esta fase conserva su alcance, pero comienza después de preparar una
+candidata standalone de P11. Así la VM valida el stack principal completo una
+sola vez.
+
 1. Preparar checklist reproducible para una instalación no-desktop.
 2. Probar base solo, cada WM solo y composición elegida.
 3. Validar Shelly y al menos un fallback aplicable.
 4. Registrar pasos del sistema que no pertenecen a dotfiles.
 5. Validar Intel+NVIDIA sin hardcodes de salida/GPU.
 
-### P11 — Mango
+### P11 — MangoWM
 
-1. Confirmar stack mínimo usando Archcraft sólo como referencia.
-2. Decidir Wofi o Fuzzel.
-3. Crear repo público, ownership, dependencias y documentación.
-4. Implementar MangoWC y Waybar sin mutar fuente para temas/estado.
-5. Integrar Playerctl y apps sólo donde exista consumo real.
-6. Validar standalone y orquestación opcional desde base.
+1. **Completa:** confirmar el stack mínimo D34 usando Archcraft sólo como
+   referencia y seleccionar Fuzzel.
+2. **Completa:** crear el repositorio standalone, su gobierno, ownership,
+   manifiestos, contrato de temas y validaciones de scaffold.
+3. **Completa:** implementar `bin/mango` con `bootstrap`, `doctor` y `unlink`
+   dry-run por defecto, perfiles `core`/`desktop` y features
+   `laptop`/`recording`.
+4. **Completa:** implementar MangoWM, Foot, Fuzzel, Waybar, Mako, lock/idle,
+   portales, capturas Grim/Slurp/Satty y wlogout sin mutar fuente para
+   temas/estado.
+5. **Completa:** implementar Catppuccin Mocha/Pink mediante paleta semántica y
+   adaptadores; las revisiones se generan atómicamente sólo bajo XDG state y el
+   override local conserva la última precedencia.
+6. **Completa:** integrar Playerctl en `desktop`, wf-recorder en `recording` y
+   brightnessctl en `laptop`, sin activación implícita por hardware.
+7. **Completa:** validar sesión, lock idempotente, renderer, wrappers, features y
+   Stow en un home aislado; la base acepta `--wm mangowm` y propaga
+   `--wm-feature`. La sesión Wayland real y la composición final se aceptan en
+   P10.
 
 ### P12 — Cierre
 
@@ -1282,7 +1371,7 @@ forma individual. Con ello se cumplen los cuatro criterios de salida de P8.
 ## 16. Criterios de aceptación globales
 
 - Los tres repositorios públicos funcionan sin acceso a la capa privada.
-- Base, bspwm y Mango pueden instalarse y mantenerse por separado.
+- Base, bspwm y MangoWM pueden instalarse y mantenerse por separado.
 - No quedan dependencias implícitas de Archcraft.
 - Ningún archivo tiene ownership ambiguo entre repositorios.
 - La ausencia de apps/features opcionales produce degradación clara, no fallos
@@ -1322,7 +1411,7 @@ final debería cubrir:
 | Paquetes cambian en Arch/AUR/CachyOS. | Separar procedencia, validar en P5/P10 y reportar sustituciones. |
 | Shelly, paru y yay no son interfaces idénticas. | Adaptadores pequeños por capacidad, override explícito y pruebas por backend. |
 | Hardware PC/laptop diverge. | Detección de capacidades y overrides locales; sin nombres codificados. |
-| Mango crece copiando todo Archcraft. | Selección feature-by-feature y non-goal explícito de réplica. |
+| MangoWM crece copiando todo Archcraft. | Selección feature-by-feature y non-goal explícito de réplica. |
 | Documentación se separa de la implementación. | Reconciliar plan al cerrar cada fase y bloquear desvíos silenciosos. |
 
 ## 19. Decisiones abiertas
@@ -1331,9 +1420,7 @@ Estas decisiones no autorizan implementación hasta resolverse en su fase:
 
 | ID | Decisión | Momento previsto |
 | --- | --- | --- |
-| O1 | Wofi o Fuzzel como launcher Wayland. | P11 |
 | O3 | Visor de imágenes y asociaciones MIME restantes. | Cuando se seleccione un visor |
-| O5 | Stack mínimo definitivo de Mango además de MangoWC/Waybar. | P11 |
 | O7 | Hacer público el repositorio de wallpapers y su mecanismo opt-in. | P8/P11 |
 | O12 | Versión exacta de Node global de respaldo; por ahora no se instala ninguna. | Cuando un proyecto la requiera |
 | O13 | Estrategia multi-cuenta y autenticación para AWS CLI y GitHub CLI. | Cuando exista un caso de uso activo |
@@ -1354,8 +1441,8 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
 | P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
 | P9 | **Completa** | P9.1–P9.8 y D31–D33: capa privada autónoma, Git/SSH fail-closed, agentes/skills mínimos, historia limpia y límites de secretos validados. |
-| P10 | Pendiente | Requiere nueva aprobación y entorno de prueba adecuado. |
-| P11 | Pendiente | Requiere nueva aprobación y creación del repo Mango. |
+| P10 | Pendiente | Por D34 se ejecutará después de P11 en una VM CachyOS no-desktop. |
+| P11 | **Activa** | Scaffold, `bin/mango` y primer paquete Stow validados; sigue la primera sesión funcional. |
 | P12 | Pendiente | Requiere nueva aprobación. |
 
 ### Registro de cambios del plan
@@ -1412,6 +1499,10 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-25 | D31; P9.3/P9.4 endurecidas y cobertura Git/SSH de P9.6 completada. | La revisión multi-PC separa auth/sign por dispositivo, bloquea Git legacy y hosts/remotos ambiguos, añade trust multi-key, revocación, keygen/doctor y un commit firmado verificado en un fixture interno. P9.5 no se inicia. |
 | 2026-08-26 | D32; P9.5 y P9.6 completadas. | Se versiona sólo una política global portable de Codex; cuatro skills quedan declaradas con CLI fijado, fuente/ref auditadas y digest fail-closed mediante `pnpm dlx`. Auth, runtime, trust, MCP y configuración nativa de Antigravity permanecen fuera; el smoke test valida Stow, ownership, idempotencia y drift sin tocar el home real. |
 | 2026-08-26 | D33; P9.7/P9.8 y P9 completadas. | El remoto y la historia actual pasan auditoría aislada; la fuente local anterior queda en cuarentena hasta la validación multi-PC y luego se eliminará sin tocar el remoto actual. Las credenciales históricas fueron revocadas, el password manager queda manual y las claves SSH siguen locales por dispositivo. |
+| 2026-08-26 | D34; O1/O5 resueltas y P11 iniciada antes de P10. | El usuario aprobó Fuzzel y el stack mínimo MangoWM, añadió Satty/wf-recorder y Catppuccin Mocha/Pink, y reservó la VM para validar después la composición completa. |
+| 2026-08-26 | Fundación standalone de P11 creada. | El nuevo repositorio local define gobierno, ownership, manifests por procedencia/perfil, contrato de temas y smoke test sin anunciar todavía una instalación funcional. |
+| 2026-08-26 | P11.3 completada. | `bin/mango`, perfiles, features, adaptadores de paquetes y ciclo Stow dry-run/apply/doctor/unlink pasan pruebas aisladas; la sesión gráfica permanece fuera de este vertical. |
+| 2026-08-26 | P11 completada. | La candidata standalone incorpora sesión segura, tema Catppuccin Mocha/Pink generado en XDG state, stack desktop, features aisladas y smoke tests con procesos falsos; la base orquesta MangoWM por su entrypoint público. P10 conserva la validación real en VM. |
 
 ## 21. Relación con otros documentos
 
