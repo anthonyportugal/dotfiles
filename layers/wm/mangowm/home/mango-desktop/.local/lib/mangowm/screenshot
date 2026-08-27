@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mode=${1:-region}
+case "$mode" in
+  region|fullscreen|clipboard)
+    ;;
+  *)
+    printf 'Uso: %s region|fullscreen|clipboard\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac
+
+mangowm_require grim
+if [[ "$mode" != fullscreen ]]; then
+  mangowm_require slurp
+  if ! geometry=$(slurp); then
+    exit 0
+  fi
+  [[ -n "$geometry" ]] || exit 0
+fi
+
+if [[ "$mode" == clipboard ]]; then
+  mangowm_require wl-copy
+  grim -g "$geometry" -t png - | wl-copy --type image/png
+  mangowm_notify low 'Captura copiada' 'La región está disponible en el portapapeles.'
+  exit 0
+fi
+
+mangowm_require satty
+theme_dir=$(mangowm_theme_dir)
+if command -v xdg-user-dir >/dev/null 2>&1; then
+  pictures_dir=$(xdg-user-dir PICTURES)
+else
+  pictures_dir="$HOME/Pictures"
+fi
+[[ -n "$pictures_dir" ]] || pictures_dir="$HOME/Pictures"
+destination_dir="$pictures_dir/Screenshots"
+mkdir -p -- "$destination_dir"
+destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').png"
+
+grim_command=(grim -t ppm)
+if [[ "$mode" == region ]]; then
+  grim_command+=(-g "$geometry")
+fi
+grim_command+=(-)
+
+"${grim_command[@]}" | \
+  XDG_CONFIG_HOME="$theme_dir/xdg-config" satty \
+    --filename - --output-filename "$destination"

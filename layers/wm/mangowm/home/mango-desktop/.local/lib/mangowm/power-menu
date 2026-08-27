@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require wlogout
+theme_dir=$(mangowm_theme_dir)
+exec wlogout --protocol layer-shell \
+  --layout "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/layout" \
+  --css "$theme_dir/wlogout.css" "$@"

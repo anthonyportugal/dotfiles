@@ -7,4 +7,5 @@ slurp
 ttf-jetbrains-mono
 ttf-nerd-fonts-symbols-mono
 waybar
+xdg-user-dirs
 xwayland-satellite

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+command_name=${1:-toggle}
+state_dir="$(mangowm_state_home)/mangowm"
+state_file="$state_dir/night-light"
+runtime_dir=$(mangowm_runtime_dir)
+mkdir -p -- "$state_dir"
+
+exec 9>"$runtime_dir/night-light.guard"
+flock 9
+
+enable() {
+  mangowm_require gammastep
+  gammastep -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}"
+  printf 'on\n' > "$state_file"
+  mangowm_notify low 'Luz nocturna activada' "${MANGOWM_NIGHT_TEMPERATURE:-4000} K"
+}
+
+disable() {
+  mangowm_require gammastep
+  gammastep -x
+  printf 'off\n' > "$state_file"
+  mangowm_notify low 'Luz nocturna desactivada'
+}
+
+case "$command_name" in
+  on)
+    enable
+    ;;
+  off)
+    disable
+    ;;
+  toggle)
+    if [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; then
+      disable
+    else
+      enable
+    fi
+    ;;
+  restore)
+    if [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; then
+      mangowm_require gammastep
+      gammastep -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}"
+    fi
+    ;;
+  *)
+    printf 'Uso: %s on|off|toggle|restore\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

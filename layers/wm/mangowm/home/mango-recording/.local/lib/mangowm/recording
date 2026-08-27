@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+UNIT=mangowm-recording.service
+
+is_active() {
+  systemctl --user --quiet is-active "$UNIT"
+}
+
+recordings_dir() {
+  local videos_dir
+
+  if command -v xdg-user-dir >/dev/null 2>&1; then
+    videos_dir=$(xdg-user-dir VIDEOS)
+  else
+    videos_dir="$HOME/Videos"
+  fi
+  [[ -n "$videos_dir" ]] || videos_dir="$HOME/Videos"
+  printf '%s\n' "$videos_dir/Recordings"
+}
+
+start_recording() {
+  local mode=${1:-fullscreen}
+  local destination_dir destination geometry
+  local -a recorder=(wf-recorder)
+
+  is_active && {
+    mangowm_notify normal 'Grabación activa' 'Detén la grabación actual antes de iniciar otra.'
+    return 0
+  }
+  mangowm_require wf-recorder
+  if [[ "$mode" == region ]]; then
+    mangowm_require slurp
+    if ! geometry=$(slurp); then
+      return 0
+    fi
+    [[ -n "$geometry" ]] || return 0
+    recorder+=(-g "$geometry")
+  fi
+
+  destination_dir=$(recordings_dir)
+  mkdir -p -- "$destination_dir"
+  destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').mp4"
+  recorder+=(-f "$destination")
+
+  systemctl --user reset-failed "$UNIT" >/dev/null 2>&1 || true
+  systemd-run --user --quiet --collect --unit=mangowm-recording \
+    --property=KillSignal=SIGINT -- "${recorder[@]}"
+  mangowm_notify low 'Grabación iniciada' "$destination"
+}
+
+stop_recording() {
+  if ! is_active; then
+    mangowm_notify low 'Grabación inactiva'
+    return 0
+  fi
+  systemctl --user stop "$UNIT"
+  mangowm_notify low 'Grabación guardada' 'wf-recorder finalizó correctamente.'
+}
+
+case "${1:-toggle}" in
+  start)
+    start_recording fullscreen
+    ;;
+  start-region)
+    start_recording region
+    ;;
+  stop)
+    stop_recording
+    ;;
+  toggle)
+    if is_active; then stop_recording; else start_recording fullscreen; fi
+    ;;
+  toggle-region)
+    if is_active; then stop_recording; else start_recording region; fi
+    ;;
+  status)
+    if is_active; then printf 'recording\n'; else printf 'stopped\n'; fi
+    ;;
+  *)
+    printf 'Uso: %s start|start-region|stop|toggle|toggle-region|status\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

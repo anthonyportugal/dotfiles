@@ -1,0 +1,86 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 34,
+  "spacing": 4,
+  "reload_style_on_change": true,
+  "modules-left": ["mango/workspaces", "mango/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["mango/layout", "mango/keymode", "mpris", "wireplumber", "network", "battery", "tray", "idle_inhibitor", "custom/power"],
+  "mango/workspaces": {
+    "disable-scroll": true,
+    "all-outputs": false,
+    "on-click": "activate"
+  },
+  "mango/window": {
+    "format": "{}",
+    "max-length": 70,
+    "separate-outputs": true
+  },
+  "mango/layout": {
+    "format": "󰕰 {}"
+  },
+  "mango/keymode": {
+    "format": "󰌌 {}"
+  },
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "right"
+    }
+  },
+  "mpris": {
+    "format": "{player_icon} {dynamic}",
+    "format-paused": "{status_icon} {dynamic}",
+    "dynamic-order": ["title", "artist"],
+    "dynamic-len": 35,
+    "interval": 0,
+    "player-icons": {
+      "default": "󰎆"
+    },
+    "status-icons": {
+      "paused": "󰏤"
+    }
+  },
+  "wireplumber": {
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟 muted",
+    "format-icons": ["󰕿", "󰖀", "󰕾"],
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "scroll-step": 5
+  },
+  "network": {
+    "format-wifi": "󰤨 {signalStrength}%",
+    "format-ethernet": "󰈀",
+    "format-linked": "󰈀",
+    "format-disconnected": "󰤭",
+    "tooltip-format": "{ifname}: {ipaddr}/{cidr}"
+  },
+  "battery": {
+    "states": {
+      "warning": 25,
+      "critical": 10
+    },
+    "format": "{icon} {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-plugged": "󰚥 {capacity}%",
+    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+  },
+  "tray": {
+    "spacing": 8
+  },
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": "󰒳",
+      "deactivated": "󰒲"
+    }
+  },
+  "custom/power": {
+    "format": "󰐥",
+    "tooltip": false,
+    "on-click": "$HOME/.local/lib/mangowm/power-menu"
+  }
+}
