@@ -3,10 +3,14 @@
 Fundación de una sesión Wayland pública, autónoma y orientada a CachyOS/Arch.
 MangoWM será el compositor principal, con un stack pequeño, portable y seguro.
 
-> **Estado:** candidata standalone de P11 completa y validada sin Wayland real.
-> Bootstrap, sesión, tema, wrappers, perfiles y features pasan pruebas aisladas.
-> La instalación de paquetes y la sesión gráfica real se validarán en P10 desde
-> una VM CachyOS no-desktop.
+> [!WARNING]
+> **Trabajo en progreso:** este repositorio todavía no es una versión estable;
+> su instalación y experiencia gráfica continúan validándose en P10.
+>
+> **Estado actual:** candidata standalone de P11 completa y primera instalación
+> P10 iniciada en una VM. MangoWM arranca y el stack base funciona; las
+> incidencias descubiertas durante esa prueba se cubren ahora con regresiones
+> automatizadas antes de repetir el checklist gráfico.
 
 ## Objetivos
 
@@ -141,6 +145,7 @@ Atajos principales:
 | `Super+L` | Bloqueo idempotente |
 | `Print` / `Shift+Print` | Región / pantalla completa con Satty |
 | `Ctrl+Print` | Región directa al clipboard |
+| `Super+Print` | Región con Satty para anotar |
 | `Super+X` | wlogout |
 | `Super+N` | Luz nocturna manual a 4000 K |
 | `Alt+Space` | Alternar teclado US/Latinoamérica |
@@ -150,12 +155,13 @@ Los paths de capturas y grabaciones se resuelven mediante XDG user dirs con
 fallbacks portables. No se codifican monitores, baterías, interfaces, GPUs ni
 backlights concretos.
 
-## Próximo vertical
+## Validación P10 activa
 
-P10 probará esta candidata dentro de una VM CachyOS no-desktop: paquetes reales,
-inicio desde TTY/display manager, portales, captura/grabación y composición con
-el repositorio base. Hasta entonces no se afirma compatibilidad gráfica real ni
-se modifica la configuración del display manager de este host.
+La primera instalación en una VM CachyOS confirmó el inicio de MangoWM y expuso
+tres ajustes: el layout JSON-stream de wlogout, un atajo explícito para Satty y
+la preferencia GTK oscura compartida. Después de aplicar estas correcciones P10
+debe repetir menú, capturas, aplicaciones GTK, portales, grabación y composición
+con la base. La configuración del display manager continúa fuera del alcance.
 
 ## Licencia
 

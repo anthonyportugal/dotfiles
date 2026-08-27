@@ -145,9 +145,13 @@ done
 grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
 grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 
+grep -Fq '**Trabajo en progreso:**' "$REPO_ROOT/README.md" || \
+  fail "README no advierte que el proyecto sigue en desarrollo"
 grep -Fq 'candidata standalone de P11 completa' "$REPO_ROOT/README.md" || \
   fail "README no comunica el estado real"
-grep -Fq 'sesión gráfica real se validarán en P10' \
-  "$REPO_ROOT/README.md" || fail "README anuncia validación gráfica inexistente"
+grep -Fq 'P10 iniciada en una VM' "$REPO_ROOT/README.md" || \
+  fail "README no registra el inicio de la validación gráfica"
+grep -Fq 'MangoWM arranca' "$REPO_ROOT/README.md" || \
+  fail "README no registra la evidencia observada en VM"
 
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'
