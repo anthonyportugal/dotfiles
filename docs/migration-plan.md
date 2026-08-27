@@ -787,9 +787,10 @@ Swaylock, wlogout y Satty. La base será dueña de la selección GTK y de sus ap
 compartidas; una integración posterior podrá orquestar ambos entrypoints por un
 contrato público, sin leer internals.
 
-El port GTK de Catppuccin está archivado y no puede garantizar cobertura total
-de GTK4/libadwaita. Se usará Mocha/Pink de forma fijada y auditable para GTK3,
-con fallback oscuro funcional y validación real de Thunar/wlogout en P10. La
+El port GTK original de Catppuccin está archivado y no puede garantizar
+cobertura total de GTK4/libadwaita. El fallback estable usa la preferencia
+`prefer-dark`; cualquier fork GTK con Mocha/Pink se evaluará como feature
+opt-in, fijada y auditable, con validación real de Thunar y apps GTK4 en P10. La
 primera UI prioriza una base consistente y usable: wallpaper estático, polling
 mínimo, blur desactivado o acotado y `blur_optimized=1`. Geometría, iconos,
 transparencia y animaciones se pulirán en iteraciones posteriores sin cambiar
@@ -1441,8 +1442,8 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
 | P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
 | P9 | **Completa** | P9.1–P9.8 y D31–D33: capa privada autónoma, Git/SSH fail-closed, agentes/skills mínimos, historia limpia y límites de secretos validados. |
-| P10 | Pendiente | Por D34 se ejecutará después de P11 en una VM CachyOS no-desktop. |
-| P11 | **Activa** | Scaffold, `bin/mango` y primer paquete Stow validados; sigue la primera sesión funcional. |
+| P10 | **Activa** | La primera instalación en VM inicia MangoWM; se corrigen regresiones encontradas en wlogout, capturas y preferencia GTK antes de repetir el checklist. |
+| P11 | **Completa** | La candidata standalone y su composición están implementadas; los defectos encontrados durante P10 se mantienen con pruebas de regresión. |
 | P12 | Pendiente | Requiere nueva aprobación. |
 
 ### Registro de cambios del plan
@@ -1503,6 +1504,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-26 | Fundación standalone de P11 creada. | El nuevo repositorio local define gobierno, ownership, manifests por procedencia/perfil, contrato de temas y smoke test sin anunciar todavía una instalación funcional. |
 | 2026-08-26 | P11.3 completada. | `bin/mango`, perfiles, features, adaptadores de paquetes y ciclo Stow dry-run/apply/doctor/unlink pasan pruebas aisladas; la sesión gráfica permanece fuera de este vertical. |
 | 2026-08-26 | P11 completada. | La candidata standalone incorpora sesión segura, tema Catppuccin Mocha/Pink generado en XDG state, stack desktop, features aisladas y smoke tests con procesos falsos; la base orquesta MangoWM por su entrypoint público. P10 conserva la validación real en VM. |
+| 2026-08-27 | P10 iniciada en VM y primera ronda de correcciones. | MangoWM inicia y funciona; la prueba real expuso el formato JSON-stream de wlogout, poca visibilidad del flujo Satty y la preferencia GTK no aplicada. Se añaden contratos y regresiones automatizadas antes de revalidar. |
 
 ## 21. Relación con otros documentos
 

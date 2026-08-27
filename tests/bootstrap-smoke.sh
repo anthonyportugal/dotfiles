@@ -53,6 +53,30 @@ ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/mango"
 "$DOTFILES" doctor --profile desktop --stow-only --target "$TARGET_DIR"
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR" --apply
 
+# El default GTK se aplica sólo cuando el target coincide con HOME y es
+# idempotente; el fixture evita tocar dconf o preferencias del host.
+PREFERENCE_STATE="$TEST_ROOT/gsettings.state"
+PREFERENCE_LOG="$TEST_ROOT/gsettings.log"
+: > "$PREFERENCE_STATE"
+: > "$PREFERENCE_LOG"
+ln -s "$SCRIPT_DIR/fakes/gsettings" "$FAKE_BIN/gsettings"
+for _ in 1 2; do
+  HOME="$TARGET_DIR" PATH="$FAKE_BIN:/usr/bin" \
+    DOTFILES_TEST_GSETTINGS_STATE="$PREFERENCE_STATE" \
+    DOTFILES_TEST_GSETTINGS_LOG="$PREFERENCE_LOG" \
+    "$DOTFILES" bootstrap --profile desktop --stow-only \
+      --target "$TARGET_DIR" --apply >/dev/null
+done
+grep -Fxq "'prefer-dark'" "$PREFERENCE_STATE" || \
+  fail 'el bootstrap no aplicó prefer-dark'
+[[ $(grep -c '^set prefer-dark$' "$PREFERENCE_LOG") == 1 ]] || \
+  fail 'prefer-dark no fue idempotente'
+HOME="$TARGET_DIR" PATH="$FAKE_BIN:/usr/bin" \
+  DOTFILES_TEST_GSETTINGS_STATE="$PREFERENCE_STATE" \
+  DOTFILES_TEST_GSETTINGS_LOG="$PREFERENCE_LOG" \
+  "$DOTFILES" doctor --profile desktop --stow-only \
+    --target "$TARGET_DIR" >/dev/null
+
 # Git público funciona sin includes opcionales y respeta la precedencia
 # pública → privada → local sin introducir una identidad.
 PUBLIC_GIT_CONFIG="$TARGET_DIR/.config/git/config"

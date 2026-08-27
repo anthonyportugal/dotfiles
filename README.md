@@ -8,8 +8,8 @@ portable, modular e independiente del Window Manager o compositor elegido.
 > doctor propios, y el repositorio bspwm ya fue validado como proyecto
 > standalone. La integración opcional entre ambos y el contrato con una capa
 > privada independiente ya están cerrados. P11 dejó una candidata MangoWM
-> standalone y composición opcional terminadas; la validación integral desde un
-> CachyOS limpio es el próximo hito P10.
+> standalone y composición opcional terminadas; P10 está activa tras una primera
+> instalación funcional en VM y una ronda de regresiones encontrada allí.
 
 ## Responsabilidad de este repositorio
 
@@ -35,7 +35,8 @@ No será responsable de:
   independiente, con instalación standalone validada.
 - [`mangowm`](https://github.com/anthonyportugal/dotfiles-mangowm): proyecto
   público Wayland independiente. Su sesión, bootstrap, tema y features están
-  validados de forma aislada; falta la prueba gráfica de P10.
+  validados de forma aislada y su primera instalación gráfica abrió P10; falta
+  cerrar la revalidación de las incidencias encontradas.
 - dotfiles privados: capa opcional e independiente para configuración personal
   o laboral no secreta. Su ausencia nunca debe romper los repositorios públicos.
 - wallpapers: fuente de assets independiente y opcional; actualmente privada y
@@ -58,6 +59,7 @@ conoce sus internals.
 
 Defaults de aplicaciones ya acordados:
 
+- preferencia GTK global en modo oscuro mediante `prefer-dark`;
 - Alacritty con una apariencia Catppuccin compartida entre sesiones;
 - Brave como navegador;
 - Zathura con MuPDF para PDF;
@@ -158,6 +160,13 @@ simulación nativa de Stow cuando ya está disponible. Si el plan es correcto:
 ./bin/dotfiles bootstrap --profile desktop --apply
 ./bin/dotfiles doctor --profile desktop
 ```
+
+El perfil `desktop` instala `glib2` y `gsettings-desktop-schemas`, y aplica de
+forma idempotente `org.gnome.desktop.interface color-scheme=prefer-dark` cuando
+el target es el home del usuario actual. Un target aislado no puede modificar
+el `dconf` del host. Si el backend de ajustes aún no está disponible durante el
+bootstrap, la sesión MangoWM vuelve a intentar el mismo entrypoint público y
+`doctor` reporta cualquier preferencia pendiente.
 
 ### Activar Zsh como shell de login
 

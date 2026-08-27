@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+operation=${1:-apply}
+schema=org.gnome.desktop.interface
+key=color-scheme
+expected="'prefer-dark'"
+
+case "$operation" in
+  apply|check)
+    ;;
+  *)
+    printf 'Uso: %s apply|check\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac
+
+if ! command -v gsettings >/dev/null 2>&1; then
+  printf 'error: gsettings no está disponible; instale glib2\n' >&2
+  exit 1
+fi
+
+available_schemas=$(gsettings list-schemas)
+if ! grep -Fxq "$schema" <<< "$available_schemas"; then
+  printf 'error: falta el schema %s; instale gsettings-desktop-schemas\n' \
+    "$schema" >&2
+  exit 1
+fi
+
+available_keys=$(gsettings list-keys "$schema")
+if ! grep -Fxq "$key" <<< "$available_keys"; then
+  printf 'error: el schema %s no expone %s\n' "$schema" "$key" >&2
+  exit 1
+fi
+
+current=$(gsettings get "$schema" "$key")
+if [[ "$current" == "$expected" ]]; then
+  [[ "$operation" == check ]] && printf 'prefer-dark\n'
+  exit 0
+fi
+
+if [[ "$operation" == check ]]; then
+  printf 'error: %s.%s es %s; se esperaba %s\n' \
+    "$schema" "$key" "$current" "$expected" >&2
+  exit 1
+fi
+
+gsettings set "$schema" "$key" prefer-dark
+current=$(gsettings get "$schema" "$key")
+if [[ "$current" != "$expected" ]]; then
+  printf 'error: gsettings no conservó %s.%s=%s\n' \
+    "$schema" "$key" "$expected" >&2
+  exit 1
+fi
+
+printf 'prefer-dark aplicado\n'

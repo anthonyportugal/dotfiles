@@ -1,4 +1,6 @@
 alacritty
+glib2
+gsettings-desktop-schemas
 gvfs
 mpv
 mpv-mpris

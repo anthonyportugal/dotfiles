@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+: "${DOTFILES_TEST_GSETTINGS_STATE:?}"
+: "${DOTFILES_TEST_GSETTINGS_LOG:?}"
+
+case "${1-}" in
+  list-schemas)
+    printf 'org.gnome.desktop.interface\n'
+    ;;
+  list-keys)
+    [[ "${2-}" == org.gnome.desktop.interface ]]
+    printf 'color-scheme\n'
+    ;;
+  get)
+    [[ "${2-}" == org.gnome.desktop.interface && "${3-}" == color-scheme ]]
+    if [[ -s "$DOTFILES_TEST_GSETTINGS_STATE" ]]; then
+      command cat "$DOTFILES_TEST_GSETTINGS_STATE"
+    else
+      printf "'default'\n"
+    fi
+    ;;
+  set)
+    [[ "${2-}" == org.gnome.desktop.interface && \
+      "${3-}" == color-scheme && "${4-}" == prefer-dark ]]
+    printf "'prefer-dark'\n" > "$DOTFILES_TEST_GSETTINGS_STATE"
+    printf 'set prefer-dark\n' >> "$DOTFILES_TEST_GSETTINGS_LOG"
+    ;;
+  *)
+    exit 2
+    ;;
+esac

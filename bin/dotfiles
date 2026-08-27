@@ -1109,6 +1109,51 @@ validate_alacritty_syntax() {
   info "Configuración de Alacritty validada"
 }
 
+target_is_current_home() {
+  local current_home target_home
+
+  current_home=$(realpath -m -- "$HOME")
+  target_home=$(realpath -m -- "$TARGET_DIR")
+  [[ "$target_home" == "$current_home" ]]
+}
+
+apply_session_preferences() {
+  local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
+
+  [[ "$PROFILE" == desktop ]] || return 0
+  (( STOW_ENABLED == 1 )) || return 0
+  if ! target_is_current_home; then
+    info "Preferencias de sesión omitidas: el target no es el home actual"
+    return 0
+  fi
+  if [[ ! -x "$preferences" ]]; then
+    warn "no se encontró el entrypoint de preferencias: $preferences"
+    return 0
+  fi
+  if ! "$preferences" apply; then
+    warn "no se pudo aplicar prefer-dark durante el bootstrap; MangoWM volverá a intentarlo al iniciar sesión"
+    return 0
+  fi
+  info "Preferencia GTK validada: prefer-dark"
+}
+
+validate_session_preferences() {
+  local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
+
+  [[ "$PROFILE" == desktop ]] || return 0
+  (( STOW_ENABLED == 1 )) || return 0
+  target_is_current_home || return 0
+  [[ -x "$preferences" ]] || {
+    error "falta el entrypoint de preferencias: $preferences"
+    return 1
+  }
+  if ! "$preferences" check >/dev/null; then
+    error "la preferencia GTK oscura no está aplicada; ejecute '$preferences apply'"
+    return 1
+  fi
+  info "Preferencia GTK validada: prefer-dark"
+}
+
 preflight() {
   command_exists find || die "falta el comando requerido: find"
   command_exists realpath || die "falta el comando requerido: realpath"
@@ -1230,6 +1275,7 @@ bootstrap() {
     info "Aplicando enlaces GNU Stow"
     run_stow install 0 || die "GNU Stow no pudo crear los enlaces"
     validate_links_installed || die "falló la validación posterior de enlaces"
+    apply_session_preferences
   fi
 
   if (( SYSTEM_ENABLED == 1 )); then
@@ -1265,6 +1311,7 @@ doctor() {
       result=1
     fi
     validate_links_installed || result=1
+    validate_session_preferences || result=1
   fi
 
   report_zsh_activation
