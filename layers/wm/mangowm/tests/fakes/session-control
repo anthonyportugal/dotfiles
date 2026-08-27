@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+name=${0##*/}
+: "${MANGOWM_TEST_LOG:?MANGOWM_TEST_LOG no está definida}"
+: "${MANGOWM_TEST_SERVICE_STATE:?MANGOWM_TEST_SERVICE_STATE no está definida}"
+printf -v command_line '%q ' "$name" "$@"
+printf '%s\n' "$command_line" >> "$MANGOWM_TEST_LOG"
+
+if [[ "$name" == systemd-run ]]; then
+  for argument in "$@"; do
+    if [[ "$argument" == --unit=mangowm-recording ]]; then
+      printf 'active\n' > "$MANGOWM_TEST_SERVICE_STATE"
+    fi
+  done
+  exit 0
+fi
+
+[[ "$name" == systemctl ]] || exit 0
+declare -a positional=()
+for argument in "$@"; do
+  case "$argument" in
+    --user|--quiet)
+      ;;
+    *)
+      positional+=("$argument")
+      ;;
+  esac
+done
+
+case "${positional[0]-}" in
+  is-active)
+    [[ "${positional[1]-}" == mangowm-recording.service && \
+       -s "$MANGOWM_TEST_SERVICE_STATE" ]]
+    ;;
+  stop)
+    if [[ "${positional[1]-}" == mangowm-recording.service ]]; then
+      : > "$MANGOWM_TEST_SERVICE_STATE"
+    fi
+    ;;
+  *)
+    ;;
+esac

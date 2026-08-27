@@ -141,7 +141,26 @@ Usa perfiles `core|desktop`, features `laptop|recording`, backends
 y modos `--packages-only`/`--stow-only`. La base podrá delegar en este contrato
 sin leer manifests ni metadata Git de MangoWM.
 
-El primer paquete Stow materializa sólo `~/.config/mango/config.conf`. Mantiene
-un baseline pequeño, carga `config.local.conf` de forma opcional y bloquea rutas
-fuera de `.config/mango`. La sesión y los adaptadores de tema se añadirán en
-verticales posteriores sin ampliar silenciosamente este ownership.
+La implementación usa cuatro paquetes Stow: `mango`, `mango-desktop`,
+`mango-laptop` y `mango-recording`. El primero posee la sesión core; los demás
+sólo materializan archivos de su perfil/feature. `config.local.conf` conserva
+la última precedencia y las políticas del bootstrap rechazan cualquier ruta
+fuera del ownership declarado.
+
+## Ciclo de sesión
+
+`~/.local/bin/mangowm-session` es el entrypoint explícito. Renderiza el tema
+antes de iniciar Mango y detiene las unidades propias al salir. El `exec-once`
+del compositor llama a un orquestador idempotente que importa el entorno
+Wayland y crea unidades systemd transitorias para Mako, Swayidle, Swaybg,
+Waybar y Polkit. No se inicia ningún portal manualmente.
+
+El renderer trata la paleta como datos, deriva una revisión por hash, valida
+todos los adaptadores en un directorio temporal y promueve `current` mediante
+un cambio atómico de symlink. El bootstrap aplicado materializa la revisión
+inicial en el XDG state del target; `unlink` no elimina estado runtime del
+usuario.
+
+La prueba real del compositor, del package manager y del display manager queda
+deliberadamente en P10. Las pruebas de P11 sólo usan homes y procesos falsos
+aislados.

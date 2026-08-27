@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+name=${0##*/}
+: "${MANGOWM_TEST_LOG:?MANGOWM_TEST_LOG no está definida}"
+printf -v command_line '%q ' "$name" "$@"
+printf '%s\n' "$command_line" >> "$MANGOWM_TEST_LOG"
+
+case "$name" in
+  slurp)
+    printf '10,20 300x200\n'
+    ;;
+  grim)
+    printf 'P6\n1 1\n255\n\000\000\000'
+    ;;
+  satty|wl-copy)
+    command cat >/dev/null
+    ;;
+  xdg-user-dir)
+    printf '%s/%s\n' "${MANGOWM_TEST_MEDIA_ROOT:?}" "$1"
+    ;;
+  *)
+    ;;
+esac

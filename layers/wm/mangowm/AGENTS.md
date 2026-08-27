@@ -61,10 +61,11 @@ Cuando un commit esté autorizado:
 Cuando se modifiquen el bootstrap, manifests o paquetes Stow:
 
 ```bash
-bash -n bin/mango tests/bootstrap-smoke.sh tests/scaffold-smoke.sh
-shellcheck -x bin/mango tests/bootstrap-smoke.sh tests/scaffold-smoke.sh
+bash -n bin/mango tests/*.sh home/*/.local/bin/* home/*/.local/lib/mangowm/*
+shellcheck bin/mango tests/*.sh tests/fakes/* home/*/.local/bin/* home/*/.local/lib/mangowm/*
 ./tests/scaffold-smoke.sh
 ./tests/bootstrap-smoke.sh
+./tests/session-smoke.sh
 git diff --check
 ```
 

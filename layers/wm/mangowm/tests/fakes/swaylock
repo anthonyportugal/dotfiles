@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+: "${MANGOWM_TEST_LOG:?MANGOWM_TEST_LOG no está definida}"
+printf -v command_line '%q ' swaylock "$@"
+printf '%s\n' "$command_line" >> "$MANGOWM_TEST_LOG"
+
+ready_fd=''
+while (( $# > 0 )); do
+  if [[ "$1" == --ready-fd ]]; then
+    ready_fd=$2
+    break
+  fi
+  shift
+done
+[[ "$ready_fd" =~ ^[0-9]+$ ]] || exit 2
+printf '\n' >&"$ready_fd"
+sleep 30

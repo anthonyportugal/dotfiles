@@ -96,14 +96,14 @@ if grep -q 'Simulación nativa de GNU Stow' "$TEST_ROOT/scope.out"; then
 fi
 
 cp -a "$REPO_ROOT/bin" "$REPO_ROOT/home" "$REPO_ROOT/packages" "$CONFIG_REPO/"
-printf 'blur=1\n' >> \
+printf 'unexpected=1\n' >> \
   "$CONFIG_REPO/home/mango/.config/mango/config.conf"
 if "$CONFIG_REPO/bin/mango" bootstrap --profile core --stow-only \
     --target "$CONFIG_TARGET" > "$TEST_ROOT/config.out" 2>&1; then
   fail "el bootstrap aceptó una directiva duplicada"
 fi
-grep -q 'duplica la directiva blur' "$TEST_ROOT/config.out" || \
-  fail "no se explicó la configuración duplicada"
+grep -q 'directiva fuera del entrypoint modular' "$TEST_ROOT/config.out" || \
+  fail "no se explicó la configuración inválida"
 if grep -q 'Simulación nativa de GNU Stow' "$TEST_ROOT/config.out"; then
   fail "Stow se ejecutó pese a configuración inválida"
 fi

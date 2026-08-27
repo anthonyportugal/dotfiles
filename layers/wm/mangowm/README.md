@@ -3,10 +3,10 @@
 Fundación de una sesión Wayland pública, autónoma y orientada a CachyOS/Arch.
 MangoWM será el compositor principal, con un stack pequeño, portable y seguro.
 
-> **Estado:** bootstrap standalone disponible para P11. El ciclo dry-run/apply,
-> `doctor`, `unlink`, perfiles, features y el primer paquete Stow están
-> validados de forma aislada. La gestión completa de paquetes requiere todavía
-> la VM y la sesión gráfica completa todavía no está implementada.
+> **Estado:** candidata standalone de P11 completa y validada sin Wayland real.
+> Bootstrap, sesión, tema, wrappers, perfiles y features pasan pruebas aisladas.
+> La instalación de paquetes y la sesión gráfica real se validarán en P10 desde
+> una VM CachyOS no-desktop.
 
 ## Objetivos
 
@@ -42,36 +42,41 @@ MangoWM será el compositor principal, con un stack pequeño, portable y seguro.
 No se instalarán desktop shells, Pywal, clipboard history, MPD/MPC ni
 componentes de Hyprland por defecto.
 
-## Layout actual
+## Layout
 
 ```text
 .
 ├── bin/mango
 ├── docs/architecture.md
 ├── home/
-│   ├── .stow
-│   └── mango/.config/mango/config.conf
+│   ├── mango/             # sesión core
+│   ├── mango-desktop/     # UX desktop
+│   ├── mango-laptop/      # feature de backlight
+│   └── mango-recording/   # feature de grabación
 ├── packages/
 ├── tests/
 │   ├── bootstrap-smoke.sh
-│   └── scaffold-smoke.sh
+│   ├── scaffold-smoke.sh
+│   └── session-smoke.sh
 └── themes/catppuccin-mocha-pink/palette.conf
 ```
 
-`home/` es el único stow directory. El paquete `mango` administra exclusivamente
-`~/.config/mango`; su baseline desactiva blur y carga opcionalmente
-`config.local.conf` sin versionarlo. Los manifests son consumidos por
-`bin/mango` y permanecen separados por procedencia.
+`home/` es el único stow directory. `mango` instala el compositor, lock/idle,
+portales y entrypoint; los otros paquetes se componen únicamente al seleccionar
+su perfil o feature. `config.local.conf` se carga al final y nunca se versiona.
+Los manifests son consumidos por `bin/mango` y permanecen separados por
+procedencia.
 
 ## Temas
 
 El default es Catppuccin Mocha con Pink como acento. La paleta canónica usa
 roles semánticos y está en `themes/catppuccin-mocha-pink/palette.conf`.
 
-Los futuros adaptadores de Foot, Fuzzel, Waybar, Mako, Swaylock, wlogout y
-Satty renderizarán bajo `$XDG_STATE_HOME/mangowm/theme/`. Cambiar de tema no
-modificará archivos versionados. GTK y aplicaciones compartidas pertenecen al
-repositorio base; la integración se hará después mediante entrypoints públicos.
+`mango-theme` valida la paleta como datos —nunca la ejecuta— y renderiza
+adaptadores de MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, wlogout y Satty
+bajo `$XDG_STATE_HOME/mangowm/theme/`. Cada revisión es inmutable y `current`
+cambia atómicamente. Cambiar de tema no modifica archivos versionados. GTK y
+aplicaciones compartidas pertenecen al repositorio base.
 
 ## Perfiles y features
 
@@ -107,13 +112,50 @@ El smoke test enlaza únicamente dentro de un home temporal:
 ```bash
 ./tests/scaffold-smoke.sh
 ./tests/bootstrap-smoke.sh
+./tests/session-smoke.sh
 ```
+
+## Iniciar la sesión
+
+Después de aplicar el perfil, el entrypoint público de sesión es:
+
+```bash
+~/.local/bin/mangowm-session
+```
+
+El entrypoint fija el entorno XDG/Wayland, materializa el tema y ejecuta Mango.
+`exec-once` importa el entorno en D-Bus/systemd y levanta Mako, Swayidle,
+Swaybg, Waybar y Polkit como unidades de usuario idempotentes. Al terminar el
+compositor, se detienen únicamente esas unidades. Los portales se activan por
+D-Bus; no se lanzan backends manualmente.
+
+Swaylock confirma mediante `ready-fd` que el bloqueo es visible antes de que
+Swayidle continúe con un evento de suspensión. Los defaults bloquean a los
+cinco minutos, apagan todos los outputs a los diez y no suspenden la máquina.
+
+Atajos principales:
+
+| Atajo | Acción |
+| --- | --- |
+| `Super+Return` / `Super+D` | Foot / Fuzzel |
+| `Super+L` | Bloqueo idempotente |
+| `Print` / `Shift+Print` | Región / pantalla completa con Satty |
+| `Ctrl+Print` | Región directa al clipboard |
+| `Super+X` | wlogout |
+| `Super+N` | Luz nocturna manual a 4000 K |
+| `Alt+Space` | Alternar teclado US/Latinoamérica |
+| `Super+Ctrl+R` | Toggle de grabación si la feature está instalada |
+
+Los paths de capturas y grabaciones se resuelven mediante XDG user dirs con
+fallbacks portables. No se codifican monitores, baterías, interfaces, GPUs ni
+backlights concretos.
 
 ## Próximo vertical
 
-Implementar la primera sesión funcional: MangoWM, Foot, Fuzzel, Waybar, Mako,
-lock/idle, portales y wrappers seguros. El bootstrap actual prepara ese trabajo,
-pero aún no constituye una sesión gráfica candidata para uso diario.
+P10 probará esta candidata dentro de una VM CachyOS no-desktop: paquetes reales,
+inicio desde TTY/display manager, portales, captura/grabación y composición con
+el repositorio base. Hasta entonces no se afirma compatibilidad gráfica real ni
+se modifica la configuración del display manager de este host.
 
 ## Licencia
 

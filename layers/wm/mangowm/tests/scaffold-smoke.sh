@@ -75,6 +75,7 @@ assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swaylock
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swayidle
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" waybar
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
+assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" xdg-user-dirs
 assert_manifest_line "$REPO_ROOT/packages/repo/laptop.txt" brightnessctl
 assert_manifest_line "$REPO_ROOT/packages/repo/recording.txt" wf-recorder
 assert_manifest_line "$REPO_ROOT/packages/stow/core.txt" mango
@@ -87,7 +88,11 @@ fi
 [[ -f "$REPO_ROOT/home/.stow" ]] || fail "falta el marcador home/.stow"
 [[ -x "$REPO_ROOT/bin/mango" ]] || fail "bin/mango no es ejecutable"
 [[ -f "$REPO_ROOT/home/mango/.config/mango/config.conf" ]] || \
-  fail "falta el primer paquete Stow de MangoWM"
+  fail "falta el entrypoint modular de MangoWM"
+[[ -f "$REPO_ROOT/home/mango-desktop/.config/waybar/config.json" ]] || \
+  fail "falta Waybar en el perfil desktop"
+[[ -x "$REPO_ROOT/home/mango/.local/bin/mango-theme" ]] || \
+  fail "falta el renderer de tema"
 [[ -f "$REPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
 
@@ -140,9 +145,9 @@ done
 grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
 grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 
-grep -Fq 'bootstrap standalone disponible' "$REPO_ROOT/README.md" || \
+grep -Fq 'candidata standalone de P11 completa' "$REPO_ROOT/README.md" || \
   fail "README no comunica el estado real"
-grep -Fq 'la sesión gráfica completa todavía no está implementada' \
-  "$REPO_ROOT/README.md" || fail "README anuncia capacidades inexistentes"
+grep -Fq 'sesión gráfica real se validarán en P10' \
+  "$REPO_ROOT/README.md" || fail "README anuncia validación gráfica inexistente"
 
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'
