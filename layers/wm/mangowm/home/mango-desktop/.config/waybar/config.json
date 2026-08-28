@@ -4,48 +4,89 @@
   "height": 34,
   "spacing": 4,
   "reload_style_on_change": true,
-  "modules-left": ["ext/workspaces"],
-  "modules-center": ["clock"],
-  "modules-right": ["mpris", "wireplumber", "network", "battery", "tray", "idle_inhibitor", "custom/power"],
-  "ext/workspaces": {
-    "format": "{name}",
-    "ignore-hidden": true,
-    "on-click": "activate"
-  },
-  "clock": {
-    "format": "{:%a %d %b  %H:%M}",
-    "tooltip-format": "<tt><small>{calendar}</small></tt>",
-    "calendar": {
-      "mode": "month",
-      "weeks-pos": "right"
-    }
+  "modules-left": [
+    "custom/launcher",
+    "mpris",
+    "custom/nightlight",
+    "idle_inhibitor",
+    "tray"
+  ],
+  "modules-center": [
+    "ext/workspaces"
+  ],
+  "modules-right": [
+    "wireplumber",
+    "backlight",
+    "network",
+    "battery",
+    "clock",
+    "custom/power"
+  ],
+  "custom/launcher": {
+    "format": "󰣇",
+    "tooltip": false,
+    "on-click": "$HOME/.local/lib/mangowm/launcher"
   },
   "mpris": {
-    "format": "{player_icon} {dynamic}",
-    "format-paused": "{status_icon} {dynamic}",
+    "format": "{player_icon} {title} - {artist}",
+    "format-paused": "{status_icon} <i>{title} - {artist}</i>",
     "dynamic-order": ["title", "artist"],
-    "dynamic-len": 35,
-    "interval": 0,
+    "dynamic-len": 32,
+    "interval": 1,
     "player-icons": {
-      "default": "󰎆"
+      "default": "󰐊",
+      "spotify": "󰓇",
+      "firefox": "󰈹",
+      "chromium": "󰊴"
     },
     "status-icons": {
       "paused": "󰏤"
     }
   },
+  "custom/nightlight": {
+    "format": "󰖔",
+    "tooltip": true,
+    "tooltip-format": "Luz nocturna (clic para alternar)",
+    "on-click": "$HOME/.local/lib/mangowm/night-light toggle"
+  },
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "tooltip": true,
+    "tooltip-format-activated": "Modo presentación: pantalla siempre activa",
+    "tooltip-format-deactivated": "Modo ahorro: reposo automático",
+    "format-icons": {
+      "activated": "󰅶",
+      "deactivated": "󰾪"
+    }
+  },
+  "tray": {
+    "icon-size": 16,
+    "spacing": 8
+  },
+  "ext/workspaces": {
+    "format": "{name}",
+    "ignore-hidden": true,
+    "on-click": "activate"
+  },
   "wireplumber": {
     "format": "{icon} {volume}%",
-    "format-muted": "󰝟 muted",
+    "format-muted": "󰝟 {volume}%",
     "format-icons": ["󰕿", "󰖀", "󰕾"],
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
     "scroll-step": 5
   },
+  "backlight": {
+    "format": "{icon} {percent}%",
+    "format-icons": ["󰃞", "󰃟", "󰃠"],
+    "scroll-step": 5
+  },
   "network": {
-    "format-wifi": "󰤨 {signalStrength}%",
-    "format-ethernet": "󰈀",
-    "format-linked": "󰈀",
-    "format-disconnected": "󰤭",
-    "tooltip-format": "{ifname}: {ipaddr}/{cidr}"
+    "format-wifi": "󰤨 {essid}",
+    "format-ethernet": "󰈀 {ifname}",
+    "format-linked": "󰈀 {ifname}",
+    "format-disconnected": "󰤭 Offline",
+    "tooltip-format": "{ifname}: {ipaddr}/{cidr} via {gwaddr}",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%) {ipaddr}"
   },
   "battery": {
     "states": {
@@ -57,14 +98,13 @@
     "format-plugged": "󰚥 {capacity}%",
     "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
   },
-  "tray": {
-    "spacing": 8
-  },
-  "idle_inhibitor": {
-    "format": "{icon}",
-    "format-icons": {
-      "activated": "󰒳",
-      "deactivated": "󰒲"
+  "clock": {
+    "format": "󰥔 {:%I:%M %p}",
+    "format-alt": "󰃭 {:%a, %d %b %Y}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "right"
     }
   },
   "custom/power": {

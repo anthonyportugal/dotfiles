@@ -256,36 +256,85 @@ render_waybar() {
     '  border-radius: 0;' \
     '  min-height: 0;' \
     '  font-family: "JetBrainsMono Nerd Font", monospace;' \
-    '  font-size: 12px;' \
+    '  font-size: 13px;' \
     '}' \
     'window#waybar {' \
-    '  background: alpha(@background, 0.94);' \
+    '  background: alpha(@background, 0.96);' \
     '  color: @foreground;' \
     '}' \
-    '#tags button, #workspaces button, #window, #clock, #mpris,' \
-    '#wireplumber, #network, #battery, #tray, #idle_inhibitor, #custom-power {' \
+    '#custom-launcher, #mpris, #custom-nightlight, #idle_inhibitor, #tray,' \
+    '#wireplumber, #backlight, #network, #battery, #clock, #custom-power {' \
     '  padding: 0 10px;' \
     '  margin: 4px 2px;' \
     '  border-radius: 8px;' \
     '  background: @surface;' \
-    '}' \
-    '#tags button, #workspaces button { color: @muted; }' \
-    '#tags button.occupied, #workspaces button.occupied, #workspaces button.visible {' \
     '  color: @foreground;' \
-    '  background: alpha(@accent, 0.18);' \
+    '}' \
+    '#custom-launcher {' \
+    '  color: @accent;' \
+    '  font-size: 16px;' \
+    '  padding: 0 10px;' \
+    '}' \
+    '#custom-nightlight, #idle_inhibitor {' \
+    '  font-size: 15px;' \
+    '  padding: 0 8px;' \
+    '}' \
+    '#idle_inhibitor.activated {' \
+    '  color: @accent;' \
+    '}' \
+    '#workspaces {' \
+    '  margin: 4px 0;' \
+    '  padding: 0 4px;' \
+    '}' \
+    '#workspaces button {' \
+    '  color: @muted;' \
+    '  background: transparent;' \
+    '  padding: 0 10px;' \
+    '  margin: 0 2px;' \
+    '  border-radius: 6px;' \
+    '  font-weight: bold;' \
+    '}' \
+    '#workspaces button.occupied, #workspaces button.visible {' \
+    '  color: @foreground;' \
+    '  background: transparent;' \
+    '}' \
+    '#workspaces button.focused, #workspaces button.active, #workspaces button.selected {' \
+    '  color: @accent;' \
+    '  background: alpha(@accent, 0.16);' \
     '  border-bottom: 2px solid @accent;' \
     '}' \
-    '#tags button.focused, #tags button.active, #tags button.selected,' \
-    '#workspaces button.focused, #workspaces button.active, #workspaces button.selected {' \
-    '  color: @background;' \
-    '  background: @accent;' \
-    '}' \
-    '#tags button.urgent, #workspaces button.urgent, #battery.critical {' \
+    '#workspaces button.urgent {' \
     '  color: @background;' \
     '  background: @urgent;' \
     '}' \
-    '#tags button:hover, #workspaces button:hover { background: @surface_hover; color: @foreground; }' \
-    '#custom-power { color: @accent; }'
+    '#workspaces button:hover {' \
+    '  color: @foreground;' \
+    '  background: @surface_hover;' \
+    '}' \
+    '#custom-launcher:hover, #mpris:hover, #custom-nightlight:hover, #idle_inhibitor:hover,' \
+    '#wireplumber:hover, #backlight:hover, #network:hover, #battery:hover, #clock:hover {' \
+    '  background: @surface_hover;' \
+    '}' \
+    '#battery.warning {' \
+    '  color: #fab387;' \
+    '}' \
+    '#battery.critical {' \
+    '  color: @background;' \
+    '  background: @urgent;' \
+    '}' \
+    '#wireplumber.muted {' \
+    '  color: @muted;' \
+    '}' \
+    '#custom-power {' \
+    '  color: #ffffff;' \
+    '  background: alpha(@urgent, 0.85);' \
+    '  font-size: 15px;' \
+    '  padding: 0 10px;' \
+    '  margin-right: 4px;' \
+    '}' \
+    '#custom-power:hover {' \
+    '  background: @urgent;' \
+    '}'
 }
 
 render_wlogout() {
