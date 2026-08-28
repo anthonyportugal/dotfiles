@@ -42,7 +42,12 @@ fi
 
 start_unit mangowm-mako mako --config "$theme_dir/mako.conf"
 start_unit mangowm-swayidle swayidle -w -C "$XDG_CONFIG_HOME/swayidle/config"
-start_unit mangowm-swaybg swaybg -c "$(<"$theme_dir/background")"
+
+if [[ -x "$HOME/.local/lib/mangowm/wallpaper" ]]; then
+  "$HOME/.local/lib/mangowm/wallpaper" restore
+else
+  start_unit mangowm-swaybg swaybg -c "$(<"$theme_dir/background")"
+fi
 
 if [[ -r "$XDG_CONFIG_HOME/waybar/config.json" ]] && command -v waybar >/dev/null 2>&1; then
   start_unit mangowm-waybar waybar \

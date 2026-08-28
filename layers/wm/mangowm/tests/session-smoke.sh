@@ -54,7 +54,8 @@ for managed_path in \
   .local/bin/mango-theme \
   .local/bin/mangowm-session \
   .local/lib/mangowm/brightness \
-  .local/lib/mangowm/recording; do
+  .local/lib/mangowm/recording \
+  .local/lib/mangowm/wallpaper; do
   [[ -L "$TARGET/$managed_path" ]] || fail "falta el enlace $managed_path"
 done
 
@@ -176,6 +177,18 @@ grep -Fqx "bind=SUPER,Print,spawn,\$HOME/.local/lib/mangowm/screenshot annotate"
 "$TARGET/.local/lib/mangowm/recording" stop
 [[ $("$TARGET/.local/lib/mangowm/recording" status) == stopped ]] || \
   fail 'la grabación no cambió a detenida'
+
+mkdir -p "$TARGET/Pictures/Wallpapers"
+touch "$TARGET/Pictures/Wallpapers/sample.png"
+"$TARGET/.local/lib/mangowm/wallpaper" set "$TARGET/Pictures/Wallpapers/sample.png"
+[[ -f "$STATE/mangowm/wallpaper" ]] || fail 'wallpaper set no guardó el estado'
+"$TARGET/.local/lib/mangowm/wallpaper" restore
+"$TARGET/.local/lib/mangowm/wallpaper" select
+"$TARGET/.local/lib/mangowm/wallpaper" clear
+[[ ! -f "$STATE/mangowm/wallpaper" ]] || fail 'wallpaper clear no eliminó el estado'
+grep -Fqx "bind=SUPER+CTRL,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo Super+Ctrl+W para seleccionar wallpaper'
 
 "$MANGO" doctor --profile desktop --feature laptop --feature recording \
   --stow-only --target "$TARGET" >/dev/null 2>&1
