@@ -1,10 +1,13 @@
 alacritty
+adw-gtk-theme
 glib2
+gnome-themes-extra
 gsettings-desktop-schemas
 gvfs
 imv
 mpv
 mpv-mpris
+papirus-icon-theme
 playerctl
 thunar
 ttf-jetbrains-mono
