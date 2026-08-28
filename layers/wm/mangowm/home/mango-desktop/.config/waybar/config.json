@@ -4,24 +4,13 @@
   "height": 34,
   "spacing": 4,
   "reload_style_on_change": true,
-  "modules-left": ["mango/workspaces", "mango/window"],
+  "modules-left": ["ext/workspaces"],
   "modules-center": ["clock"],
-  "modules-right": ["mango/layout", "mango/keymode", "mpris", "wireplumber", "network", "battery", "tray", "idle_inhibitor", "custom/power"],
-  "mango/workspaces": {
-    "disable-scroll": true,
-    "all-outputs": false,
+  "modules-right": ["mpris", "wireplumber", "network", "battery", "tray", "idle_inhibitor", "custom/power"],
+  "ext/workspaces": {
+    "format": "{name}",
+    "ignore-hidden": true,
     "on-click": "activate"
-  },
-  "mango/window": {
-    "format": "{}",
-    "max-length": 70,
-    "separate-outputs": true
-  },
-  "mango/layout": {
-    "format": "󰕰 {}"
-  },
-  "mango/keymode": {
-    "format": "󰌌 {}"
   },
   "clock": {
     "format": "{:%a %d %b  %H:%M}",

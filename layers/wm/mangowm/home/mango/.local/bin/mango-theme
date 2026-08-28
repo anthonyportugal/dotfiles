@@ -246,23 +246,29 @@ render_waybar() {
     '  background: alpha(@background, 0.94);' \
     '  color: @foreground;' \
     '}' \
-    '#workspaces button, #window, #layout, #keymode, #clock, #mpris,' \
+    '#tags button, #workspaces button, #window, #clock, #mpris,' \
     '#wireplumber, #network, #battery, #tray, #idle_inhibitor, #custom-power {' \
     '  padding: 0 10px;' \
     '  margin: 4px 2px;' \
     '  border-radius: 8px;' \
     '  background: @surface;' \
     '}' \
-    '#workspaces button { color: @muted; }' \
-    '#workspaces button.focused, #workspaces button.active {' \
+    '#tags button, #workspaces button { color: @muted; }' \
+    '#tags button.occupied, #workspaces button.occupied, #workspaces button.visible {' \
+    '  color: @foreground;' \
+    '  background: alpha(@accent, 0.18);' \
+    '  border-bottom: 2px solid @accent;' \
+    '}' \
+    '#tags button.focused, #tags button.active, #tags button.selected,' \
+    '#workspaces button.focused, #workspaces button.active, #workspaces button.selected {' \
     '  color: @background;' \
     '  background: @accent;' \
     '}' \
-    '#workspaces button.urgent, #battery.critical {' \
+    '#tags button.urgent, #workspaces button.urgent, #battery.critical {' \
     '  color: @background;' \
     '  background: @urgent;' \
     '}' \
-    '#workspaces button:hover { background: @surface_hover; color: @foreground; }' \
+    '#tags button:hover, #workspaces button:hover { background: @surface_hover; color: @foreground; }' \
     '#custom-power { color: @accent; }'
 }
 
