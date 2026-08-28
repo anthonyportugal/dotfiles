@@ -12,5 +12,6 @@ mangowm_require wlogout
 theme_dir=$(mangowm_theme_dir)
 exec wlogout --protocol layer-shell \
   -b 5 \
+  -T 360 -B 360 -L 200 -R 200 \
   --layout "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/layout" \
   --css "$theme_dir/wlogout.css" "$@"
