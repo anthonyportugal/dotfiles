@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+# Close wlogout overlay first so it does not block the display manager
+pkill -u "$(id -u)" -x wlogout >/dev/null 2>&1 || true
+
+# Terminate user session cleanly via systemd loginctl if available
+if command -v loginctl >/dev/null 2>&1; then
+  loginctl terminate-user "$USER" 2>/dev/null && exit 0
+fi
+
+# Fallback: signal mango compositor directly
+pkill -u "$(id -u)" -x mango || pkill -u "$(id -u)" -f mangowm-session
