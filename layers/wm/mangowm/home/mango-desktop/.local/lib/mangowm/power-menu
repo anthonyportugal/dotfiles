@@ -4,6 +4,10 @@ set -Eeuo pipefail
 # shellcheck source=/dev/null
 source "$HOME/.local/lib/mangowm/common"
 
+if pkill -u "$UID" -x wlogout >/dev/null 2>&1; then
+  exit 0
+fi
+
 mangowm_require wlogout
 theme_dir=$(mangowm_theme_dir)
 exec wlogout --protocol layer-shell \
