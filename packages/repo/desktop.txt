@@ -2,6 +2,7 @@ alacritty
 glib2
 gsettings-desktop-schemas
 gvfs
+imv
 mpv
 mpv-mpris
 playerctl

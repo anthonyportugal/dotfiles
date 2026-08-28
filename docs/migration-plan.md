@@ -237,9 +237,11 @@ diseño, no como una decisión todavía abierta.
 
 ### D11 — Wallpapers como fuente de assets independiente
 
-Los wallpapers no serán un submodule obligatorio. Su repositorio seguirá
-independiente, inicialmente privado y quizá público después. La integración
-será opcional y no impedirá instalar los dotfiles o un WM sin esos assets.
+Los wallpapers no serán un submodule obligatorio. Su repositorio sigue
+independiente y opcional (ej. `~/Pictures/Wallpapers`). O7 resuelve la
+integración opt-in: `mango-wallpaper` (Fuzzel + `swaybg`) en Wayland y
+`bspwm-wallpaper` (Rofi + `feh`) en X11, con persistencia en `$XDG_STATE_HOME`,
+atajo `Super+Ctrl+W` y restauración automática en el arranque.
 
 ### D12 — Secretos separados de dotfiles privados
 
@@ -269,6 +271,7 @@ repositorio.
 - Navegador: Brave.
 - Lector PDF: Zathura con el backend MuPDF.
 - Editor de texto: Micro.
+- Visor de imágenes: imv para Wayland y X11 (resuelto por O3).
 - File managers: Yazi para terminal y Thunar para entorno gráfico.
 - Reproducción multimedia: mpv con `mpv-mpris` y Playerctl para control MPRIS.
 - Barra Wayland: Waybar, propiedad del repositorio `mangowm`.
@@ -1421,8 +1424,6 @@ Estas decisiones no autorizan implementación hasta resolverse en su fase:
 
 | ID | Decisión | Momento previsto |
 | --- | --- | --- |
-| O3 | Visor de imágenes y asociaciones MIME restantes. | Cuando se seleccione un visor |
-| O7 | Hacer público el repositorio de wallpapers y su mecanismo opt-in. | P8/P11 |
 | O12 | Versión exacta de Node global de respaldo; por ahora no se instala ninguna. | Cuando un proyecto la requiera |
 | O13 | Estrategia multi-cuenta y autenticación para AWS CLI y GitHub CLI. | Cuando exista un caso de uso activo |
 
@@ -1505,6 +1506,7 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-26 | P11.3 completada. | `bin/mango`, perfiles, features, adaptadores de paquetes y ciclo Stow dry-run/apply/doctor/unlink pasan pruebas aisladas; la sesión gráfica permanece fuera de este vertical. |
 | 2026-08-26 | P11 completada. | La candidata standalone incorpora sesión segura, tema Catppuccin Mocha/Pink generado en XDG state, stack desktop, features aisladas y smoke tests con procesos falsos; la base orquesta MangoWM por su entrypoint público. P10 conserva la validación real en VM. |
 | 2026-08-27 | P10 iniciada en VM y primera ronda de correcciones. | MangoWM inicia y funciona; la prueba real expuso el formato JSON-stream de wlogout, poca visibilidad del flujo Satty y la preferencia GTK no aplicada. Se añaden contratos y regresiones automatizadas antes de revalidar. |
+| 2026-08-27 | O3 y O7 resueltas. | Se añade imv como visor de imágenes nativo Wayland/X11 y asociaciones MIME en base; se implementan selectores opt-in de wallpapers con persistencia en XDG state y atajo Super+Ctrl+W en MangoWM (Fuzzel+swaybg) y bspwm (Rofi+feh). |
 
 ## 21. Relación con otros documentos
 
