@@ -11,21 +11,57 @@ case "${1-}" in
     ;;
   list-keys)
     [[ "${2-}" == org.gnome.desktop.interface ]]
-    printf 'color-scheme\n'
+    printf 'color-scheme\ngtk-theme\nicon-theme\n'
     ;;
   get)
-    [[ "${2-}" == org.gnome.desktop.interface && "${3-}" == color-scheme ]]
-    if [[ -s "$DOTFILES_TEST_GSETTINGS_STATE" ]]; then
-      command cat "$DOTFILES_TEST_GSETTINGS_STATE"
-    else
-      printf "'default'\n"
-    fi
+    [[ "${2-}" == org.gnome.desktop.interface ]]
+    case "${3-}" in
+      color-scheme)
+        if [[ -s "$DOTFILES_TEST_GSETTINGS_STATE" ]]; then
+          command cat "$DOTFILES_TEST_GSETTINGS_STATE"
+        else
+          printf "'default'\n"
+        fi
+        ;;
+      gtk-theme)
+        if grep -q '^set gtk-theme$' "$DOTFILES_TEST_GSETTINGS_LOG" 2>/dev/null; then
+          printf "'adw-gtk3-dark'\n"
+        else
+          printf "'default'\n"
+        fi
+        ;;
+      icon-theme)
+        if grep -q '^set icon-theme$' "$DOTFILES_TEST_GSETTINGS_LOG" 2>/dev/null; then
+          printf "'Papirus-Dark'\n"
+        else
+          printf "'default'\n"
+        fi
+        ;;
+      *)
+        exit 2
+        ;;
+    esac
     ;;
   set)
-    [[ "${2-}" == org.gnome.desktop.interface && \
-      "${3-}" == color-scheme && "${4-}" == prefer-dark ]]
-    printf "'prefer-dark'\n" > "$DOTFILES_TEST_GSETTINGS_STATE"
-    printf 'set prefer-dark\n' >> "$DOTFILES_TEST_GSETTINGS_LOG"
+    [[ "${2-}" == org.gnome.desktop.interface ]]
+    case "${3-}" in
+      color-scheme)
+        [[ "${4-}" == prefer-dark ]]
+        printf "'prefer-dark'\n" > "$DOTFILES_TEST_GSETTINGS_STATE"
+        printf 'set prefer-dark\n' >> "$DOTFILES_TEST_GSETTINGS_LOG"
+        ;;
+      gtk-theme)
+        [[ "${4-}" == adw-gtk3-dark ]]
+        printf 'set gtk-theme\n' >> "$DOTFILES_TEST_GSETTINGS_LOG"
+        ;;
+      icon-theme)
+        [[ "${4-}" == Papirus-Dark ]]
+        printf 'set icon-theme\n' >> "$DOTFILES_TEST_GSETTINGS_LOG"
+        ;;
+      *)
+        exit 2
+        ;;
+    esac
     ;;
   *)
     exit 2

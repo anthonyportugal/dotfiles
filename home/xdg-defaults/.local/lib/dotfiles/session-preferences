@@ -4,8 +4,6 @@ set -Eeuo pipefail
 
 operation=${1:-apply}
 schema=org.gnome.desktop.interface
-key=color-scheme
-expected="'prefer-dark'"
 
 case "$operation" in
   apply|check)
@@ -29,29 +27,43 @@ if ! grep -Fxq "$schema" <<< "$available_schemas"; then
 fi
 
 available_keys=$(gsettings list-keys "$schema")
-if ! grep -Fxq "$key" <<< "$available_keys"; then
-  printf 'error: el schema %s no expone %s\n' "$schema" "$key" >&2
-  exit 1
-fi
 
-current=$(gsettings get "$schema" "$key")
-if [[ "$current" == "$expected" ]]; then
-  [[ "$operation" == check ]] && printf 'prefer-dark\n'
-  exit 0
-fi
+set_or_check_pref() {
+  local key=$1
+  local expected=$2
+  local value=$3
+
+  if ! grep -Fxq "$key" <<< "$available_keys"; then
+    return 0
+  fi
+
+  local current
+  current=$(gsettings get "$schema" "$key" 2>/dev/null || true)
+  if [[ "$current" == "$expected" ]]; then
+    return 0
+  fi
+
+  if [[ "$operation" == check ]]; then
+    printf 'error: %s.%s es %s; se esperaba %s\n' \
+      "$schema" "$key" "$current" "$expected" >&2
+    return 1
+  fi
+
+  gsettings set "$schema" "$key" "$value"
+  current=$(gsettings get "$schema" "$key" 2>/dev/null || true)
+  if [[ "$current" != "$expected" ]]; then
+    printf 'error: gsettings no conservó %s.%s=%s\n' \
+      "$schema" "$key" "$expected" >&2
+    return 1
+  fi
+}
+
+set_or_check_pref "color-scheme" "'prefer-dark'" "prefer-dark"
+set_or_check_pref "gtk-theme" "'adw-gtk3-dark'" "adw-gtk3-dark"
+set_or_check_pref "icon-theme" "'Papirus-Dark'" "Papirus-Dark"
 
 if [[ "$operation" == check ]]; then
-  printf 'error: %s.%s es %s; se esperaba %s\n' \
-    "$schema" "$key" "$current" "$expected" >&2
-  exit 1
+  printf 'prefer-dark\n'
+else
+  printf 'preferencias de sesión aplicadas\n'
 fi
-
-gsettings set "$schema" "$key" prefer-dark
-current=$(gsettings get "$schema" "$key")
-if [[ "$current" != "$expected" ]]; then
-  printf 'error: gsettings no conservó %s.%s=%s\n' \
-    "$schema" "$key" "$expected" >&2
-  exit 1
-fi
-
-printf 'prefer-dark aplicado\n'
