@@ -1,82 +1,83 @@
 # Dotfiles
 
-Configuración base pública para un entorno Arch Linux/CachyOS. Este repositorio
-está migrando desde una instalación dependiente de Archcraft hacia una base
-portable, modular e independiente del Window Manager o compositor elegido.
+*Read this in other languages:* [Español](README.es.md)
 
-> **Estado:** migración en curso. El repositorio base ya dispone de bootstrap y
-> doctor propios, y el repositorio bspwm ya fue validado como proyecto
-> standalone. La integración opcional entre ambos y el contrato con una capa
-> privada independiente ya están cerrados. P11 dejó una candidata MangoWM
-> standalone y composición opcional terminadas; P10 está activa tras una primera
-> instalación funcional en VM y una ronda de regresiones encontrada allí.
+Public base configuration for an Arch Linux / CachyOS environment. This repository
+is migrating from an Archcraft-dependent setup toward a portable, modular base that
+is completely independent of the chosen Window Manager or compositor.
 
-## Responsabilidad de este repositorio
+> **Status:** migration in progress. The base repository features its own bootstrap
+> and doctor commands, and the bspwm repository has already been validated as a
+> standalone project. Optional integration between both and the contract with an
+> independent private layer are finalized. P11 delivered a standalone MangoWM
+> candidate and optional composition; P10 is active after an initial functional
+> installation in a VM and a round of regressions identified there.
 
-El repositorio base será responsable de:
+## Repository Scope & Responsibilities
 
-- shell y herramientas CLI portables;
-- configuración común de aplicaciones que no pertenezcan a un WM;
-- perfiles y dependencias propias;
-- instalación y validación de su propio alcance;
-- orquestación opcional de otros repositorios mediante contratos públicos.
+The base repository is responsible for:
 
-No será responsable de:
+- Portable shell and CLI tooling;
+- Common application configurations that do not belong to a specific WM;
+- Self-contained profiles and dependencies;
+- Installation and validation of its own scope;
+- Optional orchestration of other repositories via public CLI contracts.
 
-- contener internamente todos los Window Managers/compositores;
-- requerir configuración privada para funcionar;
-- gestionar secrets, drivers de GPU o display managers;
-- reproducir implícitamente los archivos que Archcraft suministraba desde
-  `/etc/skel`.
+It is NOT responsible for:
 
-## Repositorios relacionados
+- Bundling all Window Managers / compositors internally;
+- Requiring private configuration to function;
+- Managing secrets, GPU drivers, or display managers;
+- Implicitly reproducing files that Archcraft copied from `/etc/skel`.
 
-- [`bspwm`](https://github.com/anthonyportugal/bspwm): proyecto público X11
-  independiente, con instalación standalone validada.
-- [`mangowm`](https://github.com/anthonyportugal/dotfiles-mangowm): proyecto
-  público Wayland independiente. Su sesión, bootstrap, tema y features están
-  validados de forma aislada y su primera instalación gráfica abrió P10; falta
-  cerrar la revalidación de las incidencias encontradas.
-- dotfiles privados: capa opcional e independiente para configuración personal
-  o laboral no secreta. Su ausencia nunca debe romper los repositorios públicos.
-- wallpapers: fuente de assets independiente y opcional; actualmente privada y
-  potencialmente pública en el futuro.
+## Related Repositories
 
-La base no depende arquitectónicamente de ninguno de ellos. Puede invocar el
-entrypoint público de un checkout externo, pero no lo clona, actualiza ni
-conoce sus internals.
+- [`bspwm`](https://github.com/anthonyportugal/bspwm): Independent public X11
+  project, with validated standalone installation.
+- [`mangowm`](https://github.com/anthonyportugal/dotfiles-mangowm): Independent
+  public Wayland project. Session lifecycle, bootstrap, theme, and features are
+  validated in isolation, and its initial graphical installation opened P10.
+- Private dotfiles: Optional, independent layer for non-secret personal or work
+  configurations. Its absence never breaks public repositories.
+- Wallpapers: Independent, optional asset source; currently private and
+  potentially public in the future.
 
-## Dirección aprobada
+The base repository does not depend architecturally on any of these. It can invoke
+the public entrypoint of an external checkout, but does not clone, update, or read
+their internals.
 
-- GNU Stow con paquetes explícitos y detección de conflictos.
-- Repositorios independientes, sin submodules como mecanismo final.
-- Precedencia de configuración: pública → privada opcional → local de máquina.
-- Bootstrap compatible con Shelly en CachyOS, además de `paru`, `yay` y
-  `pacman` cuando sus capacidades correspondan.
-- Zsh sin Oh My Zsh, integrando directamente `zsh-autosuggestions`,
-  `zsh-completions`, `zsh-history-substring-search` y
+## Approved Architectural Direction
+
+- GNU Stow with explicit packages and conflict detection.
+- Independent repositories without submodules as a final mechanism.
+- Configuration precedence: public defaults → optional private → local machine overrides.
+- Bootstrap compatible with Shelly on CachyOS, as well as `paru`, `yay`, and
+  `pacman` according to their capabilities.
+- Zsh without Oh My Zsh, directly integrating `zsh-autosuggestions`,
+  `zsh-completions`, `zsh-history-substring-search`, and
   `zsh-syntax-highlighting`.
 
-Defaults de aplicaciones ya acordados:
+Agreed application defaults:
 
-- preferencia GTK global en modo oscuro mediante `prefer-dark`;
-- Alacritty con una apariencia Catppuccin compartida entre sesiones;
-- Brave como navegador;
-- Zathura con MuPDF para PDF;
-- Micro como editor de texto;
-- Yazi y Thunar como file managers de terminal y gráfico;
-- mpv con `mpv-mpris` y Playerctl para reproducción/control multimedia;
-- Foot como terminal de la futura sesión MangoWM;
-- Fuzzel como launcher Wayland;
-- Waybar para MangoWM/Wayland.
+- Global dark theme preference via `prefer-dark` (GTK);
+- Alacritty with a Catppuccin appearance shared across sessions;
+- Brave as web browser;
+- Zathura with MuPDF for PDF viewing;
+- Micro as terminal text editor;
+- imv as image viewer for Wayland and X11;
+- Yazi and Thunar as terminal and graphical file managers;
+- mpv with `mpv-mpris` and Playerctl for media playback/control;
+- Foot as default terminal for the MangoWM session;
+- Fuzzel as Wayland application launcher;
+- Waybar for MangoWM / Wayland.
 
-bspwm conserva Polybar y Alacritty para X11. Foot, Fuzzel y Waybar pertenecen
-al repositorio MangoWM y no cubren esa sesión.
+bspwm preserves Polybar and Alacritty for X11. Foot, Fuzzel, and Waybar belong
+to the MangoWM repository and do not cover X11.
 
-## Layout durante la migración
+## Layout During Migration
 
-`home/` es el stow directory dedicado. Cada directorio inmediato representa un
-paquete pequeño y refleja rutas relativas al home usando sus nombres reales:
+`home/` is the dedicated stow directory. Each immediate subdirectory represents a
+small package reflecting paths relative to `$HOME`:
 
 ```text
 home/
@@ -88,42 +89,41 @@ home/
 └── zsh/
 ```
 
-Estos paquetes ya fueron migrados y validados. Los dotfiles que todavía
-aparezcan fuera de `home/` son estado transitorio; la raíz completa del
-repositorio nunca debe tratarse como un paquete Stow.
+These packages are migrated and validated. Any dotfiles still located outside
+`home/` represent transitional state; the repository root must never be treated
+as a Stow package.
 
-Los perfiles y la procedencia de paquetes están documentados en
-[`packages/README.md`](packages/README.md). Son datos consumidos por el
-bootstrap y no deben ejecutarse directamente.
+Package manifests and provenance are documented in
+[`packages/README.md`](packages/README.md). They are consumed by the bootstrap
+CLI and are not meant to be run directly.
 
-## Organización local recomendada
+## Recommended Local Organization
 
-Los repositorios no requieren una ubicación fija, pero los ejemplos de esta
-documentación usan la siguiente estructura:
+Repositories do not require a fixed location, but examples in this documentation
+use the following directory structure:
 
 ```text
 ~/.dotfiles/
-├── base/          # repositorio público de dotfiles
+├── base/          # public base dotfiles repository
 └── wm/
-    ├── bspwm/     # repositorio público de bspwm
-    └── mangowm/   # repositorio público standalone de MangoWM
+    ├── bspwm/     # public bspwm standalone repository
+    └── mangowm/   # public MangoWM standalone repository
 ```
 
-Cada directorio es un checkout Git independiente con su propio `origin` e
-historial. Compartir `~/.dotfiles/` como carpeta padre no los convierte en un
-monorepo, no crea submodules y no permite que la base lea los internals de los
-WM. También mantiene los checkouts de WM fuera de `base/`, como exige
-`--wm-path`.
+Each directory is an independent Git checkout with its own `origin` and history.
+Sharing `~/.dotfiles/` as a parent folder does not create a monorepo, does not
+introduce submodules, and does not allow the base to inspect WM internals. It also
+keeps WM checkouts outside `base/`, as required by `--wm-path`.
 
-## Bootstrap del repositorio base
+## Base Repository Bootstrap
 
-Prepara primero la carpeta contenedora:
+Prepare the parent container directory:
 
 ```bash
 mkdir -p "$HOME/.dotfiles"
 ```
 
-Para un checkout nuevo mediante SSH:
+For a new checkout via SSH:
 
 ```bash
 git clone --branch refactor/modular-dotfiles \
@@ -131,8 +131,7 @@ git clone --branch refactor/modular-dotfiles \
 cd "$HOME/.dotfiles/base"
 ```
 
-Si sólo necesitas acceso público de lectura, la clonación equivalente por
-HTTPS es:
+For read-only public access via HTTPS:
 
 ```bash
 git clone --branch refactor/modular-dotfiles \
@@ -140,104 +139,96 @@ git clone --branch refactor/modular-dotfiles \
 cd "$HOME/.dotfiles/base"
 ```
 
-La rama explícita es temporal mientras esta migración no se integre en `main`;
-después podrá omitirse `--branch refactor/modular-dotfiles`.
+The explicit branch is temporary while this migration refactor is merged into
+`main`.
 
-El entrypoint público es [`bin/dotfiles`](bin/dotfiles). Funciona sin bspwm,
-MangoWM ni configuración privada. Requiere una distribución basada en Arch con
-Bash y pacman; Git sólo es necesario para obtener el repositorio. Desde
-`~/.dotfiles/base`, ejecuta primero el dry-run:
+The public entrypoint is [`bin/dotfiles`](bin/dotfiles). It works without bspwm,
+MangoWM, or private configuration. It requires an Arch-based distribution with
+Bash and pacman; Git is only required to clone the repository. From
+`~/.dotfiles/base`, run dry-run first:
 
 ```bash
 ./bin/dotfiles bootstrap --profile desktop
 ```
 
-El comando muestra plataforma, backend, paquetes instalados/faltantes, comando
-de instalación previsto, paquetes Stow y colisiones. También ejecuta la
-simulación nativa de Stow cuando ya está disponible. Si el plan es correcto:
+The command displays platform, backend, installed/missing packages, planned
+installation command, Stow packages, and collisions. It also executes native Stow
+simulation when available. If the plan looks correct:
 
 ```bash
 ./bin/dotfiles bootstrap --profile desktop --apply
 ./bin/dotfiles doctor --profile desktop
 ```
 
-El perfil `desktop` instala `glib2` y `gsettings-desktop-schemas`, y aplica de
-forma idempotente `org.gnome.desktop.interface color-scheme=prefer-dark` cuando
-el target es el home del usuario actual. Un target aislado no puede modificar
-el `dconf` del host. Si el backend de ajustes aún no está disponible durante el
-bootstrap, la sesión MangoWM vuelve a intentar el mismo entrypoint público y
-`doctor` reporta cualquier preferencia pendiente.
+The `desktop` profile installs `glib2` and `gsettings-desktop-schemas`, and
+idempotently applies `org.gnome.desktop.interface color-scheme=prefer-dark` when
+targeting the current user's `$HOME`. An isolated test target does not modify host
+`dconf`. If the settings backend is not yet available during bootstrap, the MangoWM
+session retries the same entrypoint, and `doctor` reports pending preferences.
 
-### Activar Zsh como shell de login
+### Activating Zsh as Login Shell
 
-Instalar Zsh y sus plugins no cambia automáticamente el shell de la cuenta.
-Comprueba qué shell ejecuta la terminal y cuál tiene registrado el usuario:
+Installing Zsh and plugins does not automatically switch the user's login shell.
+Check which shell is active in the terminal and which is registered:
 
 ```bash
 ps -p $$ -o comm=
 getent passwd "$USER" | cut -d: -f7
 ```
 
-Si todavía aparece Bash, puedes probar inmediatamente la configuración pública
-reemplazando el proceso de esa terminal:
+If Bash is still active, test the public configuration immediately:
 
 ```bash
 exec zsh
 ```
 
-Para conservar Zsh en terminales y sesiones futuras, cambia explícitamente el
-shell de login. `chsh` exige una ruta incluida literalmente en su lista, aunque
-otra ruta como `/usr/sbin/zsh` apunte al mismo binario. Selecciona la primera
-ruta Zsh registrada y después cierra por completo la sesión de Ly antes de
-volver a entrar:
+To permanently switch login shell, use `chsh`. Select the first valid Zsh path
+listed in `chsh --list-shells`, and log out of the session (e.g. Ly) completely:
 
 ```bash
 zsh_login_shell=$(chsh --list-shells | awk '/\/zsh$/ { print; exit }')
-printf 'Shell elegido: %s\n' "$zsh_login_shell"
+printf 'Selected shell: %s\n' "$zsh_login_shell"
 chsh -s "$zsh_login_shell"
 ```
 
-En una instalación normal de Arch/CachyOS el resultado suele ser `/bin/zsh` o
-`/usr/bin/zsh`. No uses una variante que no aparezca en
-`chsh --list-shells`.
+On a standard Arch / CachyOS install, this resolves to `/bin/zsh` or `/usr/bin/zsh`.
+Do not use a path that is not registered in `chsh --list-shells`.
 
-El bootstrap y `doctor` muestran una advertencia accionable cuando operan sobre
-el home actual y detectan otro shell de login. No ejecutan `chsh` por cuenta del
-usuario ni intentan cargar `.zshrc` desde Bash.
+Bootstrap and `doctor` display an actionable warning when operating on the
+current home if a non-Zsh login shell is detected. They do not run `chsh`
+automatically or attempt to source `.zshrc` from Bash.
 
-No se debe ejecutar el bootstrap completo con `sudo`: el propio backend eleva
-únicamente la instalación de paquetes y Stow siempre opera como el usuario. La
-aplicación vuelve a simular inmediatamente antes de enlazar, usa
-`--no-folding`, nunca usa `--adopt` y se detiene ante cualquier colisión.
+Do not run the entire bootstrap with `sudo`: the backend elevates package
+installation privileges internally, and Stow always runs as the unprivileged user.
+Application re-simulates immediately before linking, uses `--no-folding`, never
+uses `--adopt`, and stops on any collision.
 
-### Perfiles, features y backend
+### Profiles, Features, and Backend Selection
 
-Los perfiles acumulativos son `core`, `cli` y `desktop`; `desktop` es el valor
-predeterminado. Los extras de Yazi son opt-in:
+Cumulative profiles are `core`, `cli`, and `desktop`; `desktop` is the default.
+Yazi extras are opt-in:
 
 ```bash
 ./bin/dotfiles bootstrap --profile desktop --feature yazi-extras
 ./bin/dotfiles bootstrap --profile desktop --feature yazi-extras --apply
 ```
 
-La selección automática intenta Shelly sólo en CachyOS, luego `paru`, `yay` y,
-finalmente, `pacman`. Puede inspeccionarse otro adaptador sin cambiar el valor
-predeterminado:
+Automatic backend detection prefers Shelly on CachyOS, then `paru`, `yay`, and
+finally `pacman`. An explicit backend override is available:
 
 ```bash
 ./bin/dotfiles bootstrap --profile desktop --backend paru
 ```
 
-Shelly, paru y yay pueden resolver AUR. pacman se limita a repositorios
-binarios y el preflight falla antes de modificar nada si queda un paquete AUR
-por instalar. En Arch genérico, Brave sólo usa el fallback AUR después de
-comprobar `core`, `extra` y `multilib`; en CachyOS se consume el manifiesto
-propio de CachyOS.
+Shelly, paru, and yay resolve AUR packages. pacman is limited to binary
+repositories and preflight fails before modifying the system if AUR packages
+remain missing. On generic Arch, Brave uses the AUR fallback only after checking
+`core`, `extra`, and `multilib`; on CachyOS, native repository manifests are used.
 
-### Operaciones parciales, doctor y unlink
+### Partial Operations, Doctor, and Unlink
 
-`--packages-only` y `--stow-only` permiten aislar ambos alcances. Son útiles
-para auditar el plan o cuando las dependencias se administraron manualmente:
+`--packages-only` and `--stow-only` allow isolating package management and dotfile
+symlinking:
 
 ```bash
 ./bin/dotfiles bootstrap --profile core --packages-only
@@ -245,81 +236,63 @@ para auditar el plan o cuando las dependencias se administraron manualmente:
 ./bin/dotfiles doctor --profile desktop --stow-only
 ```
 
-`doctor` siempre es read-only. Comprueba paquetes, capacidad del backend,
-sintaxis Zsh, el TOML de Alacritty y que cada target sea un symlink hacia la
-fuente pública esperada. Cuando el target es el home actual, también informa si
-la cuenta todavía inicia otro shell y por eso no cargaría los plugins.
+`doctor` is strictly read-only. It validates packages, backend capability, Zsh
+syntax, Alacritty TOML, and verifies that every target is a symlink pointing to the
+expected source.
 
-`unlink` tampoco elimina paquetes ni archivos ajenos. Su primer pase sólo
-simula; `--apply` retira los enlaces que Stow administra:
+`unlink` simulates by default without deleting packages or unmanaged files;
+`--apply` removes managed symlinks:
 
 ```bash
 ./bin/dotfiles unlink --profile desktop
 ./bin/dotfiles unlink --profile desktop --apply
 ```
 
-La interfaz completa está disponible con `./bin/dotfiles help`.
+The full CLI manual is available via `./bin/dotfiles help`.
 
-## Configuración privada y local opcional
+## Optional Private and Local Configuration
 
-La base no necesita un repositorio privado para funcionar. Expone únicamente
-puntos de inclusión estables que cada persona puede completar mediante
-archivos propios o cualquier repositorio externo bajo su control:
+The base repository functions completely without private dotfiles. It exposes
+stable inclusion drop-in paths:
 
-| Área | Privado opcional | Local de máquina |
+| Area | Optional Private | Local Machine Override |
 | --- | --- | --- |
 | Zsh | `~/.config/zsh/private.zsh` | `~/.config/zsh/local.zsh` |
 | Git | `~/.config/git/private.gitconfig` | `~/.config/git/local.gitconfig` |
 
-La precedencia es:
+Precedence order:
 
 ```text
-defaults públicos → privado opcional → local de máquina
+public defaults → optional private → local machine overrides
 ```
 
-Git ignora limpiamente los includes ausentes. La configuración pública define
-editor, rama inicial y `user.useConfigOnly = true`; no contiene ni infiere
-nombre, email, firma o ajustes de organizaciones. El modo estricto hace que un
-commit sin identidad clasificada falle en vez de heredar una cuenta equivocada.
-Una capa privada puede usar `includeIf` para seleccionar identidades por
-checkout, por ejemplo:
+Git cleanly ignores missing includes. Public configuration defines editor, initial
+branch, and `user.useConfigOnly = true`; it contains no names, emails, keys, or
+organization settings. Strict mode ensures commits without classified identity
+fail instead of inheriting incorrect credentials. A private layer can use
+`includeIf` to isolate identities per directory:
 
 ```gitconfig
 [includeIf "gitdir:~/dev/work/example/"]
     path = ~/.config/git/identities/example.gitconfig
 ```
 
-El slash final hace que la condición cubra recursivamente los repositorios bajo
-esa carpeta. Conviene evitar una identidad personal global cuando también se
-usan equipos laborales: un repo sin clasificar debería fallar antes que crear
-un commit con la identidad incorrecta.
+Legacy `~/.gitconfig` must not coexist. Git reads XDG config first and
+`~/.gitconfig` second, which could override the precedence contract. `bootstrap`
+and `doctor` detect and halt on legacy `~/.gitconfig` files.
 
-No debe coexistir un `~/.gitconfig` legacy. Git carga el archivo XDG y después
-`~/.gitconfig`, por lo que este último podría sobrescribir el contrato
-público→privado→local. `bootstrap` y `doctor` lo detectan y se detienen para que
-su migración o backup sea una decisión explícita.
+OpenSSH has no public include because hosts and identities belong to private or
+local layers. Private keys, credentials, `known_hosts`, and agent state must remain
+outside Git.
 
-OpenSSH no tiene un include público porque sus hosts e identidades pertenecen a
-la capa privada o local. Una configuración privada puede administrar
-`~/.ssh/config` y fragmentos no secretos, pero las private keys, credenciales,
-`known_hosts`, sockets y estado del agente deben permanecer fuera de Git.
-Con múltiples cuentas, cada remoto debería usar un alias SSH explícito y cada
-bloque debería fijar `IdentitiesOnly yes`; los hosts canónicos ambiguos no
-deberían actuar como fallback personal.
+### Integrating a Private Layer
 
-El bootstrap público no busca, clona ni ejecuta una capa privada. Si existe, se
-instala por separado y consume estos contratos; si se retira, base, bspwm y los
-futuros repositorios públicos continúan funcionando.
+After installing base, you can:
 
-### Integrar una capa privada propia
+1. Manually create required optional drop-in files; or
+2. Manage them in an independent private repository via GNU Stow.
 
-Después de instalar la base, hay dos opciones equivalentes:
-
-1. crear manualmente sólo los archivos opcionales necesarios; o
-2. mantenerlos en un repositorio privado independiente con su propio bootstrap
-   o con GNU Stow.
-
-Un layout Stow mínimo podría ser:
+A minimal private Stow layout:
 
 ```text
 private-dotfiles/
@@ -332,65 +305,34 @@ private-dotfiles/
         └── .config/zsh/private.zsh
 ```
 
-Y se aplicaría desde ese repositorio, no desde la base pública:
+Applied from that repository:
 
 ```bash
 stow --dir=home --target="$HOME" --no-folding \
   git-private ssh-private zsh-private
 ```
 
-Los nombres de paquetes y la herramienta del repositorio privado son libres;
-el contrato estable son las rutas de la tabla anterior. Si se usa Git por
-contexto, las condiciones deben cubrir raíces explícitas y cada identidad debe
-vivir en un archivo independiente. Para SSH, sólo deben versionarse hosts,
-opciones y registros de confianza públicos; las claves privadas —idealmente
-distintas por equipo y por propósito auth/sign— se provisionan por separado.
-
-Una comprobación breve después de integrar ambas capas es:
+Quick post-integration verification:
 
 ```bash
 git config --global --show-origin --get init.defaultBranch
-git config --show-origin --get user.email   # dentro de un repo clasificado
+git config --show-origin --get user.email   # inside a classified repo
 zsh -lic 'alias >/dev/null'
-ssh -G nombre-del-host >/dev/null
+ssh -G host-alias >/dev/null
 ```
 
-El archivo local de Git se carga después del privado. En OpenSSH la precedencia
-depende del orden y normalmente gana el primer valor encontrado, por lo que una
-capa privada que permita overrides de máquina debe incluirlos antes de sus
-defaults.
+## Optional Integration with bspwm
 
-## Integración opcional con bspwm
-
-bspwm conserva su propio repositorio, perfiles, dependencias y ciclo de vida.
-La ubicación recomendada es `~/.dotfiles/wm/bspwm`. Prepara la carpeta aunque
-quieras instalar este repositorio sin la base:
+bspwm maintains its own repository, profiles, dependencies, and lifecycle.
+Recommended location is `~/.dotfiles/wm/bspwm`:
 
 ```bash
 mkdir -p "$HOME/.dotfiles/wm"
-```
-
-Si ya tienes una clave de GitHub configurada y piensas contribuir, clónalo
-mediante SSH:
-
-```bash
-git clone --branch refactor/standalone-bspwm \
-  git@github.com:anthonyportugal/bspwm.git "$HOME/.dotfiles/wm/bspwm"
-```
-
-Para obtener el mismo contenido público sin configurar una identidad SSH:
-
-```bash
 git clone --branch refactor/standalone-bspwm \
   https://github.com/anthonyportugal/bspwm.git "$HOME/.dotfiles/wm/bspwm"
 ```
 
-La rama explícita es necesaria mientras el trabajo standalone no se integre en
-`main`; después podrá omitirse `--branch refactor/standalone-bspwm`. La URL
-elegida sólo configura el `origin` de ese checkout y no cambia la integración.
-
-Puedes instalar bspwm por separado mediante su propio `bin/bspwm`, o componer
-ambos planes desde la base. El dry-run sigue siendo el valor predeterminado:
+Install standalone via `bin/bspwm`, or compose plans from the base CLI:
 
 ```bash
 cd "$HOME/.dotfiles/base"
@@ -405,29 +347,22 @@ cd "$HOME/.dotfiles/base"
   --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" --wm-profile desktop
 ```
 
-El perfil del WM es independiente del perfil base. `--packages-only`,
-`--stow-only`, backend, plataforma y target se propagan a su interfaz pública.
-Antes de aplicar, la base ejecuta el preflight del WM; no hace `clone`, `pull`,
-`checkout`, `commit` ni `push` en ninguno de los dos repositorios.
+The WM profile is decoupled from the base profile. `--packages-only`,
+`--stow-only`, backend, platform, and target propagate cleanly. The base runs
+the WM preflight first; it never executes `git pull`, `commit`, or `push` on
+external checkouts.
 
-## Integración opcional con MangoWM
+## Optional Integration with MangoWM
 
-MangoWM conserva el mismo contrato independiente. Puede clonarse mediante SSH:
+MangoWM follows the same independent contract:
 
 ```bash
 mkdir -p "$HOME/.dotfiles/wm"
-git clone git@github.com:anthonyportugal/dotfiles-mangowm.git \
-  "$HOME/.dotfiles/wm/mangowm"
-```
-
-O mediante HTTPS para una instalación pública de sólo lectura:
-
-```bash
 git clone https://github.com/anthonyportugal/dotfiles-mangowm.git \
   "$HOME/.dotfiles/wm/mangowm"
 ```
 
-El dry-run compuesto no depende de los internals del checkout:
+Compose plans from the base CLI:
 
 ```bash
 cd "$HOME/.dotfiles/base"
@@ -445,37 +380,29 @@ cd "$HOME/.dotfiles/base"
   --wm-profile desktop --wm-feature laptop
 ```
 
-`--wm-feature laptop|recording` es exclusivo de MangoWM y se puede repetir. Las
-features de la base continúan usando `--feature`, por lo que ambos espacios de
-nombres nunca se mezclan. El entrypoint de sesión resultante es
-`~/.local/bin/mangowm-session`; conectarlo a TTY o display manager se validará
-en P10, no lo modifica este bootstrap.
+The resulting session entrypoint is `~/.local/bin/mangowm-session`.
 
-### Límites y pasos manuales
+### Boundaries and Manual Steps
 
-- Actualizar el sistema antes de reconstruir el entorno sigue siendo una
-  decisión explícita del usuario; el bootstrap no ejecuta un upgrade global.
-- Los helpers AUR conservan sus prompts para permitir revisar PKGBUILDs; no se
-  fuerza `--noconfirm`.
-- Los archivos que colisionen deben revisarse, respaldarse o retirarse
-  manualmente antes de volver a ejecutar el comando.
-- Display manager, GPU híbrida, servicios, secretos, ciclo de vida Git de los
-  repositorios de WM y capa privada quedan fuera del alcance de este bootstrap.
-- La prueba final desde una instalación CachyOS no-desktop limpia pertenece a
-  P10 y se ejecutará después de preparar MangoWM en P11; hasta entonces, las
-  diferencias descubiertas deben registrarse en el plan de migración.
+- Upgrading the system before rebuilding remains an explicit user choice; bootstrap
+  does not run system upgrades.
+- AUR helpers retain interactive prompts for reviewing PKGBUILDs; `--noconfirm`
+  is not forced.
+- Colliding files must be reviewed, backed up, or removed manually before applying.
+- Display managers, hybrid GPU drivers, services, secrets, and Git lifecycle remain
+  outside the scope of this bootstrap.
 
-## Plan y colaboración
+## Roadmap & Collaboration
 
-La arquitectura, decisiones, fases y progreso viven en el
-[plan de migración](docs/migration-plan.md). Las reglas para futuras sesiones y
-colaboradores están en [AGENTS.md](AGENTS.md).
+Architecture, decisions, phases, and live progress are tracked in the
+[migration plan](docs/migration-plan.md). Rules for future agent sessions and
+contributors are in [AGENTS.md](AGENTS.md).
 
-No se debe comenzar una fase porque aparezca en el roadmap: cada fase necesita
-aprobación explícita. Tampoco se hacen commits sin una solicitud explícita.
+Phases require explicit approval before implementation. Commits are not created
+without explicit request.
 
-## Licencia
+## License
 
-El código y la configuración originales de este repositorio se publican bajo
-la [licencia MIT](LICENSE). Los componentes vendorizados conservan sus avisos
-en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Original code and configuration in this repository are published under the
+[MIT License](LICENSE). Third-party vendored assets retain their notices in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
