@@ -145,13 +145,15 @@ done
 grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
 grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 
-grep -Fq '**Trabajo en progreso:**' "$REPO_ROOT/README.md" || \
-  fail "README no advierte que el proyecto sigue en desarrollo"
-grep -Fq 'candidata standalone de P11 completa' "$REPO_ROOT/README.md" || \
-  fail "README no comunica el estado real"
-grep -Fq 'P10 iniciada en una VM' "$REPO_ROOT/README.md" || \
-  fail "README no registra el inicio de la validación gráfica"
-grep -Fq 'MangoWM arranca' "$REPO_ROOT/README.md" || \
-  fail "README no registra la evidencia observada en VM"
+grep -Fq '**Work in progress:**' "$REPO_ROOT/README.md" || \
+  fail "README.md no advierte que el proyecto sigue en desarrollo"
+grep -Fq 'P11 standalone candidate completed' "$REPO_ROOT/README.md" || \
+  fail "README.md no comunica el estado real"
+grep -Fq 'started in a VM' "$REPO_ROOT/README.md" || \
+  fail "README.md no registra el inicio de la validación gráfica"
+grep -Fq 'MangoWM boots' "$REPO_ROOT/README.md" || \
+  fail "README.md no registra la evidencia observada en VM"
+grep -Fq '**Trabajo en progreso:**' "$REPO_ROOT/README.es.md" || \
+  fail "README.es.md no advierte que el proyecto sigue en desarrollo"
 
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'

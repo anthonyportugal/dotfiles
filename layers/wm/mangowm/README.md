@@ -1,62 +1,63 @@
 # MangoWM dotfiles
 
-Fundación de una sesión Wayland pública, autónoma y orientada a CachyOS/Arch.
-MangoWM será el compositor principal, con un stack pequeño, portable y seguro.
+*Read this in other languages:* [Español](README.es.md)
+
+Foundation of a public, autonomous Wayland session tailored for CachyOS / Arch Linux.
+MangoWM serves as the primary compositor with a minimal, portable, and secure stack.
 
 > [!WARNING]
-> **Trabajo en progreso:** este repositorio todavía no es una versión estable;
-> su instalación y experiencia gráfica continúan validándose en P10.
+> **Work in progress:** this repository is not yet a stable release;
+> its installation and graphical desktop experience continue to be validated in P10.
 >
-> **Estado actual:** candidata standalone de P11 completa y primera instalación
-> P10 iniciada en una VM. MangoWM arranca y el stack base funciona; las
-> incidencias descubiertas durante esa prueba se cubren ahora con regresiones
-> automatizadas antes de repetir el checklist gráfico.
+> **Current status:** P11 standalone candidate completed and initial P10
+> installation started in a VM. MangoWM boots and the base stack works; regressions
+> identified during VM testing are now covered with automated regression tests before
+> repeating the full graphical checklist.
 
-## Objetivos
+## Objectives
 
-- funcionar sin Archcraft, dotfiles base, bspwm ni configuración privada;
-- ofrecer dry-run, bootstrap, doctor y unlink propios;
-- evitar hardcodes de hardware y detectar capacidades;
-- mantener configuración, estado generado y secretos con owners distintos;
-- priorizar rendimiento/batería sin sacrificar una experiencia de escritorio
-  completa;
-- llegar a una candidata standalone antes de la prueba integral en VM.
+- Function without Archcraft, base dotfiles, bspwm, or private configurations;
+- Provide self-contained dry-run, bootstrap, doctor, and unlink operations;
+- Avoid hardcoded hardware paths and detect capabilities dynamically;
+- Keep configuration, generated state, and secrets under strict separate ownership;
+- Prioritize performance and battery life while delivering a complete desktop experience;
+- Achieve a standalone candidate before end-to-end VM validation.
 
-## Stack aprobado
+## Approved Stack
 
-| Capacidad | Selección |
+| Capability | Selection |
 | --- | --- |
-| Compositor | MangoWM estable (`mangowm`) |
+| Compositor | Stable MangoWM (`mangowm`) |
 | Terminal | Foot |
 | Launcher | Fuzzel |
-| Barra | Waybar |
+| Status Bar | Waybar |
 | Wallpaper | Swaybg |
-| Notificaciones | Mako |
-| Lock/idle | Swaylock, Swayidle y Wlopm |
-| Menú de sesión | wlogout |
-| Luz nocturna | Gammastep manual |
-| Clipboard | wl-clipboard, sin historial predeterminado |
-| Capturas | Grim, Slurp y Satty |
-| Portales | xdg-desktop-portal, wlr y gtk |
+| Notifications | Mako |
+| Lock / Idle | Swaylock, Swayidle, and Wlopm |
+| Session Menu | wlogout |
+| Night Light | Gammastep (manual toggle) |
+| Clipboard | wl-clipboard (no persistent history by default) |
+| Screenshots | Grim, Slurp, and Satty |
+| Portals | xdg-desktop-portal, wlr, and gtk |
 | Polkit | polkit-gnome |
-| Audio | PipeWire y WirePlumber |
-| X11 | Xorg XWayland y xwayland-satellite |
+| Audio | PipeWire and WirePlumber |
+| X11 Compatibility | Xorg XWayland and xwayland-satellite |
 
-`wf-recorder` pertenece a la feature `recording`; `brightnessctl` a `laptop`.
-No se instalarán desktop shells, Pywal, clipboard history, MPD/MPC ni
-componentes de Hyprland por defecto.
+`wf-recorder` belongs to the `recording` feature; `brightnessctl` to `laptop`.
+Desktop shells, Pywal, clipboard history daemons, MPD/MPC, or Hyprland components
+are not installed by default.
 
-## Layout
+## Directory Layout
 
 ```text
 .
 ├── bin/mango
 ├── docs/architecture.md
 ├── home/
-│   ├── mango/             # sesión core
-│   ├── mango-desktop/     # UX desktop
-│   ├── mango-laptop/      # feature de backlight
-│   └── mango-recording/   # feature de grabación
+│   ├── mango/             # core session
+│   ├── mango-desktop/     # desktop UX
+│   ├── mango-laptop/      # backlight control feature
+│   └── mango-recording/   # screen recording feature
 ├── packages/
 ├── tests/
 │   ├── bootstrap-smoke.sh
@@ -65,38 +66,35 @@ componentes de Hyprland por defecto.
 └── themes/catppuccin-mocha-pink/palette.conf
 ```
 
-`home/` es el único stow directory. `mango` instala el compositor, lock/idle,
-portales y entrypoint; los otros paquetes se componen únicamente al seleccionar
-su perfil o feature. `config.local.conf` se carga al final y nunca se versiona.
-Los manifests son consumidos por `bin/mango` y permanecen separados por
-procedencia.
+`home/` is the dedicated stow directory. `mango` installs the compositor, lock/idle,
+portals, and entrypoint; other packages are composed only when their profile or
+feature is selected. `config.local.conf` loads at the end and is never versioned.
+Package manifests are consumed by `bin/mango` and separated by source.
 
-## Temas
+## Themes
 
-El default es Catppuccin Mocha con Pink como acento. La paleta canónica usa
-roles semánticos y está en `themes/catppuccin-mocha-pink/palette.conf`.
+The default theme is Catppuccin Mocha with Pink accent. The canonical palette uses
+semantic roles and is located in `themes/catppuccin-mocha-pink/palette.conf`.
 
-`mango-theme` valida la paleta como datos —nunca la ejecuta— y renderiza
-adaptadores de MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, wlogout y Satty
-bajo `$XDG_STATE_HOME/mangowm/theme/`. Cada revisión es inmutable y `current`
-cambia atómicamente. Cambiar de tema no modifica archivos versionados. GTK y
-aplicaciones compartidas pertenecen al repositorio base.
+`mango-theme` parses the palette as data and atomically renders adapters for
+MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, wlogout, and Satty under
+`$XDG_STATE_HOME/mangowm/theme/`. Each revision is immutable and `current` switches
+atomically. Theme changes never rewrite versioned source files. GTK and shared apps
+belong to the base dotfiles repository.
 
-## Perfiles y features
+## Profiles and Features
 
-- `core`: sesión mínima segura y completa;
-- `desktop`: barra, capturas, luz nocturna y compatibilidad adicional;
-- feature `laptop`: control real de backlight mediante Brightnessctl;
-- feature `recording`: grabación bajo demanda con wf-recorder.
+- `core`: minimal secure and complete session;
+- `desktop`: bar, screenshots, night light, wallpaper selector, and extra desktop tools;
+- feature `laptop`: hardware backlight control via Brightnessctl;
+- feature `recording`: on-demand screen recording via wf-recorder.
 
-La procedencia y composición exactas viven en `packages/README.md`. Las
-features se pueden repetir y se deduplican sin activarse por detección de
-hardware.
+Detailed composition is documented in `packages/README.md`.
 
 ## Bootstrap
 
-Todas las operaciones son inspeccionables. `bootstrap` y `unlink` hacen dry-run
-salvo que se proporcione `--apply`; `doctor` nunca modifica el sistema.
+All commands support dry-run simulation by default unless `--apply` is provided;
+`doctor` is strictly read-only:
 
 ```bash
 ./bin/mango bootstrap --profile desktop
@@ -106,12 +104,11 @@ salvo que se proporcione `--apply`; `doctor` nunca modifica el sistema.
 ./bin/mango unlink --profile desktop --apply
 ```
 
-`--packages-only` y `--stow-only` permiten aislar responsabilidades. Los
-backends soportados son `auto`, `shelly`, `paru`, `yay` y `pacman`; Pacman falla
-antes de mutar cuando falta un paquete AUR. Nunca ejecute el entrypoint completo
-con `sudo`.
+`--packages-only` and `--stow-only` allow isolating package installation from symlinking.
+Supported backends: `auto`, `shelly`, `paru`, `yay`, and `pacman`. Never execute the
+entire entrypoint with `sudo`.
 
-El smoke test enlaza únicamente dentro de un home temporal:
+Run smoke tests in an isolated temporary target:
 
 ```bash
 ./tests/scaffold-smoke.sh
@@ -119,51 +116,48 @@ El smoke test enlaza únicamente dentro de un home temporal:
 ./tests/session-smoke.sh
 ```
 
-## Iniciar la sesión
+## Launching the Session
 
-Después de aplicar el perfil, el entrypoint público de sesión es:
+After applying the profile, the session entrypoint is:
 
 ```bash
 ~/.local/bin/mangowm-session
 ```
 
-El entrypoint fija el entorno XDG/Wayland, materializa el tema y ejecuta Mango.
-`exec-once` importa el entorno en D-Bus/systemd y levanta Mako, Swayidle,
-Swaybg, Waybar y Polkit como unidades de usuario idempotentes. Al terminar el
-compositor, se detienen únicamente esas unidades. Los portales se activan por
-D-Bus; no se lanzan backends manualmente.
+The entrypoint configures the XDG / Wayland environment, materializes the theme,
+and starts Mango. `exec-once` imports the environment into D-Bus / systemd and launches
+Mako, Swayidle, Swaybg, Waybar, and Polkit as idempotent user units. Portals are
+activated on-demand by D-Bus.
 
-Swaylock confirma mediante `ready-fd` que el bloqueo es visible antes de que
-Swayidle continúe con un evento de suspensión. Los defaults bloquean a los
-cinco minutos, apagan todos los outputs a los diez y no suspenden la máquina.
+Swaylock confirms via `ready-fd` that the lock surface is visible before Swayidle
+proceeds with suspension events. Defaults lock after 5 minutes and turn off outputs
+after 10 minutes.
 
-Atajos principales:
+### Primary Keybindings
 
-| Atajo | Acción |
+| Shortcut | Action |
 | --- | --- |
-| `Super+Return` / `Super+D` | Foot / Fuzzel |
-| `Super+L` | Bloqueo idempotente |
-| `Print` / `Shift+Print` | Región / pantalla completa con Satty |
-| `Ctrl+Print` | Región directa al clipboard |
-| `Super+Print` | Región con Satty para anotar |
-| `Super+X` | wlogout |
-| `Super+N` | Luz nocturna manual a 4000 K |
-| `Alt+Space` | Alternar teclado US/Latinoamérica |
-| `Super+Ctrl+R` | Toggle de grabación si la feature está instalada |
+| `Super+Return` / `Super+D` | Foot terminal / Fuzzel launcher |
+| `Super+L` | Idempotent screen lock |
+| `Print` / `Shift+Print` | Region / fullscreen screenshot with Satty |
+| `Ctrl+Print` | Region screenshot directly to clipboard |
+| `Super+Print` | Region screenshot with Satty for annotation |
+| `Super+X` | wlogout session menu |
+| `Super+N` | Manual night light toggle (4000 K) |
+| `Super+Ctrl+W` | Wallpaper selector via Fuzzel |
+| `Alt+Space` | Toggle keyboard layout between US and Latin America |
+| `Super+Ctrl+R` | Toggle screen recording (if feature is installed) |
 
-Los paths de capturas y grabaciones se resuelven mediante XDG user dirs con
-fallbacks portables. No se codifican monitores, baterías, interfaces, GPUs ni
-backlights concretos.
+Screenshot and recording paths resolve via XDG user directories with portable fallbacks.
 
-## Validación P10 activa
+## Active P10 Validation
 
-La primera instalación en una VM CachyOS confirmó el inicio de MangoWM y expuso
-tres ajustes: el layout JSON-stream de wlogout, un atajo explícito para Satty y
-la preferencia GTK oscura compartida. Después de aplicar estas correcciones P10
-debe repetir menú, capturas, aplicaciones GTK, portales, grabación y composición
-con la base. La configuración del display manager continúa fuera del alcance.
+The first VM installation confirmed MangoWM booting and identified three initial
+refinements: wlogout JSON-stream layout, Satty explicit shortcut, and GTK dark
+preference propagation. These are now covered with regression tests for the next
+VM validation checkpoint.
 
-## Licencia
+## License
 
-El código y la configuración originales usan MIT. La paleta Catppuccin conserva
-su atribución en `THIRD_PARTY_NOTICES.md`.
+Original code and configuration are licensed under MIT. Catppuccin palette retains
+its attribution in `THIRD_PARTY_NOTICES.md`.
