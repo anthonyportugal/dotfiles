@@ -24,7 +24,7 @@ start_unit() {
 if command -v dbus-update-activation-environment >/dev/null 2>&1; then
   dbus-update-activation-environment --systemd \
     WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE \
-    XDG_CONFIG_HOME XDG_STATE_HOME
+    XDG_CONFIG_HOME XDG_STATE_HOME GTK_THEME
 fi
 
 theme_dir=$(mangowm_theme_dir)
