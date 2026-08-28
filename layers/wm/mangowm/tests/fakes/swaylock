@@ -14,6 +14,7 @@ while (( $# > 0 )); do
   fi
   shift
 done
-[[ "$ready_fd" =~ ^[0-9]+$ ]] || exit 2
-printf '\n' >&"$ready_fd"
+if [[ "$ready_fd" =~ ^[0-9]+$ ]]; then
+  printf '\n' >&"$ready_fd"
+fi
 sleep 30

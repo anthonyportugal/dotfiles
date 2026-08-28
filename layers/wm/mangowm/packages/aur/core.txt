@@ -1,2 +1,3 @@
 # Stable AUR release. Prefer a verified CachyOS binary later if available.
 mangowm
+swaylock-effects-git

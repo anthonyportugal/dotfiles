@@ -7,7 +7,6 @@ polkit-gnome
 stow
 swaybg
 swayidle
-swaylock
 util-linux
 wireplumber
 wl-clipboard

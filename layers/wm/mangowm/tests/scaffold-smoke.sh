@@ -71,7 +71,7 @@ assert_manifest_line "$REPO_ROOT/packages/aur/core.txt" mangowm
 assert_manifest_line "$REPO_ROOT/packages/aur/desktop.txt" wlogout
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" foot
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" fuzzel
-assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swaylock
+assert_manifest_line "$REPO_ROOT/packages/aur/core.txt" swaylock-effects-git
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swayidle
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" waybar
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
