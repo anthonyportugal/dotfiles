@@ -6,7 +6,7 @@
 }
 {
   "label": "logout",
-  "action": "mmsg -q",
+  "action": "mmsg -q || pkill -u \"$UID\" -x mango",
   "text": "Logout",
   "keybind": "e"
 }
