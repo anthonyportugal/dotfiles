@@ -18,18 +18,18 @@ max_height = 1000
 
 [opener]
 edit = [
-  { run = 'micro "$@"', block = true, desc = "Edit with micro", for = "unix" },
+  { run = '${EDITOR:-micro} "$@"', block = true, desc = "Edit", for = "unix" },
 ]
 open = [
   { run = 'xdg-open "$@"', desc = "Open", for = "unix" },
 ]
 
 [open]
-rules = [
-  { name = "*/", use = [ "edit", "open" ] },
+prepend_rules = [
   { mime = "text/*", use = [ "edit", "open" ] },
-  { mime = "application/json", use = [ "edit", "open" ] },
-  { mime = "application/x-yaml", use = [ "edit", "open" ] },
-  { mime = "application/toml", use = [ "edit", "open" ] },
-  { mime = "*", use = [ "open", "edit" ] },
+  { url = "*.json", use = [ "edit", "open" ] },
+  { url = "*.toml", use = [ "edit", "open" ] },
+  { url = "*.yaml", use = [ "edit", "open" ] },
+  { url = "*.yml", use = [ "edit", "open" ] },
+  { url = "*.md", use = [ "edit", "open" ] },
 ]
