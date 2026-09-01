@@ -283,6 +283,9 @@ parse_args() {
   esac
 
   case "$WM" in
+    mango)
+      WM="mangowm"
+      ;;
     ""|bspwm|mangowm)
       ;;
     *)
@@ -297,6 +300,14 @@ parse_args() {
       usage_error "perfil de WM no soportado: $WM_PROFILE"
       ;;
   esac
+
+  if [[ -z "$WM" && -n "$WM_PATH" ]]; then
+    if [[ -f "$WM_PATH/bin/mango" ]]; then
+      WM="mangowm"
+    elif [[ -f "$WM_PATH/bin/bspwm" ]]; then
+      WM="bspwm"
+    fi
+  fi
 
   if [[ -n "$WM" ]]; then
     [[ -n "$WM_PATH" ]] || usage_error "--wm $WM requiere --wm-path DIR"

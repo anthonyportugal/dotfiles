@@ -99,13 +99,13 @@ The base CLI can orchestrate the installation of standalone WM repositories via 
 - **Compose with MangoWM (Wayland):**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm-path "$HOME/.dotfiles/wm/mangowm" \
+    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
     --wm-profile desktop --apply
   ```
 - **Compose with BSPWM (X11):**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm-path "$HOME/.dotfiles/wm/bspwm" \
+    --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
     --wm-profile desktop --apply
   ```
 
