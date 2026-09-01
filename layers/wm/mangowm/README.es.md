@@ -1,119 +1,142 @@
-# MangoWM dotfiles
+# MangoWM Dotfiles
 
 *Read this in other languages:* [English](README.md)
 
-Fundación de una sesión Wayland pública, autónoma y orientada a CachyOS/Arch.
-MangoWM será el compositor principal, con un stack pequeño, portable y seguro.
+Sesión Wayland autónoma, modular y minimalista configurada para **CachyOS** y **Arch Linux** utilizando [MangoWM](https://github.com/DreamMaoMao/mangowm) como compositor principal de ventanas en mosaico dinámico con el tema Catppuccin Mocha.
 
-> [!WARNING]
-> **Trabajo en progreso:** este repositorio todavía no es una versión estable;
-> su instalación y experiencia gráfica continúan validándose en P10.
->
-> **Estado actual:** candidata standalone de P11 completa y primera instalación
-> P10 iniciada en una VM. MangoWM arranca y el stack base funciona; las
-> incidencias descubiertas durante esa prueba se cubren ahora con regresiones
-> automatizadas antes de repetir el checklist gráfico.
+> [!NOTE]
+> **Trabajo en progreso:** Este repositorio se encuentra activamente mantenido. La candidata standalone de P11 está completa y la validación inicial fue iniciada en una VM donde MangoWM arranca. Está diseñado para funcionar de manera 100% independiente o integrado con el ecosistema de dotfiles principal en [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (actualmente en la rama `refactor/modular-dotfiles`).
 
-## Objetivos
+---
 
-- funcionar sin Archcraft, dotfiles base, bspwm ni configuración privada;
-- ofrecer dry-run, bootstrap, doctor y unlink propios;
-- evitar hardcodes de hardware y detectar capacidades;
-- mantener configuración, estado generado y secretos con owners distintos;
-- priorizar rendimiento/batería sin sacrificar una experiencia de escritorio
-  completa;
-- llegar a una candidata standalone antes de la prueba integral en VM.
+## 🧱 Arquitectura Modular
 
-## Stack aprobado
-
-| Capacidad | Selección |
-| --- | --- |
-| Compositor | MangoWM estable (`mangowm`) |
-| Terminal | Foot |
-| Launcher | Fuzzel |
-| Barra | Waybar |
-| Wallpaper | Swaybg |
-| Notificaciones | Mako |
-| Lock/idle | Swaylock, Swayidle y Wlopm |
-| Menú de sesión | wlogout |
-| Luz nocturna | Gammastep manual |
-| Clipboard | wl-clipboard, sin historial predeterminado |
-| Capturas | Grim, Slurp y Satty |
-| Portales | xdg-desktop-portal, wlr y gtk |
-| Polkit | polkit-gnome |
-| Audio | PipeWire y WirePlumber |
-| X11 | Xorg XWayland y xwayland-satellite |
-
-`wf-recorder` pertenece a la feature `recording`; `brightnessctl` a `laptop`.
-No se instalarán desktop shells, Pywal, clipboard history, MPD/MPC ni
-componentes de Hyprland por defecto.
-
-## Layout
+Este repositorio utiliza una **arquitectura modular por capas** administrada mediante [GNU Stow](https://www.gnu.org/software/stow/). Cada componente está aislado en paquetes independientes, permitiendo instalaciones personalizadas para computadoras de escritorio, laptops o sistemas mínimos sin software innecesario (*zero bloat*).
 
 ```text
-.
-├── bin/mango
-├── docs/architecture.md
-├── home/
-│   ├── mango/             # sesión core
-│   ├── mango-desktop/     # UX desktop
-│   ├── mango-laptop/      # feature de backlight
-│   └── mango-recording/   # feature de grabación
-├── packages/
-├── tests/
-│   ├── bootstrap-smoke.sh
-│   ├── scaffold-smoke.sh
-│   └── session-smoke.sh
-└── themes/catppuccin-mocha-pink/palette.conf
+┌────────────────────────────────────────────────────────────────────────┐
+│                      CAPA 3: FEATURES (A Demanda)                      │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
+│  │         mango-laptop         │    │       mango-recording        │  │
+│  │  • Control de brillo monitor │    │  • Grabador de pantalla      │  │
+│  │    (brightnessctl)           │    │    ligero (wf-recorder)      │  │
+│  │  • Atajos teclas Fn brillo   │    │  • Atajo Super+Ctrl+R        │  │
+│  │  • Monitor de batería        │    │  • Indicador de estado       │  │
+│  └──────────────────────────────┘    └──────────────────────────────┘  │
+├────────────────────────────────────────────────────────────────────────┤
+│                  CAPA 2: PERFIL DESKTOP (Visual & UX)                  │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │                          mango-desktop                           │  │
+│  │  • Barra superior (Waybar)         • Menú de apagado (wlogout)   │  │
+│  │  • Selector de fondos (Swaybg)     • Luz nocturna (Gammastep)    │  │
+│  │  • Capturas con editor (Satty)     • Control multimedia          │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+├────────────────────────────────────────────────────────────────────────┤
+│                    CAPA 1: CORE (Base Indispensable)                   │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │                              mango                               │  │
+│  │  • Compositor MangoWM              • Terminal (Foot)             │  │
+│  │  • Lanzador de apps (Fuzzel)       • Bloqueo (Swaylock)          │  │
+│  │  • Notificaciones (Mako)           • Motor de temas Catppuccin   │  │
+│  │  • Portales Wayland XDG            • Atajos de teclado base      │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-`home/` es el único stow directory. `mango` instala el compositor, lock/idle,
-portales y entrypoint; los otros paquetes se componen únicamente al seleccionar
-su perfil o feature. `config.local.conf` se carga al final y nunca se versiona.
-Los manifests son consumidos por `bin/mango` y permanecen separados por
-procedencia.
+### Desglose de Paquetes
 
-## Temas
+| Paquete | Propósito | ¿Cuándo instalarlo? |
+| :--- | :--- | :--- |
+| **`mango`** *(Core)* | Base indispensable: configuración del compositor, terminal, lanzador, pantalla de bloqueo, notificaciones y generador de temas. | **Siempre obligatorio.** |
+| **`mango-desktop`** | Experiencia completa de escritorio: barra superior (`Waybar`), menú de energía (`wlogout`), fondos de pantalla (`Swaybg`), luz nocturna y editor de capturas (`Satty`). | **Escritorios estándar y VMs.** |
+| **`mango-laptop`** | Control de brillo por hardware (`brightnessctl`), atajos de teclas `Fn` de brillo y hooks de batería. | **Solo en Laptops.** |
+| **`mango-recording`** | Script y atajo dedicado para grabación de pantalla con `wf-recorder`. | **Bajo demanda / Creadores.** |
 
-El default es Catppuccin Mocha con Pink como acento. La paleta canónica usa
-roles semánticos y está en `themes/catppuccin-mocha-pink/palette.conf`.
+---
 
-`mango-theme` valida la paleta como datos —nunca la ejecuta— y renderiza
-adaptadores de MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, wlogout y Satty
-bajo `$XDG_STATE_HOME/mangowm/theme/`. Cada revisión es inmutable y `current`
-cambia atómicamente. Cambiar de tema no modifica archivos versionados. GTK y
-aplicaciones compartidas pertenecen al repositorio base.
+## 🚀 Instalación y Perfiles
 
-## Perfiles y features
+La herramienta incluida `./bin/mango` gestiona la instalación de paquetes y los enlaces simbólicos de GNU Stow con simulación segura por defecto.
 
-- `core`: sesión mínima segura y completa;
-- `desktop`: barra, capturas, luz nocturna y compatibilidad adicional;
-- feature `laptop`: control real de backlight mediante Brightnessctl;
-- feature `recording`: grabación bajo demanda con wf-recorder.
-
-La procedencia y composición exactas viven en `packages/README.md`. Las
-features se pueden repetir y se deduplican sin activarse por detección de
-hardware.
-
-## Bootstrap
-
-Todas las operaciones son inspeccionables. `bootstrap` y `unlink` hacen dry-run
-salvo que se proporcione `--apply`; `doctor` nunca modifica el sistema.
-
+### 1. Computadora de Escritorio / Máquina Virtual (Recomendado)
+Instala la base `mango` y el escritorio `mango-desktop`:
 ```bash
-./bin/mango bootstrap --profile desktop
-./bin/mango bootstrap --profile desktop --feature laptop --apply
-./bin/mango doctor --profile desktop --feature laptop
-./bin/mango unlink --profile desktop
-./bin/mango unlink --profile desktop --apply
+./bin/mango bootstrap --profile desktop --apply
 ```
 
-`--packages-only` y `--stow-only` permiten aislar responsabilidades. Los
-backends soportados son `auto`, `shelly`, `paru`, `yay` y `pacman`; Pacman falla
-antes de mutar cuando falta un paquete AUR. Nunca ejecute el entrypoint completo
-con `sudo`.
+### 2. Configuración para Laptop
+Instala `mango` + `mango-desktop` + `mango-laptop` (añade teclas de brillo e integración de batería):
+```bash
+./bin/mango bootstrap --profile desktop --feature laptop --apply
+```
 
-El smoke test enlaza únicamente dentro de un home temporal:
+### 3. Estación de Trabajo Completa (con Grabación de Pantalla)
+```bash
+./bin/mango bootstrap --profile desktop --feature laptop --feature recording --apply
+```
+
+### 4. Núcleo Mínimo (Solo Administrador de Ventanas)
+Instala únicamente el compositor, terminal y lanzador sin barra de estado ni demonios de escritorio:
+```bash
+./bin/mango bootstrap --profile core --apply
+```
+
+### Opciones Útiles del Asistente
+- **Simulación Dry-run (Comprobación segura):** Omite `--apply` para previsualizar acciones sin modificar el sistema de archivos:
+  ```bash
+  ./bin/mango bootstrap --profile desktop
+  ```
+- **Diagnóstico del sistema:** Verifica enlaces e integridad de configuración:
+  ```bash
+  ./bin/mango doctor --profile desktop
+  ```
+- **Desvincular / Limpiar:** Retira los enlaces simbólicos de forma limpia:
+  ```bash
+  ./bin/mango unlink --profile desktop --apply
+  ```
+- **Gestores de paquetes compatibles:** Detección automática de `shelly`, `paru`, `yay` o `pacman` (configurable con `--backend <nombre>`).
+
+---
+
+## 🔗 Integración con Dotfiles Base
+
+Aunque este repositorio funciona de forma **100% independiente**, se integra limpiamente con el ecosistema principal de dotfiles modulares:
+- 🌐 **Repositorio Principal:** [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) *(Rama activa: `refactor/modular-dotfiles`)*
+- **Ecosistema Compartido:** Cuando se instala junto al repositorio base, MangoWM sincroniza automáticamente preferencias globales de modo oscuro, alias de shell compartidos, configuraciones de Neovim y tokens de tema GTK mediante `$HOME/.local/lib/dotfiles/session-preferences`.
+
+---
+
+## 🎨 Tema y Paleta de Colores
+
+El entorno está diseñado con **Catppuccin Mocha** utilizando **Pink (`#f5c2e7`)** como acento semántico principal.
+
+- Archivo de paleta: `themes/catppuccin-mocha-pink/palette.conf`
+- **Renderizado Atómico Dinámico:** El script `mango-theme` lee los tokens de la paleta y genera archivos de configuración en tiempo de ejecución para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout bajo `$XDG_STATE_HOME/mangowm/theme/current/`.
+
+---
+
+## ⌨️ Atajos de Teclado Principales
+
+| Atajo | Acción |
+| :--- | :--- |
+| `Super + Return` | Abrir terminal Foot |
+| `Super + D` | Abrir lanzador de aplicaciones Fuzzel |
+| `Super + L` | Bloquear pantalla de inmediato (Swaylock) |
+| `Super + X` | Abrir menú de apagado/sesión (Wlogout) |
+| `Super + Shift + Q` | Cerrar sesión de MangoWM |
+| `Super + Shift + R` | Recargar configuración de MangoWM |
+| `Super + T` | Alternar modos de mosaico (*Dwindle, Tile, Grid, Monocle, Scroller*) |
+| `Super + N` | Alternar luz nocturna cálida (Gammastep) |
+| `Super + Ctrl + W` | Seleccionar fondo de pantalla con Fuzzel |
+| `Print` / `Shift + Print` | Captura de región / Pantalla completa con editor Satty |
+| `Ctrl + Print` | Copiar captura de región directo al portapapeles |
+| `Super + Ctrl + R` | Alternar grabación de pantalla *(requiere feature recording)* |
+
+---
+
+## 🧪 Pruebas Automatizadas
+
+Ejecuta la suite de pruebas localmente para validar enlaces, manifests y la sesión:
 
 ```bash
 ./tests/scaffold-smoke.sh
@@ -121,52 +144,9 @@ El smoke test enlaza únicamente dentro de un home temporal:
 ./tests/session-smoke.sh
 ```
 
-## Iniciar la sesión
+---
 
-Después de aplicar el perfil, el entrypoint público de sesión es:
+## 📄 Licencia
 
-```bash
-~/.local/bin/mangowm-session
-```
-
-El entrypoint fija el entorno XDG/Wayland, materializa el tema y ejecuta Mango.
-`exec-once` importa el entorno en D-Bus/systemd y levanta Mako, Swayidle,
-Swaybg, Waybar y Polkit como unidades de usuario idempotentes. Al terminar el
-compositor, se detienen únicamente esas unidades. Los portales se activan por
-D-Bus; no se lanzan backends manualmente.
-
-Swaylock confirma mediante `ready-fd` que el bloqueo es visible antes de que
-Swayidle continúe con un evento de suspensión. Los defaults bloquean a los
-cinco minutos, apagan todos los outputs a los diez y no suspenden la máquina.
-
-Atajos principales:
-
-| Atajo | Acción |
-| --- | --- |
-| `Super+Return` / `Super+D` | Foot / Fuzzel |
-| `Super+L` | Bloqueo idempotente |
-| `Print` / `Shift+Print` | Región / pantalla completa con Satty |
-| `Ctrl+Print` | Región directa al clipboard |
-| `Super+Print` | Región con Satty para anotar |
-| `Super+X` | wlogout |
-| `Super+N` | Luz nocturna manual a 4000 K |
-| `Super+Ctrl+W` | Selector de wallpaper con Fuzzel |
-| `Alt+Space` | Alternar teclado US/Latinoamérica |
-| `Super+Ctrl+R` | Toggle de grabación si la feature está instalada |
-
-Los paths de capturas y grabaciones se resuelven mediante XDG user dirs con
-fallbacks portables. No se codifican monitores, baterías, interfaces, GPUs ni
-backlights concretos.
-
-## Validación P10 activa
-
-La primera instalación en una VM CachyOS confirmó el inicio de MangoWM y expuso
-tres ajustes: el layout JSON-stream de wlogout, un atajo explícito para Satty y
-la preferencia GTK oscura compartida. Después de aplicar estas correcciones P10
-debe repetir menú, capturas, aplicaciones GTK, portales, grabación y composición
-con la base. La configuración del display manager continúa fuera del alcance.
-
-## Licencia
-
-El código y la configuración originales usan MIT. La paleta Catppuccin conserva
-su atribución en `THIRD_PARTY_NOTICES.md`.
+El código y las configuraciones originales se distribuyen bajo la [Licencia MIT](LICENSE).
+Las paletas de Catppuccin y avisos de terceros se detallan en `THIRD_PARTY_NOTICES.md`.
