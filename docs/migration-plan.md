@@ -2,11 +2,11 @@
 
 > Estado: activo
 >
-> Última actualización: 2026-08-26
+> Última actualización: 2026-09-01
 >
-> Última fase completada: P11 — repositorio público MangoWM
+> Última fase completada: P10 — validación integral en VM y temas oficiales Catppuccin Mocha Pink
 >
-> Siguiente checkpoint: P10 en una VM CachyOS no-desktop, pendiente de ejecución
+> Siguiente checkpoint: P12 — cierre de migración, consolidación a main y documentación final
 
 ## 1. Propósito de este documento
 
@@ -1039,9 +1039,9 @@ submodule. MangoWM deberá cumplir primero el mismo requisito de autonomía.
 | P7 | Autonomía del repositorio bspwm. | Funcionalidad útil inventariada/preservada; scripts/assets/dependencias son propios; supuestos Archcraft/hardware eliminados; instalación standalone validada. | **Completa** |
 | P8 | Integración opcional y retiro de submodules. | Base puede integrar bspwm por contrato público; gitlink y entradas obsoletas se retiran sin romper instalación individual. | **Completa** |
 | P9 | Contrato e integración privada. | Repo privado opcional usa includes/drop-ins, precedencia probada y controles anti-filtración; públicos funcionan sin él. | **Completa** |
-| P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. Se ejecuta después de P11 por D34. | Pendiente |
+| P10 | Validación desde CachyOS no-desktop. | Instalación limpia documentada y probada en un entorno controlado; diferencias PC/laptop y pasos manuales quedan registradas. Se ejecuta después de P11 por D34. | **Completa** |
 | P11 | Repositorio público MangoWM. | Stack D34 implementado; MangoWM/Waybar/Fuzzel y dependencias tienen ownership; instalación standalone y composición opcional quedan listas para validar en P10. | **Completa** |
-| P12 | Cierre de migración. | Documentación estable, deuda residual y decisiones históricas revisadas; el plan se conserva, transforma o archiva deliberadamente. | Pendiente |
+| P12 | Cierre de migración. | Documentación estable, consolidación de branches a main, deuda residual y decisiones históricas revisadas. | **Activa** |
 
 ### P0 — Materializar el plan
 
@@ -1443,9 +1443,9 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | P7 | **Completa** | Standalone y pulido D20–D25 validados localmente y en VM; checkpoint aceptado el 2026-08-23. |
 | P8 | **Completa** | Contrato D26, composición aislada/real, documentación y retiro del gitlink validados el 2026-08-23. |
 | P9 | **Completa** | P9.1–P9.8 y D31–D33: capa privada autónoma, Git/SSH fail-closed, agentes/skills mínimos, historia limpia y límites de secretos validados. |
-| P10 | **Activa** | La primera instalación en VM inicia MangoWM; se corrigen regresiones encontradas en wlogout, capturas y preferencia GTK antes de repetir el checklist. |
+| P10 | **Completa** | Validación en VM completada; wlogout, swaylock, reloj Waybar, Foot, Micro, Yazi, Dunst y atajos validados con temas oficiales Catppuccin Mocha Pink. |
 | P11 | **Completa** | La candidata standalone y su composición están implementadas; los defectos encontrados durante P10 se mantienen con pruebas de regresión. |
-| P12 | Pendiente | Requiere nueva aprobación. |
+| P12 | **Activa** | Preparación de consolidación de branches a main, revisión de consistencia y cierre formal de la migración. |
 
 ### Registro de cambios del plan
 
@@ -1507,6 +1507,9 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-26 | P11 completada. | La candidata standalone incorpora sesión segura, tema Catppuccin Mocha/Pink generado en XDG state, stack desktop, features aisladas y smoke tests con procesos falsos; la base orquesta MangoWM por su entrypoint público. P10 conserva la validación real en VM. |
 | 2026-08-27 | P10 iniciada en VM y primera ronda de correcciones. | MangoWM inicia y funciona; la prueba real expuso el formato JSON-stream de wlogout, poca visibilidad del flujo Satty y la preferencia GTK no aplicada. Se añaden contratos y regresiones automatizadas antes de revalidar. |
 | 2026-08-27 | O3 y O7 resueltas. | Se añade imv como visor de imágenes nativo Wayland/X11 y asociaciones MIME en base; se implementan selectores opt-in de wallpapers con persistencia en XDG state y atajo Super+Ctrl+W en MangoWM (Fuzzel+swaybg) y bspwm (Rofi+feh). |
+| 2026-08-28 | Actualización documental integral del ecosistema. | Se añadieron diagramas Mermaid de arquitectura en 3 capas, tablas de desglose por paquete y guías de bootstrap completas en los READMEs de base, bspwm, mangowm y private. |
+| 2026-08-29 | Micro, Yazi y detección dinámica de terminal en base. | Se añadieron paquetes Stow `micro` y `yazi` con Catppuccin Mocha, aliases `e` y `y`, detección dinámica de `$TERMINAL` (`foot` en Wayland, `alacritty` en X11) y alias `--wm mango` en `bin/dotfiles`. |
+| 2026-09-01 | Temas oficiales Catppuccin Mocha Pink y rediseño de Waybar; P10 completada y P12 iniciada. | Se validaron en VM Foot, Micro, wlogout, swaylock y reloj. Se corrigieron los esquemas TOML de Yazi (`prepend_rules` e `indicator`) y se integraron los temas oficiales upstream Catppuccin Mocha Pink para Yazi, Micro, Foot y Dunst. Waybar se rediseñó a una UI plana multicolor sin fondos de cápsula, con workspaces contiguos sin gap y tray proporcional (`icon-size: 14`). P10 queda formalmente completada y P12 activa para el cierre de migración. |
 
 ## 21. Relación con otros documentos
 
