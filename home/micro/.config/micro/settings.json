@@ -1,0 +1,18 @@
+{
+  "autoindent": true,
+  "colorscheme": "catppuccin-mocha",
+  "cursorline": true,
+  "diffgutter": true,
+  "eofnewline": true,
+  "mouse": true,
+  "rmtrailingws": true,
+  "savecursor": true,
+  "saveundo": true,
+  "scrollbar": false,
+  "softwrap": true,
+  "statusformatl": "$(filename) $(modified)",
+  "statusformatr": "$(line):$(col) | $(opt:filetype)",
+  "statusline": true,
+  "tabsize": 2,
+  "tabstospaces": true
+}

@@ -1,0 +1,73 @@
+# Catppuccin Mocha for Yazi
+[flavor]
+use = ""
+
+[manager]
+cwd = { fg = "#89b4fa" }
+hovered = { fg = "#1e1e2e", bg = "#f5c2e7", bold = true }
+preview_hovered = { underline = true }
+find_keyword = { fg = "#f9e2af", bold = true, italic = true }
+find_position = { fg = "#f5c2e7", bold = true }
+marker_selected = { fg = "#a6e3a1", bg = "#a6e3a1" }
+marker_copied = { fg = "#f9e2af", bg = "#f9e2af" }
+marker_cut = { fg = "#f38ba8", bg = "#f38ba8" }
+tab_active = { fg = "#1e1e2e", bg = "#f5c2e7", bold = true }
+tab_inactive = { fg = "#cdd6f4", bg = "#313244" }
+tab_width = 1
+count_copied = { fg = "#1e1e2e", bg = "#f9e2af" }
+count_cut = { fg = "#1e1e2e", bg = "#f38ba8" }
+count_selected = { fg = "#1e1e2e", bg = "#a6e3a1" }
+border_symbol = "│"
+border_style = { fg = "#585b70" }
+
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#313244", bg = "#313244" }
+mode_normal = { fg = "#1e1e2e", bg = "#89b4fa", bold = true }
+mode_select = { fg = "#1e1e2e", bg = "#a6e3a1", bold = true }
+mode_unset = { fg = "#1e1e2e", bg = "#f38ba8", bold = true }
+progress_label = { fg = "#ffffff", bold = true }
+progress_normal = { fg = "#89b4fa", bg = "#313244" }
+progress_error = { fg = "#f38ba8", bg = "#313244" }
+permissions_t = { fg = "#89b4fa" }
+permissions_r = { fg = "#f9e2af" }
+permissions_w = { fg = "#f38ba8" }
+permissions_x = { fg = "#a6e3a1" }
+permissions_s = { fg = "#6c7086" }
+
+[select]
+border = { fg = "#89b4fa" }
+active = { fg = "#f5c2e7", bold = true }
+inactive = { fg = "#cdd6f4" }
+
+[input]
+border = { fg = "#89b4fa" }
+title = { fg = "#cdd6f4" }
+value = { fg = "#cdd6f4" }
+selected = { bg = "#45475a" }
+
+[completion]
+border = { fg = "#89b4fa" }
+active = { fg = "#1e1e2e", bg = "#f5c2e7" }
+inactive = { fg = "#cdd6f4" }
+
+[tasks]
+border = { fg = "#89b4fa" }
+title = { fg = "#cdd6f4" }
+hovered = { underline = true }
+
+[which]
+mask = { bg = "#181825" }
+cand = { fg = "#89b4fa" }
+rest = { fg = "#6c7086" }
+desc = { fg = "#cdd6f4" }
+separator = "  "
+separator_style = { fg = "#585b70" }
+
+[help]
+on = { fg = "#f5c2e7" }
+exec = { fg = "#89dceb" }
+desc = { fg = "#cdd6f4" }
+hovered = { bg = "#45475a", bold = true }
+footer = { fg = "#1e1e2e", bg = "#cdd6f4" }
