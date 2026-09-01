@@ -46,9 +46,12 @@ Configurations are structured into small packages managed with [GNU Stow](https:
 | :--- | :--- | :--- |
 | **`git`** | Fail-closed Git configuration template (requires explicit identity setup) | `core`, `desktop` |
 | **`zsh`** | Clean Zsh configuration with auto-suggestions, syntax-highlighting, and aliases | `core`, `desktop` |
-| **`starship`** | Cross-shell modern prompt theme | `desktop` |
-| **`alacritty`** | Alacritty terminal emulator with Catppuccin Mocha theme | `desktop` |
-| **`bat`** | Catppuccin themes for `bat` (syntax-highlighting `cat`) | `desktop` |
+| **`bat`** | Catppuccin themes for `bat` (syntax-highlighting `cat`) | `cli`, `desktop` |
+| **`micro`** | Terminal text editor with Catppuccin Mocha theme | `cli`, `desktop` |
+| **`starship`** | Cross-shell modern prompt theme | `cli`, `desktop` |
+| **`yazi`** | Blazing fast terminal file manager with Catppuccin Mocha theme | `cli`, `desktop` |
+| **`foot`** | Lightweight Wayland terminal emulator with Catppuccin Mocha theme | `desktop` |
+| **`alacritty`** | Cross-platform terminal emulator with Catppuccin Mocha theme | `desktop` |
 | **`xdg-defaults`** | GTK 3/4 `prefer-dark` settings, default mimeapps, and session hooks | `desktop` |
 
 ---

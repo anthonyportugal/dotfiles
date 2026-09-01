@@ -46,9 +46,12 @@ Las configuraciones están organizadas en paquetes modulares administrados media
 | :--- | :--- | :--- |
 | **`git`** | Plantilla de configuración segura de Git (requiere configuración explícita de identidad) | `core`, `desktop` |
 | **`zsh`** | Configuración limpia de Zsh con autosugerencias, resaltado de sintaxis y alias | `core`, `desktop` |
-| **`starship`** | Tema y prompt moderno multiplataforma | `desktop` |
-| **`alacritty`** | Emulador de terminal Alacritty con tema Catppuccin Mocha | `desktop` |
-| **`bat`** | Temas Catppuccin para `bat` (visualizador con resaltado de código) | `desktop` |
+| **`bat`** | Temas Catppuccin para `bat` (visualizador con resaltado de código) | `cli`, `desktop` |
+| **`micro`** | Editor de texto en terminal con tema Catppuccin Mocha | `cli`, `desktop` |
+| **`starship`** | Tema y prompt moderno multiplataforma | `cli`, `desktop` |
+| **`yazi`** | Explorador de archivos en terminal ultrarrápido con tema Catppuccin Mocha | `cli`, `desktop` |
+| **`foot`** | Emulador de terminal ligero para Wayland con tema Catppuccin Mocha | `desktop` |
+| **`alacritty`** | Emulador de terminal multiplataforma con tema Catppuccin Mocha | `desktop` |
 | **`xdg-defaults`** | Ajustes GTK 3/4 `prefer-dark`, aplicaciones por defecto (`mimeapps`) y hooks | `desktop` |
 
 ---
