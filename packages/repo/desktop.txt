@@ -1,5 +1,6 @@
-alacritty
 adw-gtk-theme
+alacritty
+foot
 glib2
 gnome-themes-extra
 gsettings-desktop-schemas
