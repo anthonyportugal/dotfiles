@@ -4,29 +4,30 @@ set -Eeuo pipefail
 # shellcheck source=/dev/null
 source "$HOME/.local/lib/mangowm/common"
 
+temp="${MANGOWM_NIGHT_TEMPERATURE:-3500}"
 command_name=${1:-toggle}
-state_dir="$(mangowm_state_home)/mangowm"
-state_file="$state_dir/night-light"
-runtime_dir=$(mangowm_runtime_dir)
-mkdir -p -- "$state_dir"
 
-exec 9>"$runtime_dir/night-light.guard"
-flock 9
+status_json() {
+  if pgrep -x gammastep >/dev/null 2>&1; then
+    printf '{"text":"󰖔","tooltip":"Luz nocturna: Activada (%s K)\\n\\nClic para desactivar","class":"on"}\n' "$temp"
+  else
+    printf '{"text":"󰖔","tooltip":"Luz nocturna: Desactivada\\n\\nClic para activar","class":"off"}\n'
+  fi
+}
 
 enable() {
-  mangowm_require wlsunset
-  local temp="${MANGOWM_NIGHT_TEMPERATURE:-4000}"
-  pkill -x wlsunset 2>/dev/null || true
-  nohup wlsunset -l 0 -L 0 -t "$temp" -T "$temp" -d 1 >/dev/null 2>&1 &
-  disown
-  printf 'on\n' > "$state_file"
+  mangowm_require gammastep
+  pkill -x gammastep 2>/dev/null || true
+  gammastep -O "$temp" >/dev/null 2>&1 &
   mangowm_notify low 'Luz nocturna activada' "${temp} K"
+  pkill -RTMIN+9 waybar 2>/dev/null || true
 }
 
 disable() {
-  pkill -x wlsunset 2>/dev/null || true
-  printf 'off\n' > "$state_file"
+  pkill -x gammastep 2>/dev/null || true
+  gammastep -x 2>/dev/null || true
   mangowm_notify low 'Luz nocturna desactivada'
+  pkill -RTMIN+9 waybar 2>/dev/null || true
 }
 
 case "$command_name" in
@@ -37,23 +38,20 @@ case "$command_name" in
     disable
     ;;
   toggle)
-    if pgrep -x wlsunset >/dev/null 2>&1 || { [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; }; then
+    if pgrep -x gammastep >/dev/null 2>&1; then
       disable
     else
       enable
     fi
     ;;
+  status|waybar)
+    status_json
+    ;;
   restore)
-    if [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; then
-      mangowm_require wlsunset
-      temp="${MANGOWM_NIGHT_TEMPERATURE:-4000}"
-      pkill -x wlsunset 2>/dev/null || true
-      nohup wlsunset -l 0 -L 0 -t "$temp" -T "$temp" -d 1 >/dev/null 2>&1 &
-      disown
-    fi
+    # No action needed on session start unless desired
     ;;
   *)
-    printf 'Uso: %s on|off|toggle|restore\n' "${0##*/}" >&2
+    printf 'Uso: %s toggle|on|off|status|restore\n' "${0##*/}" >&2
     exit 2
     ;;
 esac

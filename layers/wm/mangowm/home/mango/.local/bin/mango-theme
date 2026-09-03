@@ -297,8 +297,14 @@ render_waybar() {
     '  color: @pink;' \
     '}' \
     '#custom-nightlight {' \
-    '  color: @peach;' \
+    '  color: @overlay0;' \
     '  font-size: 15px;' \
+    '}' \
+    '#custom-nightlight.on {' \
+    '  color: @peach;' \
+    '}' \
+    '#custom-nightlight.off {' \
+    '  color: @overlay0;' \
     '}' \
     '#custom-nightlight:hover {' \
     '  color: @yellow;' \
