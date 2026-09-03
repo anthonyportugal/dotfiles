@@ -37,8 +37,7 @@ enable() {
 }
 
 disable() {
-  pkill -9 -x gammastep 2>/dev/null || true
-  gammastep -x 2>/dev/null || true
+  pkill -x gammastep 2>/dev/null || true
   rm -f "$state_file"
   mangowm_notify low 'Luz nocturna desactivada'
   refresh_waybar
@@ -63,7 +62,7 @@ case "$command_name" in
     ;;
   restore)
     rm -f "$state_file"
-    gammastep -x 2>/dev/null || true
+    pkill -x gammastep 2>/dev/null || true
     ;;
   *)
     printf 'Uso: %s toggle|on|off|status|restore\n' "${0##*/}" >&2
