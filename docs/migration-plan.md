@@ -2,11 +2,11 @@
 
 > Estado: activo
 >
-> Última actualización: 2026-09-01
+> Última actualización: 2026-09-02
 >
-> Última fase completada: P10 — validación integral en VM y temas oficiales Catppuccin Mocha Pink
+> Última fase completada: Validación integral en Hardware Real (Laptop HP ProBook 440 G10 en CachyOS con LUKS + Limine + Ly)
 >
-> Siguiente checkpoint: P12 — cierre de migración, consolidación a main y documentación final
+> Siguiente checkpoint: P12 — Cierre de migración, Wallpapers, Screenshots, Merge a main, BSPWM, Ly/Limine y capa privada SSH
 
 ## 1. Propósito de este documento
 
@@ -1364,13 +1364,32 @@ sola vez.
    `--wm-feature`. La sesión Wayland real y la composición final se aceptan en
    P10.
 
-### P12 — Cierre
+### P12 — Cierre y Ecosistema de Producción
 
-1. Ejecutar validación completa y revisar deuda.
-2. Consolidar instrucciones estables en README/AGENTS.
-3. Trasladar decisiones arquitectónicas duraderas a documentación estable si
-   mejora su consulta.
-4. Decidir si este plan permanece como registro, se reduce o se archiva.
+1. **P12.1 — Colección de Wallpapers Optimizados & Repositorio Público:**
+   - Crear un repositorio público dedicado y limpio para wallpapers de alta resolución.
+   - Optimizar imágenes en formatos modernos y comprimidos (WebP / AVIF / PNG optimizados) para asegurar carga instantánea y consumo mínimo de memoria RAM/VRAM en Swaybg/Feh.
+   - Definir el wallpaper predeterminado del sistema.
+2. **P12.2 — Showcase Screenshots & Corrección de Satty:**
+   - Corregir el flujo de anotación interactiva de Satty (`screenshot annotate`) para permitir dibujar sobre capturas de pantalla sin cierres prematuros.
+   - Generar capturas de pantalla limpias y representativas del escritorio MangoWM para el `README.md` de `dotfiles-mangowm`.
+3. **P12.3 — Consolidación de Ramas a `main`:**
+   - Merge de la rama `refactor/modular-dotfiles` hacia `main` en el repositorio `base`.
+   - Merge de la rama `refactor/standalone-bspwm` hacia `main` en el repositorio `wm/bspwm`.
+   - Actualizar `README.md` y `README.es.md` en todos los repositorios para retirar los banners de *Work in Progress (WIP)* y declarar las versiones de producción estables.
+4. **P12.4 — Validación de Dotfiles Privados en Laptop y Remotos SSH:**
+   - Desplegar la capa `dotfiles-private` en la laptop física.
+   - Configurar y autenticar claves SSH independientes por dispositivo.
+   - Migrar los remotos Git de HTTPS a SSH (`git@github.com:...`) y verificar la firma criptográfica de commits.
+5. **P12.5 — Pulido Final de BSPWM:**
+   - Validación final de paridad y consistencia en `wm/bspwm` con los estándares de temas oficiales Catppuccin Mocha Pink y manifiestos del ecosistema.
+6. **P12.6 — Repositorio de Tematización de Sistema (`dotfiles-system` para Ly + Limine):**
+   - Crear un repositorio dedicado para configuraciones que requieren privilegios de `root`:
+     - `/etc/ly/config.ini`: tema Catppuccin Mocha, integración con `brightnessctl` y animaciones Durdraw/ANSI.
+     - `/boot/limine.conf`: tema Catppuccin Mocha y splash art limpio.
+     - Script automatizado de despliegue hacia `/etc/` y `/boot/`.
+7. **P12.7 — Archivo y Cierre Documental:**
+   - Archivar este plan de migración como registro histórico y consolidar las reglas duraderas en los README y AGENTS de cada repositorio.
 
 ## 16. Criterios de aceptación globales
 
@@ -1510,6 +1529,8 @@ Estados permitidos: `Pendiente`, `Activa`, `Bloqueada`, `Completa`.
 | 2026-08-28 | Actualización documental integral del ecosistema. | Se añadieron diagramas Mermaid de arquitectura en 3 capas, tablas de desglose por paquete y guías de bootstrap completas en los READMEs de base, bspwm, mangowm y private. |
 | 2026-08-29 | Micro, Yazi y detección dinámica de terminal en base. | Se añadieron paquetes Stow `micro` y `yazi` con Catppuccin Mocha, aliases `e` y `y`, detección dinámica de `$TERMINAL` (`foot` en Wayland, `alacritty` en X11) y alias `--wm mango` en `bin/dotfiles`. |
 | 2026-09-01 | Temas oficiales Catppuccin Mocha Pink y rediseño de Waybar; P10 completada y P12 iniciada. | Se validaron en VM Foot, Micro, wlogout, swaylock y reloj. Se corrigieron los esquemas TOML de Yazi (`prepend_rules` e `indicator`) y se integraron los temas oficiales upstream Catppuccin Mocha Pink para Yazi, Micro, Foot y Dunst. Waybar se rediseñó a una UI plana multicolor sin fondos de cápsula, con workspaces contiguos sin gap y tray proporcional (`icon-size: 14`). P10 queda formalmente completada y P12 activa para el cierre de migración. |
+| 2026-09-02 | D35; Validación en Hardware Real (Laptop HP ProBook 440 G10). | Se validó en hardware físico CachyOS + LUKS + Limine + Ly: bootstrap base y MangoWM (`desktop`+`laptop`), Zsh modular, Starship, plugins oficiales, Thunar, Foot flotante (`Super+Shift+Return`), navegador (`Super+B`), lanzador (`Super+D`), selector de wallpapers (`Super+W`), cheat sheet de atajos (`Super+F1`), menús Fuzzel Catppuccin Mocha, Power Profiles Daemon interactivo y luz nocturna con `gammastep` no bloqueante con estado determinístico y señal `RTMIN+9` en Waybar. |
+| 2026-09-02 | D36; Roadmap de finalización y cierre del ecosistema (P12.1–P12.7). | El usuario aprobó el roadmap de cierre priorizando la capa privada: 1) Repositorio público de wallpapers optimizados (WebP/AVIF/PNG); 2) Showcase screenshots y corrección de anotación Satty; 3) Consolidación de ramas a `main` y retiro de banners WIP; 4) Validación de `dotfiles-private` en laptop y migración a SSH; 5) Pulido final de BSPWM; 6) Repositorio de tematización de sistema (`dotfiles-system` para Ly + Limine); 7) Archivo documental final. |
 
 ## 21. Relación con otros documentos
 
