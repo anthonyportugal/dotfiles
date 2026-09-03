@@ -12,6 +12,7 @@ keybindings=(
   "   Super + Shift + Enter         Terminal Foot (Ventana Flotante)"
   "󰍉   Super + D                     Lanzador de Aplicaciones (Fuzzel)"
   "📁  Super + Shift + E             Explorador de Archivos (Thunar Flotante)"
+  "🌐  Super + B                     Navegador Web (Firefox / Zen / Chromium)"
   "󰖔   Super + N                     Alternar Luz Nocturna (On / Off)"
   "⚡  Super + Shift + P             Menú de Perfil de Energía"
   "🖼️   Super + W                     Selector de Wallpapers"

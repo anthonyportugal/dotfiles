@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+# Prioritize user's BROWSER, then popular modern Wayland browsers
+if [[ -n "${BROWSER:-}" ]] && command -v "$BROWSER" >/dev/null 2>&1; then
+  exec "$BROWSER" "$@"
+elif command -v zen-browser >/dev/null 2>&1; then
+  exec zen-browser "$@"
+elif command -v firefox >/dev/null 2>&1; then
+  exec firefox "$@"
+elif command -v chromium >/dev/null 2>&1; then
+  exec chromium "$@"
+elif command -v brave >/dev/null 2>&1; then
+  exec brave "$@"
+elif command -v google-chrome-stable >/dev/null 2>&1; then
+  exec google-chrome-stable "$@"
+elif command -v xdg-open >/dev/null 2>&1; then
+  exec xdg-open "https://duckduckgo.com" "$@"
+else
+  mangowm_notify critical 'Navegador Web' 'No se encontró ningún navegador instalado (firefox, chromium, zen, etc.)'
+  exit 1
+fi

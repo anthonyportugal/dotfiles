@@ -114,7 +114,7 @@ shellcheck "${shell_files[@]}"
 for command_name in \
   brightnessctl dbus-update-activation-environment fuzzel grim mako \
   mango notify-send playerctl satty slurp swaybg swayidle systemctl systemd-run \
-  waybar wf-recorder wl-copy wlogout wlsunset wpctl xdg-user-dir; do
+  waybar wf-recorder wl-copy wlogout wlsunset wpctl xdg-open xdg-user-dir; do
   case "$command_name" in
     systemctl|systemd-run|dbus-update-activation-environment)
       ln -s "$REPO_ROOT/tests/fakes/session-control" "$FAKE_BIN/$command_name"

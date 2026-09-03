@@ -17,7 +17,7 @@ enable() {
   mangowm_require wlsunset
   local temp="${MANGOWM_NIGHT_TEMPERATURE:-4000}"
   pkill -x wlsunset 2>/dev/null || true
-  nohup wlsunset -T "$temp" -t "$temp" >/dev/null 2>&1 &
+  nohup wlsunset -l 0 -L 0 -t "$temp" -T "$temp" -d 1 >/dev/null 2>&1 &
   disown
   printf 'on\n' > "$state_file"
   mangowm_notify low 'Luz nocturna activada' "${temp} K"
@@ -48,7 +48,7 @@ case "$command_name" in
       mangowm_require wlsunset
       temp="${MANGOWM_NIGHT_TEMPERATURE:-4000}"
       pkill -x wlsunset 2>/dev/null || true
-      nohup wlsunset -T "$temp" -t "$temp" >/dev/null 2>&1 &
+      nohup wlsunset -l 0 -L 0 -t "$temp" -T "$temp" -d 1 >/dev/null 2>&1 &
       disown
     fi
     ;;
