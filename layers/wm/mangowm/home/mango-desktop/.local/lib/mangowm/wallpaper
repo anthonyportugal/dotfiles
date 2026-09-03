@@ -96,9 +96,12 @@ select_wallpaper() {
     formatted+=("${file##*/}|${file}")
   done
 
+  local theme_dir
+  theme_dir=$(mangowm_theme_dir)
+
   local selection
   selection=$(printf '%s\n' "${formatted[@]}" | \
-    fuzzel --dmenu --prompt='Wallpaper ❯ ' | cut -d'|' -f2 || true)
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" --prompt='Wallpaper ❯ ' | cut -d'|' -f2 || true)
 
   if [[ -n "$selection" && -r "$selection" ]]; then
     set_wallpaper "$selection"

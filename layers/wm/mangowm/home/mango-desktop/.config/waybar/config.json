@@ -19,7 +19,7 @@
     "backlight",
     "network",
     "bluetooth",
-    "power-profiles-daemon",
+    "custom/power-profile",
     "battery",
     "clock",
     "custom/power"
@@ -102,17 +102,14 @@
     "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
     "on-click": "blueman-manager || overskride || rfkill toggle bluetooth"
   },
-  "power-profiles-daemon": {
-    "format": "{icon}",
-    "tooltip-format": "Perfil de energía: {profile}\nControlador CPU: {cpu_driver}\n\nClic para cambiar modo",
-    "tooltip": true,
+  "custom/power-profile": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/power-profile waybar",
+    "interval": 3,
+    "signal": 8,
     "on-click": "$HOME/.local/lib/mangowm/power-profile select",
-    "format-icons": {
-      "default": "󰾅",
-      "performance": "󰓅",
-      "balanced": "󰾅",
-      "power-saver": "󰌪"
-    }
+    "tooltip": true
   },
   "battery": {
     "states": {

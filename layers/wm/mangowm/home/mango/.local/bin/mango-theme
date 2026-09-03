@@ -276,7 +276,7 @@ render_waybar() {
     '  color: @text;' \
     '}' \
     '#custom-launcher, #mpris, #custom-nightlight, #idle_inhibitor, #tray,' \
-    '#wireplumber, #backlight, #network, #bluetooth, #power-profiles-daemon, #battery, #clock, #custom-power {' \
+    '#wireplumber, #backlight, #network, #bluetooth, #custom-power-profile, #battery, #clock, #custom-power {' \
     '  padding: 0 8px;' \
     '  margin: 0;' \
     '  background: transparent;' \
@@ -396,19 +396,19 @@ render_waybar() {
     '#bluetooth:hover {' \
     '  color: @sky;' \
     '}' \
-    '#power-profiles-daemon {' \
+    '#custom-power-profile {' \
     '  color: @green;' \
     '}' \
-    '#power-profiles-daemon.performance {' \
+    '#custom-power-profile.performance {' \
     '  color: @red;' \
     '}' \
-    '#power-profiles-daemon.balanced {' \
+    '#custom-power-profile.balanced {' \
     '  color: @blue;' \
     '}' \
-    '#power-profiles-daemon.power-saver {' \
+    '#custom-power-profile.power-saver {' \
     '  color: @green;' \
     '}' \
-    '#power-profiles-daemon:hover {' \
+    '#custom-power-profile:hover {' \
     '  color: @teal;' \
     '}' \
     '#battery {' \

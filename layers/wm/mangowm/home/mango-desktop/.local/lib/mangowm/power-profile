@@ -23,7 +23,33 @@ set_profile() {
       *)           label="$target"; icon="" ;;
     esac
     mangowm_notify low "Perfil de Energía" "$icon $label activo"
+    pkill -RTMIN+8 waybar 2>/dev/null || true
   fi
+}
+
+waybar_json() {
+  local current
+  current=$(get_current)
+  local icon label class
+  case "$current" in
+    power-saver)
+      icon="󰌪"
+      label="Ahorro de energía"
+      class="power-saver"
+      ;;
+    performance)
+      icon="󰓅"
+      label="Alto rendimiento"
+      class="performance"
+      ;;
+    balanced|*)
+      icon="󰾅"
+      label="Modo equilibrado"
+      class="balanced"
+      ;;
+  esac
+  printf '{"text":"%s","alt":"%s","tooltip":"Perfil de Energía: %s (%s)\\n\\nClic para cambiar modo","class":"%s"}\n' \
+    "$icon" "$current" "$label" "$current" "$class"
 }
 
 case "$command_name" in
@@ -48,6 +74,7 @@ case "$command_name" in
   select|menu)
     current=$(get_current)
     mangowm_require fuzzel
+    theme_dir=$(mangowm_theme_dir)
 
     tag_saver=""
     tag_balanced=""
@@ -65,13 +92,17 @@ case "$command_name" in
     )
 
     selected=$(printf '%s\n' "${options[@]}" | \
-      fuzzel --dmenu --prompt="Perfil de Energía ❯ " --lines=3 --width=42 || true)
+      fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+        --prompt="Perfil de Energía ❯ " --lines=3 --width=42 || true)
 
     case "$selected" in
       *"power-saver"*) set_profile power-saver ;;
       *"balanced"*)    set_profile balanced ;;
       *"performance"*) set_profile performance ;;
     esac
+    ;;
+  waybar|status)
+    waybar_json
     ;;
   set)
     set_profile "${2:-balanced}"
@@ -80,7 +111,7 @@ case "$command_name" in
     get_current
     ;;
   *)
-    printf 'Uso: %s next|prev|up|down|select|set <profile>|get\n' "${0##*/}" >&2
+    printf 'Uso: %s next|prev|up|down|select|waybar|set <profile>|get\n' "${0##*/}" >&2
     exit 2
     ;;
 esac
