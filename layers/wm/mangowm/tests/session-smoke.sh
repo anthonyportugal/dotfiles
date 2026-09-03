@@ -112,9 +112,9 @@ shellcheck "${shell_files[@]}"
 # Todos los procesos y herramientas externas se reemplazan por dobles. La
 # prueba inspecciona composición sin necesitar Wayland ni tocar el host.
 for command_name in \
-  brightnessctl dbus-update-activation-environment fuzzel gammastep grim mako \
+  brightnessctl dbus-update-activation-environment fuzzel grim mako \
   mango notify-send playerctl satty slurp swaybg swayidle systemctl systemd-run \
-  waybar wf-recorder wl-copy wlogout wpctl xdg-user-dir; do
+  waybar wf-recorder wl-copy wlogout wlsunset wpctl xdg-user-dir; do
   case "$command_name" in
     systemctl|systemd-run|dbus-update-activation-environment)
       ln -s "$REPO_ROOT/tests/fakes/session-control" "$FAKE_BIN/$command_name"

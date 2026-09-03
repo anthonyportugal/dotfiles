@@ -1,5 +1,4 @@
 blueman
-gammastep
 grim
 libnotify
 playerctl
@@ -8,5 +7,6 @@ slurp
 ttf-jetbrains-mono
 ttf-nerd-fonts-symbols-mono
 waybar
+wlsunset
 xdg-user-dirs
 xwayland-satellite

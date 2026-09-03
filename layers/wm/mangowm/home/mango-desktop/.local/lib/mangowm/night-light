@@ -14,17 +14,17 @@ exec 9>"$runtime_dir/night-light.guard"
 flock 9
 
 enable() {
-  mangowm_require gammastep
-  pkill -x gammastep 2>/dev/null || true
-  nohup gammastep -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}" >/dev/null 2>&1 &
+  mangowm_require wlsunset
+  local temp="${MANGOWM_NIGHT_TEMPERATURE:-4000}"
+  pkill -x wlsunset 2>/dev/null || true
+  nohup wlsunset -T "$temp" -t "$temp" >/dev/null 2>&1 &
   disown
   printf 'on\n' > "$state_file"
-  mangowm_notify low 'Luz nocturna activada' "${MANGOWM_NIGHT_TEMPERATURE:-4000} K"
+  mangowm_notify low 'Luz nocturna activada' "${temp} K"
 }
 
 disable() {
-  pkill -x gammastep 2>/dev/null || true
-  gammastep -x 2>/dev/null || true
+  pkill -x wlsunset 2>/dev/null || true
   printf 'off\n' > "$state_file"
   mangowm_notify low 'Luz nocturna desactivada'
 }
@@ -37,7 +37,7 @@ case "$command_name" in
     disable
     ;;
   toggle)
-    if pgrep -x gammastep >/dev/null 2>&1 || { [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; }; then
+    if pgrep -x wlsunset >/dev/null 2>&1 || { [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; }; then
       disable
     else
       enable
@@ -45,9 +45,10 @@ case "$command_name" in
     ;;
   restore)
     if [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; then
-      mangowm_require gammastep
-      pkill -x gammastep 2>/dev/null || true
-      nohup gammastep -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}" >/dev/null 2>&1 &
+      mangowm_require wlsunset
+      temp="${MANGOWM_NIGHT_TEMPERATURE:-4000}"
+      pkill -x wlsunset 2>/dev/null || true
+      nohup wlsunset -T "$temp" -t "$temp" >/dev/null 2>&1 &
       disown
     fi
     ;;
