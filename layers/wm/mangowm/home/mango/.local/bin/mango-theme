@@ -276,7 +276,7 @@ render_waybar() {
     '  color: @text;' \
     '}' \
     '#custom-launcher, #mpris, #custom-nightlight, #idle_inhibitor, #tray,' \
-    '#wireplumber, #backlight, #network, #battery, #clock, #custom-power {' \
+    '#wireplumber, #backlight, #network, #bluetooth, #battery, #clock, #custom-power {' \
     '  padding: 0 8px;' \
     '  margin: 0;' \
     '  background: transparent;' \
@@ -380,6 +380,18 @@ render_waybar() {
     '}' \
     '#network:hover {' \
     '  color: @peach;' \
+    '}' \
+    '#bluetooth {' \
+    '  color: @sapphire;' \
+    '}' \
+    '#bluetooth.disabled, #bluetooth.off {' \
+    '  color: @overlay0;' \
+    '}' \
+    '#bluetooth.connected {' \
+    '  color: @blue;' \
+    '}' \
+    '#bluetooth:hover {' \
+    '  color: @sky;' \
     '}' \
     '#battery {' \
     '  color: @teal;' \

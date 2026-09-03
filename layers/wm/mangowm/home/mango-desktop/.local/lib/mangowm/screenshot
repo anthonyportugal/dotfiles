@@ -42,7 +42,7 @@ destination_dir="$pictures_dir/Screenshots"
 mkdir -p -- "$destination_dir"
 destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').png"
 
-grim_command=(grim -t ppm)
+grim_command=(grim -t png)
 if [[ "$mode" == region || "$mode" == annotate ]]; then
   grim_command+=(-g "$geometry")
 fi

@@ -15,14 +15,17 @@ flock 9
 
 enable() {
   mangowm_require gammastep
-  gammastep -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}"
+  pkill -x gammastep 2>/dev/null || true
+  gammastep -m wayland -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}" 2>/dev/null || \
+    gammastep -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}"
   printf 'on\n' > "$state_file"
   mangowm_notify low 'Luz nocturna activada' "${MANGOWM_NIGHT_TEMPERATURE:-4000} K"
 }
 
 disable() {
   mangowm_require gammastep
-  gammastep -x
+  pkill -x gammastep 2>/dev/null || true
+  gammastep -m wayland -x 2>/dev/null || gammastep -x 2>/dev/null || true
   printf 'off\n' > "$state_file"
   mangowm_notify low 'Luz nocturna desactivada'
 }
@@ -44,7 +47,9 @@ case "$command_name" in
   restore)
     if [[ -r "$state_file" ]] && grep -Fxq on "$state_file"; then
       mangowm_require gammastep
-      gammastep -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}"
+      pkill -x gammastep 2>/dev/null || true
+      gammastep -m wayland -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}" 2>/dev/null || \
+        gammastep -P -O "${MANGOWM_NIGHT_TEMPERATURE:-4000}"
     fi
     ;;
   *)

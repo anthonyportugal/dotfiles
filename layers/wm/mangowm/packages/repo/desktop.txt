@@ -1,3 +1,4 @@
+blueman
 gammastep
 grim
 libnotify
