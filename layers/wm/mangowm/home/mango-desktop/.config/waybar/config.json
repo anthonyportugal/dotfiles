@@ -49,7 +49,6 @@
     "format": "{}",
     "return-type": "json",
     "exec": "$HOME/.local/lib/mangowm/night-light status",
-    "interval": 2,
     "signal": 9,
     "on-click": "$HOME/.local/lib/mangowm/night-light toggle"
   },

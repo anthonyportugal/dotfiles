@@ -5,10 +5,21 @@ set -Eeuo pipefail
 source "$HOME/.local/lib/mangowm/common"
 
 temp="${MANGOWM_NIGHT_TEMPERATURE:-3500}"
-command_name=${1:-toggle}
+command_name="${1:-toggle}"
+
+runtime_dir=$(mangowm_runtime_dir)
+state_file="$runtime_dir/night-light.state"
+
+is_enabled() {
+  [[ -f "$state_file" ]] && [[ "$(<"$state_file")" == "on" ]]
+}
+
+refresh_waybar() {
+  pkill -RTMIN+9 waybar 2>/dev/null || true
+}
 
 status_json() {
-  if pgrep -x gammastep >/dev/null 2>&1; then
+  if is_enabled; then
     printf '{"text":"󰖔","tooltip":"Luz nocturna: Activada (%s K)\\n\\nClic para desactivar","class":"on"}\n' "$temp"
   else
     printf '{"text":"󰖔","tooltip":"Luz nocturna: Desactivada\\n\\nClic para activar","class":"off"}\n'
@@ -17,17 +28,20 @@ status_json() {
 
 enable() {
   mangowm_require gammastep
-  pkill -x gammastep 2>/dev/null || true
+  pkill -9 -x gammastep 2>/dev/null || true
+  sleep 0.05
   gammastep -O "$temp" >/dev/null 2>&1 &
+  printf 'on\n' > "$state_file"
   mangowm_notify low 'Luz nocturna activada' "${temp} K"
-  pkill -RTMIN+9 waybar 2>/dev/null || true
+  refresh_waybar
 }
 
 disable() {
-  pkill -x gammastep 2>/dev/null || true
+  pkill -9 -x gammastep 2>/dev/null || true
   gammastep -x 2>/dev/null || true
+  rm -f "$state_file"
   mangowm_notify low 'Luz nocturna desactivada'
-  pkill -RTMIN+9 waybar 2>/dev/null || true
+  refresh_waybar
 }
 
 case "$command_name" in
@@ -38,7 +52,7 @@ case "$command_name" in
     disable
     ;;
   toggle)
-    if pgrep -x gammastep >/dev/null 2>&1; then
+    if is_enabled; then
       disable
     else
       enable
@@ -48,7 +62,8 @@ case "$command_name" in
     status_json
     ;;
   restore)
-    # No action needed on session start unless desired
+    rm -f "$state_file"
+    gammastep -x 2>/dev/null || true
     ;;
   *)
     printf 'Uso: %s toggle|on|off|status|restore\n' "${0##*/}" >&2
