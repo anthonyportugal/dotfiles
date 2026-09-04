@@ -30,8 +30,6 @@ if [[ "$mode" == clipboard ]]; then
   exit 0
 fi
 
-mangowm_require satty
-theme_dir=$(mangowm_theme_dir)
 if command -v xdg-user-dir >/dev/null 2>&1; then
   pictures_dir=$(xdg-user-dir PICTURES)
 else
@@ -42,12 +40,23 @@ destination_dir="$pictures_dir/Screenshots"
 mkdir -p -- "$destination_dir"
 destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').png"
 
-grim_command=(grim -t png)
-if [[ "$mode" == region || "$mode" == annotate ]]; then
-  grim_command+=(-g "$geometry")
+if [[ "$mode" == fullscreen ]]; then
+  grim -t png "$destination"
+  if command -v wl-copy >/dev/null 2>&1; then
+    wl-copy --type image/png < "$destination"
+  fi
+  mangowm_notify low 'Captura guardada' "Pantalla completa guardada en ${destination##*/} y copiada al portapapeles."
+  exit 0
 fi
-grim_command+=(-)
 
-"${grim_command[@]}" | \
-  XDG_CONFIG_HOME="$theme_dir/xdg-config" satty \
-    --filename - --output-filename "$destination"
+mangowm_require satty
+theme_dir=$(mangowm_theme_dir)
+
+temp_file=$(mktemp --suffix=.png "${TMPDIR:-/tmp}/satty-capture.XXXXXX")
+trap 'rm -f -- "$temp_file"' EXIT
+
+grim -g "$geometry" -t png - > "$temp_file"
+
+XDG_CONFIG_HOME="$theme_dir/xdg-config" satty \
+  --filename "$temp_file" \
+  --output-filename "$destination" </dev/null
