@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+: "${DOTFILES_WALLS_TEST_LOG:?DOTFILES_WALLS_TEST_LOG no está definida}"
+
+printf '%q ' "$@" >> "$DOTFILES_WALLS_TEST_LOG"
+printf '\n' >> "$DOTFILES_WALLS_TEST_LOG"

@@ -23,6 +23,10 @@ WM_PROFILE="desktop"
 WM_PROFILE_SET=0
 WM_ENTRYPOINT=""
 
+WALLPAPERS=0
+WALLPAPERS_PATH=""
+WALLPAPERS_ENTRYPOINT=""
+
 PLATFORM=""
 BACKEND=""
 
@@ -91,6 +95,8 @@ Opciones:
   --wm-path DIR                   Checkout externo del repositorio del WM.
   --wm-profile core|desktop       Perfil propio del WM (default: desktop).
   --wm-feature laptop|recording   Feature de MangoWM; se puede repetir.
+  --wallpapers                    Integra la colección de wallpapers (anthonyportugal/walls).
+  --wallpapers-path DIR           Checkout externo del repositorio de wallpapers.
   --apply                         Aplica bootstrap/unlink; sin él hay dry-run.
   -h, --help                      Muestra esta ayuda.
 
@@ -242,6 +248,22 @@ parse_args() {
         local wm_feature_value=${1#*=}
         require_option_value "--wm-feature" "$wm_feature_value"
         WM_FEATURES+=("$wm_feature_value")
+        shift
+        ;;
+      --wallpapers)
+        WALLPAPERS=1
+        shift
+        ;;
+      --wallpapers-path)
+        require_option_value "$1" "${2-}"
+        WALLPAPERS_PATH=$2
+        WALLPAPERS=1
+        shift 2
+        ;;
+      --wallpapers-path=*)
+        WALLPAPERS_PATH=${1#*=}
+        require_option_value "--wallpapers-path" "$WALLPAPERS_PATH"
+        WALLPAPERS=1
         shift
         ;;
       --apply)
@@ -712,6 +734,87 @@ run_wm_operation() {
   format_command "${wm_command[@]}"
   "${wm_command[@]}"
 }
+
+validate_wallpapers_checkout() {
+  local base_root walls_root
+
+  (( WALLPAPERS == 1 )) || return 0
+  command_exists realpath || die "falta el comando requerido: realpath"
+
+  if [[ -z "$WALLPAPERS_PATH" ]]; then
+    if [[ -d "$REPO_ROOT/../walls" ]]; then
+      WALLPAPERS_PATH="$REPO_ROOT/../walls"
+    elif [[ -d "$TARGET_DIR/.dotfiles/walls" ]]; then
+      WALLPAPERS_PATH="$TARGET_DIR/.dotfiles/walls"
+    elif [[ -L "$TARGET_DIR/.local/share/wallpapers" ]]; then
+      local link_dest
+      link_dest=$(readlink -f "$TARGET_DIR/.local/share/wallpapers" || true)
+      if [[ -f "$link_dest/bin/walls" ]]; then
+        WALLPAPERS_PATH=$link_dest
+      elif [[ -f "${link_dest%/*}/bin/walls" ]]; then
+        WALLPAPERS_PATH=${link_dest%/*}
+      fi
+    elif [[ -L "$TARGET_DIR/Pictures/Wallpapers" ]]; then
+      local link_dest
+      link_dest=$(readlink -f "$TARGET_DIR/Pictures/Wallpapers" || true)
+      if [[ -f "$link_dest/bin/walls" ]]; then
+        WALLPAPERS_PATH=$link_dest
+      elif [[ -f "${link_dest%/*}/bin/walls" ]]; then
+        WALLPAPERS_PATH=${link_dest%/*}
+      fi
+    fi
+  fi
+
+  [[ -n "$WALLPAPERS_PATH" ]] || die "--wallpapers requiere un checkout disponible o la opción --wallpapers-path DIR"
+
+  base_root=$(realpath -m -- "$REPO_ROOT")
+  walls_root=$(realpath -m -- "$WALLPAPERS_PATH")
+  [[ -d "$walls_root" ]] || die "el checkout de wallpapers no existe: $walls_root"
+  [[ "$walls_root" != "$base_root" && "$walls_root" != "$base_root/"* ]] || \
+    die "el checkout de wallpapers debe estar fuera del repositorio base: $walls_root"
+
+  WALLPAPERS_ENTRYPOINT="$walls_root/bin/walls"
+  [[ -f "$WALLPAPERS_ENTRYPOINT" && -x "$WALLPAPERS_ENTRYPOINT" ]] || \
+    die "el checkout de wallpapers no expone el entrypoint ejecutable esperado: $WALLPAPERS_ENTRYPOINT"
+  WALLPAPERS_PATH=$walls_root
+}
+
+run_wallpapers_operation() {
+  local operation=$1
+  local apply_mode=$2
+  local -a walls_command=()
+
+  (( WALLPAPERS == 1 )) || return 0
+
+  case "$operation" in
+    doctor)
+      walls_command=("$WALLPAPERS_ENTRYPOINT" doctor --target "$TARGET_DIR")
+      ;;
+    bootstrap)
+      if [[ "$apply_mode" == 1 ]]; then
+        walls_command=("$WALLPAPERS_ENTRYPOINT" link --target "$TARGET_DIR")
+      else
+        info "Simulando enlace de wallpapers (ejecute con --apply para aplicar)"
+        format_command "$WALLPAPERS_ENTRYPOINT" link --target "$TARGET_DIR"
+        return 0
+      fi
+      ;;
+    unlink)
+      if [[ "$apply_mode" == 1 ]]; then
+        walls_command=("$WALLPAPERS_ENTRYPOINT" unlink --target "$TARGET_DIR")
+      else
+        info "Simulando desvinculación de wallpapers (ejecute con --apply para aplicar)"
+        format_command "$WALLPAPERS_ENTRYPOINT" unlink --target "$TARGET_DIR"
+        return 0
+      fi
+      ;;
+  esac
+
+  info "Operando sobre repositorio de wallpapers ($WALLPAPERS_PATH)"
+  format_command "${walls_command[@]}"
+  "${walls_command[@]}"
+}
+
 
 # ShellCheck no puede seguir el array que se devuelve mediante nameref.
 # shellcheck disable=SC2034
@@ -1227,6 +1330,10 @@ print_plan() {
     print_array "Features WM" WM_FEATURES
   fi
 
+  if (( WALLPAPERS == 1 )); then
+    printf '  %-24s %s\n' 'Wallpapers:' "$WALLPAPERS_PATH"
+  fi
+
   if (( SYSTEM_ENABLED == 1 )); then
     printf '  %-24s %s\n' 'Plataforma:' "$PLATFORM"
     printf '  %-24s %s\n' 'Backend:' "$BACKEND"
@@ -1354,7 +1461,7 @@ unlink_dotfiles() {
   info "Unlink completado"
 }
 
-bootstrap_with_optional_wm() {
+bootstrap_with_optional_components() {
   if [[ -n "$WM" && "$APPLY" == 1 ]]; then
     info "Preflight del WM antes de modificar cualquiera de los dos alcances"
     run_wm_operation bootstrap 0 || die "falló el preflight del repositorio $WM; no se modificó la base"
@@ -1362,9 +1469,10 @@ bootstrap_with_optional_wm() {
 
   bootstrap
   run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap del repositorio $WM"
+  run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
 }
 
-doctor_with_optional_wm() {
+doctor_with_optional_components() {
   local result=0
 
   if ! doctor; then
@@ -1374,10 +1482,14 @@ doctor_with_optional_wm() {
     error "Doctor: falló la validación del repositorio $WM"
     result=1
   fi
+  if ! run_wallpapers_operation doctor 0; then
+    error "Doctor: falló la validación del repositorio de wallpapers"
+    result=1
+  fi
   return "$result"
 }
 
-unlink_with_optional_wm() {
+unlink_with_optional_components() {
   if [[ -n "$WM" && "$APPLY" == 1 ]]; then
     info "Preflight de unlink del WM antes de modificar cualquiera de los dos alcances"
     run_wm_operation unlink 0 || die "falló el preflight de unlink del repositorio $WM; no se modificó la base"
@@ -1385,20 +1497,22 @@ unlink_with_optional_wm() {
 
   unlink_dotfiles
   run_wm_operation unlink "$APPLY" || die "falló el unlink del repositorio $WM"
+  run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
 }
 
 main() {
   parse_args "$@"
   validate_wm_checkout
+  validate_wallpapers_checkout
   case "$COMMAND" in
     bootstrap)
-      bootstrap_with_optional_wm
+      bootstrap_with_optional_components
       ;;
     doctor)
-      doctor_with_optional_wm
+      doctor_with_optional_components
       ;;
     unlink)
-      unlink_with_optional_wm
+      unlink_with_optional_components
       ;;
   esac
 }

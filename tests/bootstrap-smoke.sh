@@ -41,11 +41,14 @@ WM_REPO="$TEST_ROOT/external bspwm"
 WM_TARGET="$TEST_ROOT/wm target"
 WM_FAILURE_TARGET="$TEST_ROOT/wm failure target"
 WM_LOG="$TEST_ROOT/wm.log"
+WALLS_REPO="$TEST_ROOT/external walls"
+WALLS_LOG="$TEST_ROOT/walls.log"
 mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
   "$PARENT_DESTINATION" "$FAKE_BIN" "$WM_REPO" "$WM_TARGET" \
-  "$WM_FAILURE_TARGET" "$WM_REPO/bin"
+  "$WM_FAILURE_TARGET" "$WM_REPO/bin" "$WALLS_REPO" "$WALLS_REPO/bin"
 ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/bspwm"
 ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/mango"
+ln -s "$SCRIPT_DIR/fakes/walls-entrypoint" "$WALLS_REPO/bin/walls"
 
 # Dry-run, aplicación, doctor e idempotencia sobre un home desechable.
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR"
@@ -216,6 +219,55 @@ fi
 grep -q 'sólo es compatible con --wm mangowm' \
   "$TEST_ROOT/wm-feature-bspwm.out" || \
   fail "la feature de WM incompatible no produjo un error accionable"
+
+# Integración con repositorio de wallpapers (anthonyportugal/walls)
+: > "$WALLS_LOG"
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" bootstrap \
+  --profile core --stow-only --target "$TARGET_DIR" \
+  --wallpapers --wallpapers-path "$WALLS_REPO"
+[[ ! -s "$WALLS_LOG" ]] || fail "bootstrap dry-run no debió ejecutar la vinculación de wallpapers"
+
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" bootstrap \
+  --profile core --stow-only --target "$TARGET_DIR" \
+  --wallpapers --wallpapers-path "$WALLS_REPO" --apply
+grep -q -- 'link --target' "$WALLS_LOG" || \
+  fail "bootstrap --wallpapers --apply no invocó el comando link"
+
+: > "$WALLS_LOG"
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" doctor \
+  --profile core --stow-only --target "$TARGET_DIR" \
+  --wallpapers --wallpapers-path "$WALLS_REPO"
+grep -q -- 'doctor --target' "$WALLS_LOG" || \
+  fail "doctor --wallpapers no invocó el comando doctor"
+
+: > "$WALLS_LOG"
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" unlink \
+  --profile core --target "$TARGET_DIR" \
+  --wallpapers --wallpapers-path "$WALLS_REPO"
+[[ ! -s "$WALLS_LOG" ]] || fail "unlink dry-run no debió ejecutar el desvinculado de wallpapers"
+
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" unlink \
+  --profile core --target "$TARGET_DIR" \
+  --wallpapers --wallpapers-path "$WALLS_REPO" --apply
+grep -q -- 'unlink --target' "$WALLS_LOG" || \
+  fail "unlink --wallpapers --apply no invocó el comando unlink"
+
+# Validaciones de límites para wallpapers
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
+    --wallpapers --wallpapers-path "$REPO_ROOT" > "$TEST_ROOT/walls-nested.out" 2>&1; then
+  fail "se aceptó un checkout de wallpapers dentro del repositorio base"
+fi
+grep -q 'debe estar fuera del repositorio base' "$TEST_ROOT/walls-nested.out" || \
+  fail "no se explicó el límite de independencia del checkout de wallpapers"
+
+BAD_WALLS="$TEST_ROOT/bad walls"
+mkdir "$BAD_WALLS"
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
+    --wallpapers --wallpapers-path "$BAD_WALLS" > "$TEST_ROOT/walls-bad-entrypoint.out" 2>&1; then
+  fail "se aceptó un checkout de wallpapers sin bin/walls ejecutable"
+fi
+grep -q 'no expone el entrypoint ejecutable esperado' "$TEST_ROOT/walls-bad-entrypoint.out" || \
+  fail "no se explicó la falta del bin/walls en el checkout de wallpapers"
 
 # Una colisión debe detenerse antes de modificar el archivo existente.
 touch "$CONFLICT_DIR/.zshrc"
