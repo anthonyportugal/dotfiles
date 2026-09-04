@@ -5,7 +5,7 @@
 Sesión Wayland autónoma, modular y minimalista configurada para **CachyOS** y **Arch Linux** utilizando [MangoWM](https://github.com/DreamMaoMao/mangowm) como compositor principal de ventanas en mosaico dinámico con el tema Catppuccin Mocha.
 
 > [!NOTE]
-> **Trabajo en progreso:** Este repositorio se encuentra activamente mantenido. La candidata standalone de P11 está completa y la validación inicial fue iniciada en una VM donde MangoWM arranca. Está diseñado para funcionar de manera 100% independiente o integrado con el ecosistema de dotfiles principal en [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (actualmente en la rama `refactor/modular-dotfiles`).
+> **Trabajo en progreso:** Este repositorio se encuentra activamente mantenido y actualmente en etapa de finalización (P12). Ha sido exhaustivamente validado tanto en máquinas virtuales como en hardware físico real (Laptop HP ProBook 440 G10 en CachyOS con LUKS + Limine + Ly). Está diseñado para funcionar de manera 100% independiente o integrado con el ecosistema de dotfiles principal en [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (rama `refactor/modular-dotfiles`).
 
 ---
 
@@ -120,15 +120,21 @@ El entorno está diseñado con **Catppuccin Mocha** utilizando **Pink (`#f5c2e7`
 | Atajo | Acción |
 | :--- | :--- |
 | `Super + Return` | Abrir terminal Foot |
+| `Super + Shift + Return` | Abrir terminal Foot flotante |
 | `Super + D` | Abrir lanzador de aplicaciones Fuzzel |
+| `Super + B` | Abrir navegador web predeterminado (Brave) |
+| `Super + Shift + E` | Abrir gestor de archivos gráfico (Thunar) |
 | `Super + L` | Bloquear pantalla de inmediato (Swaylock) |
 | `Super + X` | Abrir menú de apagado/sesión (Wlogout) |
+| `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Fuzzel) |
 | `Super + Shift + Q` | Cerrar sesión de MangoWM |
 | `Super + Shift + R` | Recargar configuración de MangoWM |
 | `Super + T` | Alternar modos de mosaico (*Dwindle, Tile, Grid, Monocle, Scroller*) |
-| `Super + N` | Alternar luz nocturna cálida (Gammastep) |
-| `Super + Ctrl + W` | Seleccionar fondo de pantalla con Fuzzel |
-| `Print` / `Shift + Print` | Captura de región / Pantalla completa con editor Satty |
+| `Super + N` | Alternar luz nocturna cálida (Gammastep con indicador en Waybar) |
+| `Super + W` / `Super + Ctrl + W` | Seleccionar fondo de pantalla interactivo con Fuzzel (Swaybg) |
+| `Super + F1` / `Super + Shift + ?` | Abrir hoja de atajos interactiva |
+| `Print` / `Super + Print` / `Super + Shift + S` | Captura de región con editor de anotaciones Satty |
+| `Shift + Print` | Captura de pantalla completa con editor Satty |
 | `Ctrl + Print` | Copiar captura de región directo al portapapeles |
 | `Super + Ctrl + R` | Alternar grabación de pantalla *(requiere feature recording)* |
 

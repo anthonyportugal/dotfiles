@@ -56,6 +56,24 @@ Cuando un commit esté autorizado:
 - Clipboard history/persistence permanece opt-in y fuera del scaffold inicial.
 - Los portales deben tener routing explícito; no iniciar backends duplicados.
 
+## Documentación vigente de herramientas
+
+Cuando una tarea dependa del uso, configuración, API o sintaxis actual de una
+librería, framework, SDK, CLI o servicio cloud, consultar Context7 antes de
+responder o implementar, aunque la herramienta sea conocida. No es necesario
+para refactors internos, scripts desde cero, lógica de negocio, code review o
+conceptos generales.
+
+Flujo requerido:
+
+```bash
+pnpm dlx ctx7@latest library <nombre-oficial> "<consulta específica>"
+pnpm dlx ctx7@latest docs </org/proyecto> "<concepto específico>"
+```
+
+Resolver siempre el ID antes de pedir documentación, salvo que el usuario haya
+dado directamente un ID `/org/proyecto`.
+
 ## Validación
 
 Cuando se modifiquen el bootstrap, manifests o paquetes Stow:

@@ -5,7 +5,7 @@
 Autonomous, modular, and minimal Wayland session configured for **CachyOS** and **Arch Linux** using [MangoWM](https://github.com/DreamMaoMao/mangowm) as the primary dynamic tiling compositor with the Catppuccin Mocha theme.
 
 > [!NOTE]
-> **Work in progress:** This repository is actively maintained. P11 standalone candidate completed and initial validation started in a VM where MangoWM boots. It is designed to work standalone or integrated with the main modular dotfiles ecosystem at [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (currently on branch `refactor/modular-dotfiles`).
+> **Work in progress:** This repository is actively maintained. P11 standalone candidate completed and initial validation started in a VM where MangoWM boots, followed by physical hardware validation on HP ProBook 440 G10 (CachyOS + LUKS + Limine + Ly). It is designed to work standalone or integrated with the main modular dotfiles ecosystem at [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (currently on branch `refactor/modular-dotfiles`).
 
 ---
 
@@ -135,15 +135,21 @@ The desktop is styled with **Catppuccin Mocha** featuring **Pink (`#f5c2e7`)** a
 | Shortcut | Action |
 | :--- | :--- |
 | `Super + Return` | Open Foot terminal |
+| `Super + Shift + Return` | Open floating Foot terminal |
 | `Super + D` | Open Fuzzel application launcher |
+| `Super + B` | Open default web browser (Brave) |
+| `Super + Shift + E` | Open graphical file manager (Thunar) |
 | `Super + L` | Lock screen immediately (Swaylock) |
 | `Super + X` | Open session power menu (Wlogout) |
+| `Super + Shift + P` | Open interactive Power Profiles selector (Fuzzel) |
 | `Super + Shift + Q` | Quit MangoWM session |
 | `Super + Shift + R` | Reload MangoWM configuration |
 | `Super + T` | Cycle tiling layouts (*Dwindle, Tile, Grid, Monocle, Scroller*) |
-| `Super + N` | Toggle warm night light (Gammastep) |
-| `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel |
-| `Print` / `Shift + Print` | Interactive region / Fullscreen screenshot with Satty editor |
+| `Super + N` | Toggle warm night light (Gammastep with real-time Waybar status) |
+| `Super + W` / `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel (Swaybg) |
+| `Super + F1` / `Super + Shift + ?` | Open interactive keybindings cheat sheet |
+| `Print` / `Super + Print` / `Super + Shift + S` | Interactive region screenshot with Satty annotation editor |
+| `Shift + Print` | Fullscreen screenshot with Satty editor |
 | `Ctrl + Print` | Copy region screenshot directly to clipboard |
 | `Super + Ctrl + R` | Toggle screen recording *(requires recording feature)* |
 
