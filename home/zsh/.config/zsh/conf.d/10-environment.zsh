@@ -14,3 +14,7 @@ if [[ -n "${WAYLAND_DISPLAY-}" ]]; then
 else
   export TERMINAL="${TERMINAL:-alacritty}"
 fi
+
+if [[ -z "${SSH_AUTH_SOCK-}" && -n "${XDG_RUNTIME_DIR-}" ]]; then
+  export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR}/ssh-agent.socket"
+fi
