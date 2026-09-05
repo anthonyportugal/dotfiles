@@ -54,6 +54,7 @@ for managed_path in \
   .local/bin/mango-theme \
   .local/bin/mangowm-session \
   .local/lib/mangowm/brightness \
+  .local/lib/mangowm/keyboard \
   .local/lib/mangowm/recording \
   .local/lib/mangowm/wallpaper; do
   [[ -L "$TARGET/$managed_path" ]] || fail "falta el enlace $managed_path"
@@ -162,9 +163,9 @@ kill -0 "$LOCK_PID" 2>/dev/null || fail 'el lock salió antes de estar activo'
 [[ $(grep -c 'satty .*--output-filename' "$LOG") == 2 ]] || \
   fail 'las capturas region/annotate no llegaron a Satty'
 grep -q '^wl-copy .*--type.*image/png' "$LOG" || fail 'la captura no llegó al clipboard'
-grep -Fqx "bind=SUPER,Print,spawn,\$HOME/.local/lib/mangowm/screenshot annotate" \
+grep -Fqx "bind=SUPER+SHIFT,S,spawn,\$HOME/.local/lib/mangowm/screenshot annotate" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
-  fail 'falta el atajo explícito Super+Print para anotar'
+  fail 'falta el atajo explícito Super+Shift+S para anotar'
 
 "$TARGET/.local/lib/mangowm/night-light" on
 "$TARGET/.local/lib/mangowm/night-light" off
@@ -178,6 +179,14 @@ grep -Fqx "bind=SUPER,Print,spawn,\$HOME/.local/lib/mangowm/screenshot annotate"
 [[ $("$TARGET/.local/lib/mangowm/recording" status) == stopped ]] || \
   fail 'la grabación no cambió a detenida'
 
+[[ $("$TARGET/.local/lib/mangowm/keyboard" get) == "US" ]] || \
+  fail 'keyboard get no devolvió el layout por defecto US'
+jq empty < <("$TARGET/.local/lib/mangowm/keyboard" status) || \
+  fail 'keyboard status no devolvió JSON válido'
+grep -Fqx "xkb_rules_options=grp:alt_space_toggle" \
+  "$TARGET/.config/mango/conf.d/20-input.conf" || \
+  fail 'falta la opción xkb_rules_options=grp:alt_space_toggle para alternar layout'
+
 mkdir -p "$TARGET/Pictures/Wallpapers"
 touch "$TARGET/Pictures/Wallpapers/sample.png"
 "$TARGET/.local/lib/mangowm/wallpaper" set "$TARGET/Pictures/Wallpapers/sample.png"
@@ -186,9 +195,9 @@ touch "$TARGET/Pictures/Wallpapers/sample.png"
 "$TARGET/.local/lib/mangowm/wallpaper" select
 "$TARGET/.local/lib/mangowm/wallpaper" clear
 [[ ! -f "$STATE/mangowm/wallpaper" ]] || fail 'wallpaper clear no eliminó el estado'
-grep -Fqx "bind=SUPER+CTRL,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
+grep -Fqx "bind=SUPER,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
-  fail 'falta el atajo Super+Ctrl+W para seleccionar wallpaper'
+  fail 'falta el atajo Super+W para seleccionar wallpaper'
 
 "$MANGO" doctor --profile desktop --feature laptop --feature recording \
   --stow-only --target "$TARGET" >/dev/null 2>&1

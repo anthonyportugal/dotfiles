@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+command_name=${1:-watch}
+
+get_raw_layout() {
+  local layout=""
+  if command -v mmsg >/dev/null 2>&1; then
+    layout=$(mmsg get keyboardlayout 2>/dev/null || true)
+  fi
+  if [[ -z "$layout" ]]; then
+    layout="us"
+  fi
+  printf '%s\n' "$layout"
+}
+
+switch_layout() {
+  if command -v mmsg >/dev/null 2>&1; then
+    mmsg dispatch switch_keyboard_layout 2>/dev/null || true
+  fi
+  mangowm_notify low "Teclado" "Distribución cambiada"
+}
+
+print_json() {
+  local raw="${1:-}"
+  local val="$raw"
+
+  if [[ "$raw" =~ \"layout\":[[:space:]]*\"([^\"]+)\" ]]; then
+    val="${BASH_REMATCH[1]}"
+  elif [[ "$raw" =~ \"layout\":[[:space:]]*([^,}]+) ]]; then
+    val="${BASH_REMATCH[1]}"
+    val="${val//\"/}"
+  fi
+  val="$(printf '%s' "$val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+  local short="US"
+  local desc="English (US)"
+  local css_class="us"
+
+  case "${val,,}" in
+    *latin*|latam)
+      short="ES"
+      desc="Español (Latinoamérica)"
+      css_class="latam"
+      ;;
+    *spanish*|es)
+      short="ES"
+      desc="Español"
+      css_class="es"
+      ;;
+    *english*|us|"")
+      short="US"
+      desc="English (US)"
+      css_class="us"
+      ;;
+    *)
+      short="$(printf '%.2s' "$val" | tr '[:lower:]' '[:upper:]')"
+      desc="$val"
+      css_class="${val,,}"
+      ;;
+  esac
+
+  printf '{"text":"%s","tooltip":"Distribución de teclado: %s\\n\\nClic para alternar","class":"%s"}\n' \
+    "$short" "$desc" "$css_class"
+}
+
+get_short_layout() {
+  local raw
+  raw=$(get_raw_layout)
+  local val="$raw"
+
+  if [[ "$raw" =~ \"layout\":[[:space:]]*\"([^\"]+)\" ]]; then
+    val="${BASH_REMATCH[1]}"
+  elif [[ "$raw" =~ \"layout\":[[:space:]]*([^,}]+) ]]; then
+    val="${BASH_REMATCH[1]}"
+    val="${val//\"/}"
+  fi
+  val="$(printf '%s' "$val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+  case "${val,,}" in
+    *latin*|latam)
+      printf 'ES\n'
+      ;;
+    *spanish*|es)
+      printf 'ES\n'
+      ;;
+    *english*|us|"")
+      printf 'US\n'
+      ;;
+    *)
+      printf '%.2s\n' "$val" | tr '[:lower:]' '[:upper:]'
+      ;;
+  esac
+}
+
+watch_events() {
+  local current
+  current=$(get_raw_layout)
+  print_json "$current"
+
+  if command -v mmsg >/dev/null 2>&1; then
+    # Subscribe to native Mango compositor event stream.
+    # Waybar reads line-by-line with 0% CPU and zero polling latency.
+    mmsg watch keyboardlayout 2>/dev/null | while read -r line; do
+      [[ -n "$line" ]] || continue
+      print_json "$line"
+    done
+  else
+    # Fallback when running outside active compositor
+    sleep infinity
+  fi
+}
+
+case "$command_name" in
+  switch|next|toggle)
+    switch_layout
+    ;;
+  watch)
+    watch_events
+    ;;
+  status|waybar)
+    print_json "$(get_raw_layout)"
+    ;;
+  get)
+    get_short_layout
+    ;;
+  *)
+    printf 'Uso: %s watch|status|switch|get\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac
