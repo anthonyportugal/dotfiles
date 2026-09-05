@@ -6,6 +6,7 @@
   "reload_style_on_change": true,
   "modules-left": [
     "custom/launcher",
+    "custom/recording",
     "mpris",
     "custom/nightlight",
     "idle_inhibitor",
@@ -138,6 +139,15 @@
       "mode": "month",
       "weeks-pos": "right"
     }
+  },
+  "custom/recording": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/recording waybar",
+    "interval": "once",
+    "signal": 10,
+    "on-click": "$HOME/.local/lib/mangowm/recording stop",
+    "tooltip": true
   },
   "custom/power": {
     "format": "󰐥",

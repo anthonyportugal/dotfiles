@@ -10,6 +10,10 @@ is_active() {
   systemctl --user --quiet is-active "$UNIT"
 }
 
+notify_waybar() {
+  pkill -RTMIN+10 waybar 2>/dev/null || true
+}
+
 recordings_dir() {
   local videos_dir
 
@@ -24,7 +28,8 @@ recordings_dir() {
 
 start_recording() {
   local mode=${1:-fullscreen}
-  local destination_dir destination geometry
+  local audio=${2:-none}
+  local destination_dir destination geometry destination_file
   local -a recorder=(wf-recorder)
 
   is_active && {
@@ -41,47 +46,140 @@ start_recording() {
     recorder+=(-g "$geometry")
   fi
 
+  case "$audio" in
+    mic)
+      recorder+=(-a)
+      ;;
+    desktop)
+      local default_sink=""
+      if command -v pactl >/dev/null 2>&1; then
+        default_sink=$(pactl get-default-sink 2>/dev/null || true)
+      fi
+      if [[ -n "$default_sink" ]]; then
+        recorder+=("-a${default_sink}.monitor")
+      else
+        recorder+=(-a)
+      fi
+      ;;
+    none|"")
+      ;;
+  esac
+
   destination_dir=$(recordings_dir)
   mkdir -p -- "$destination_dir"
-  destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').mp4"
+  destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S').mp4"
   recorder+=(-f "$destination")
+
+  destination_file="$(mangowm_runtime_dir)/recording.destination"
+  printf '%s\n' "$destination" > "$destination_file"
 
   systemctl --user reset-failed "$UNIT" >/dev/null 2>&1 || true
   systemd-run --user --quiet --collect --unit=mangowm-recording \
     --property=KillSignal=SIGINT -- "${recorder[@]}"
-  mangowm_notify low 'Grabación iniciada' "$destination"
+  notify_waybar
+
+  local audio_note=""
+  case "$audio" in
+    mic) audio_note=" (con micrófono)" ;;
+    desktop) audio_note=" (con audio del sistema)" ;;
+  esac
+  mangowm_notify low 'Grabación iniciada' "$destination$audio_note"
 }
 
 stop_recording() {
+  local destination_file
+  destination_file="$(mangowm_runtime_dir)/recording.destination"
+
   if ! is_active; then
+    rm -f -- "$destination_file"
+    notify_waybar
     mangowm_notify low 'Grabación inactiva'
     return 0
   fi
   systemctl --user stop "$UNIT"
-  mangowm_notify low 'Grabación guardada' 'wf-recorder finalizó correctamente.'
+  notify_waybar
+
+  local saved_msg='wf-recorder finalizó correctamente.'
+  if [[ -r "$destination_file" ]]; then
+    saved_msg="Guardado en: $(<"$destination_file")"
+    rm -f -- "$destination_file"
+  fi
+  mangowm_notify low 'Grabación guardada' "$saved_msg"
+}
+
+waybar_status() {
+  if is_active; then
+    printf '{"text":"󰻃 REC","class":"recording","tooltip":"Grabación de pantalla activa\\nClic para detener"}\n'
+  else
+    printf '{"text":"","class":"idle"}\n'
+  fi
+}
+
+menu() {
+  if is_active; then
+    stop_recording
+    return 0
+  fi
+  mangowm_require fuzzel
+  local choice
+  choice=$(printf '%s\n' \
+    "⏺️   Pantalla completa (Mudo)" \
+    "🎙️   Pantalla completa + Micrófono" \
+    "🔊   Pantalla completa + Audio PC" \
+    "✂️   Región de pantalla (Mudo)" \
+    "🎙️   Región de pantalla + Micrófono" \
+    "🔊   Región de pantalla + Audio PC" | \
+    fuzzel --dmenu --prompt="Grabador de Pantalla ❯ " --lines=6 --width=38 || true)
+
+  case "$choice" in
+    *"Pantalla completa + Micrófono"*)
+      start_recording fullscreen mic
+      ;;
+    *"Pantalla completa + Audio PC"*)
+      start_recording fullscreen desktop
+      ;;
+    *"Pantalla completa"*)
+      start_recording fullscreen none
+      ;;
+    *"Región de pantalla + Micrófono"*)
+      start_recording region mic
+      ;;
+    *"Región de pantalla + Audio PC"*)
+      start_recording region desktop
+      ;;
+    *"Región de pantalla"*)
+      start_recording region none
+      ;;
+  esac
 }
 
 case "${1:-toggle}" in
   start)
-    start_recording fullscreen
+    start_recording fullscreen "${2:-none}"
     ;;
   start-region)
-    start_recording region
+    start_recording region "${2:-none}"
     ;;
   stop)
     stop_recording
     ;;
   toggle)
-    if is_active; then stop_recording; else start_recording fullscreen; fi
+    if is_active; then stop_recording; else start_recording fullscreen "${2:-none}"; fi
     ;;
   toggle-region)
-    if is_active; then stop_recording; else start_recording region; fi
+    if is_active; then stop_recording; else start_recording region "${2:-none}"; fi
     ;;
   status)
     if is_active; then printf 'recording\n'; else printf 'stopped\n'; fi
     ;;
+  waybar)
+    waybar_status
+    ;;
+  menu)
+    menu
+    ;;
   *)
-    printf 'Uso: %s start|start-region|stop|toggle|toggle-region|status\n' "${0##*/}" >&2
+    printf 'Uso: %s start|start-region|stop|toggle|toggle-region|status|waybar|menu\n' "${0##*/}" >&2
     exit 2
     ;;
 esac

@@ -175,9 +175,15 @@ grep -Fqx "bind=SUPER+SHIFT,S,spawn,\$HOME/.local/lib/mangowm/screenshot annotat
 "$TARGET/.local/lib/mangowm/recording" start
 [[ $("$TARGET/.local/lib/mangowm/recording" status) == recording ]] || \
   fail 'la grabación no cambió a activa'
+recording_json=$("$TARGET/.local/lib/mangowm/recording" waybar)
+jq empty <<< "$recording_json" || fail 'recording waybar no devolvió JSON válido al estar activo'
+[[ "$recording_json" == *'󰻃 REC'* ]] || fail 'recording waybar no incluyó icono y texto REC'
 "$TARGET/.local/lib/mangowm/recording" stop
 [[ $("$TARGET/.local/lib/mangowm/recording" status) == stopped ]] || \
   fail 'la grabación no cambió a detenida'
+stopped_recording_json=$("$TARGET/.local/lib/mangowm/recording" waybar)
+jq empty <<< "$stopped_recording_json" || fail 'recording waybar no devolvió JSON válido al estar inactivo'
+[[ "$stopped_recording_json" == *'"text":""'* ]] || fail 'recording waybar no ocultó el texto al detenerse'
 
 [[ $("$TARGET/.local/lib/mangowm/keyboard" get) == "US" ]] || \
   fail 'keyboard get no devolvió el layout por defecto US'
