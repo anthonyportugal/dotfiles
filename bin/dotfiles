@@ -23,9 +23,20 @@ WM_PROFILE="desktop"
 WM_PROFILE_SET=0
 WM_ENTRYPOINT=""
 
+declare -a WMS=()
+declare -A WM_PATHS=()
+declare -A WM_PROFILES=()
+declare -A WM_ENTRYPOINTS=()
+
 WALLPAPERS=0
 WALLPAPERS_PATH=""
 WALLPAPERS_ENTRYPOINT=""
+
+PRIVATE=0
+PRIVATE_PATH=""
+PRIVATE_PROFILE="core"
+PRIVATE_ENTRYPOINT=""
+declare -a PRIVATE_WORK=()
 
 PLATFORM=""
 BACKEND=""
@@ -72,12 +83,18 @@ usage_error() {
 usage() {
   cat <<EOF
 Uso:
+  $PROGRAM_NAME setup [opciones]
+  $PROGRAM_NAME sync [opciones]
+  $PROGRAM_NAME update [opciones]
   $PROGRAM_NAME bootstrap [opciones]
   $PROGRAM_NAME doctor [opciones]
   $PROGRAM_NAME unlink [opciones]
   $PROGRAM_NAME help
 
 Comandos:
+  setup      Asistente interactivo guiado para configurar e instalar por capas.
+  sync       Re-sincroniza enlaces locales y paquetes sin tocar repositorios Git.
+  update     Descarga actualizaciones de GitHub (fast-forward) y re-sincroniza.
   bootstrap  Resuelve dependencias y enlaces. Sólo modifica con --apply.
   doctor     Comprueba dependencias, sintaxis y enlaces sin modificar nada.
   unlink     Retira únicamente los enlaces Stow. Sólo modifica con --apply.
@@ -91,16 +108,23 @@ Opciones:
   --target DIR                    Home objetivo (default: \$HOME).
   --packages-only                 Opera o valida sólo paquetes del sistema.
   --stow-only                     Opera o valida sólo paquetes Stow.
-  --wm bspwm|mangowm              Integra opcionalmente un WM independiente.
+  --wm bspwm|mangowm              Integra opcionalmente un WM independiente (repetible).
   --wm-path DIR                   Checkout externo del repositorio del WM.
   --wm-profile core|desktop       Perfil propio del WM (default: desktop).
   --wm-feature laptop|recording   Feature de MangoWM; se puede repetir.
   --wallpapers                    Integra la colección de wallpapers (anthonyportugal/walls).
   --wallpapers-path DIR           Checkout externo del repositorio de wallpapers.
+  --private                       Integra la capa privada (anthonyportugal/dotfiles-private).
+  --private-path DIR              Checkout externo del repositorio privado.
+  --private-profile core|dev      Perfil de la capa privada (default: core).
+  --private-work NOMBRE           Añade un componente laboral a la capa privada.
   --apply                         Aplica bootstrap/unlink; sin él hay dry-run.
   -h, --help                      Muestra esta ayuda.
 
 Ejemplos:
+  $PROGRAM_NAME setup
+  $PROGRAM_NAME sync
+  $PROGRAM_NAME update
   $PROGRAM_NAME bootstrap --profile desktop
   $PROGRAM_NAME bootstrap --profile desktop --feature yazi-extras --apply
   $PROGRAM_NAME bootstrap --wm bspwm --wm-path \$HOME/.dotfiles/wm/bspwm
@@ -119,6 +143,10 @@ require_option_value() {
 
 parse_args() {
   if (( $# == 0 )); then
+    if [[ -t 0 && -t 1 ]]; then
+      COMMAND="setup"
+      return 0
+    fi
     usage
     exit 0
   fi
@@ -127,7 +155,7 @@ parse_args() {
   shift
 
   case "$COMMAND" in
-    bootstrap|doctor|unlink)
+    bootstrap|doctor|unlink|sync|update|setup|install)
       ;;
     help|-h|--help)
       usage
@@ -210,21 +238,53 @@ parse_args() {
       --wm)
         require_option_value "$1" "${2-}"
         WM=$2
+        case "$2" in
+          both|all)
+            append_unique WMS "mangowm"
+            append_unique WMS "bspwm"
+            ;;
+          mango)
+            WM="mangowm"
+            append_unique WMS "mangowm"
+            ;;
+          *)
+            append_unique WMS "$2"
+            ;;
+        esac
         shift 2
         ;;
       --wm=*)
         WM=${1#*=}
         require_option_value "--wm" "$WM"
+        case "$WM" in
+          both|all)
+            append_unique WMS "mangowm"
+            append_unique WMS "bspwm"
+            ;;
+          mango)
+            WM="mangowm"
+            append_unique WMS "mangowm"
+            ;;
+          *)
+            append_unique WMS "$WM"
+            ;;
+        esac
         shift
         ;;
       --wm-path)
         require_option_value "$1" "${2-}"
         WM_PATH=$2
+        if (( ${#WMS[@]} > 0 )); then
+          WM_PATHS["${WMS[-1]}"]="$WM_PATH"
+        fi
         shift 2
         ;;
       --wm-path=*)
         WM_PATH=${1#*=}
         require_option_value "--wm-path" "$WM_PATH"
+        if (( ${#WMS[@]} > 0 )); then
+          WM_PATHS["${WMS[-1]}"]="$WM_PATH"
+        fi
         shift
         ;;
       --wm-profile)
@@ -264,6 +324,47 @@ parse_args() {
         WALLPAPERS_PATH=${1#*=}
         require_option_value "--wallpapers-path" "$WALLPAPERS_PATH"
         WALLPAPERS=1
+        shift
+        ;;
+      --private)
+        PRIVATE=1
+        shift
+        ;;
+      --private-path)
+        require_option_value "$1" "${2-}"
+        PRIVATE_PATH=$2
+        PRIVATE=1
+        shift 2
+        ;;
+      --private-path=*)
+        PRIVATE_PATH=${1#*=}
+        require_option_value "--private-path" "$PRIVATE_PATH"
+        PRIVATE=1
+        shift
+        ;;
+      --private-profile)
+        require_option_value "$1" "${2-}"
+        PRIVATE_PROFILE=$2
+        PRIVATE=1
+        shift 2
+        ;;
+      --private-profile=*)
+        PRIVATE_PROFILE=${1#*=}
+        require_option_value "--private-profile" "$PRIVATE_PROFILE"
+        PRIVATE=1
+        shift
+        ;;
+      --private-work)
+        require_option_value "$1" "${2-}"
+        PRIVATE_WORK+=("$2")
+        PRIVATE=1
+        shift 2
+        ;;
+      --private-work=*)
+        local private_work_val=${1#*=}
+        require_option_value "--private-work" "$private_work_val"
+        PRIVATE_WORK+=("$private_work_val")
+        PRIVATE=1
         shift
         ;;
       --apply)
@@ -326,21 +427,25 @@ parse_args() {
   if [[ -z "$WM" && -n "$WM_PATH" ]]; then
     if [[ -f "$WM_PATH/bin/mango" ]]; then
       WM="mangowm"
+      append_unique WMS "mangowm"
     elif [[ -f "$WM_PATH/bin/bspwm" ]]; then
       WM="bspwm"
+      append_unique WMS "bspwm"
     fi
   fi
 
-  if [[ -n "$WM" ]]; then
-    [[ -n "$WM_PATH" ]] || usage_error "--wm $WM requiere --wm-path DIR"
-  else
-    [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
-    (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
-    (( ${#WM_FEATURES[@]} == 0 )) || usage_error "--wm-feature requiere --wm mangowm"
+  if [[ "$COMMAND" =~ ^(bootstrap|doctor|unlink)$ ]]; then
+    if [[ -n "$WM" ]]; then
+      [[ -n "$WM_PATH" ]] || usage_error "--wm $WM requiere --wm-path DIR"
+    else
+      [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
+      (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
+      (( ${#WM_FEATURES[@]} == 0 )) || usage_error "--wm-feature requiere --wm mangowm"
+    fi
   fi
 
   if (( ${#WM_FEATURES[@]} > 0 )); then
-    [[ "$WM" == mangowm ]] || usage_error "--wm-feature sólo es compatible con --wm mangowm"
+    [[ "$WM" == mangowm || " ${WMS[*]} " =~ " mangowm " ]] || usage_error "--wm-feature sólo es compatible con --wm mangowm"
     local wm_feature
     local -a unique_wm_features=()
     for wm_feature in "${WM_FEATURES[@]}"; do
@@ -354,6 +459,20 @@ parse_args() {
       esac
     done
     WM_FEATURES=("${unique_wm_features[@]}")
+  fi
+
+  if (( PRIVATE == 1 )); then
+    case "$PRIVATE_PROFILE" in
+      core|development|dev)
+        [[ "$PRIVATE_PROFILE" != "dev" ]] || PRIVATE_PROFILE="development"
+        ;;
+      *)
+        usage_error "perfil de capa privada no soportado: $PRIVATE_PROFILE"
+        ;;
+    esac
+  else
+    [[ -z "$PRIVATE_PATH" ]] || usage_error "--private-path requiere --private"
+    (( ${#PRIVATE_WORK[@]} == 0 )) || usage_error "--private-work requiere --private"
   fi
 
   if [[ "$COMMAND" == "doctor" && "$APPLY" == 1 ]]; then
@@ -664,75 +783,109 @@ format_command() {
 }
 
 validate_wm_checkout() {
-  local base_root wm_root
+  local base_root wm_root current_wm
 
-  [[ -n "$WM" ]] || return 0
+  if (( ${#WMS[@]} == 0 )) && [[ -n "$WM" ]]; then
+    WMS+=("$WM")
+  fi
+
+  (( ${#WMS[@]} > 0 )) || return 0
   command_exists realpath || die "falta el comando requerido: realpath"
 
   base_root=$(realpath -m -- "$REPO_ROOT")
-  wm_root=$(realpath -m -- "$WM_PATH")
-  [[ -d "$wm_root" ]] || die "el checkout del WM no existe: $wm_root"
-  [[ "$wm_root" != "$base_root" && "$wm_root" != "$base_root/"* ]] || \
-    die "el checkout del WM debe estar fuera del repositorio base: $wm_root"
 
-  case "$WM" in
-    bspwm)
-      WM_ENTRYPOINT="$wm_root/bin/bspwm"
-      ;;
-    mangowm)
-      WM_ENTRYPOINT="$wm_root/bin/mango"
-      ;;
-  esac
+  for current_wm in "${WMS[@]}"; do
+    case "$current_wm" in
+      bspwm|mangowm)
+        ;;
+      *)
+        die "entorno de ventanas no soportado: $current_wm"
+        ;;
+    esac
 
-  [[ -f "$WM_ENTRYPOINT" && -x "$WM_ENTRYPOINT" ]] || \
-    die "el checkout de $WM no expone el entrypoint ejecutable esperado: $WM_ENTRYPOINT"
-  WM_PATH=$wm_root
-}
+    local path="${WM_PATHS[$current_wm]-}"
+    if [[ -z "$path" ]]; then
+      if [[ -n "$WM_PATH" && ${#WMS[@]} -eq 1 ]]; then
+        path="$WM_PATH"
+      elif [[ -d "$TARGET_DIR/.dotfiles/wm/$current_wm" ]]; then
+        path="$TARGET_DIR/.dotfiles/wm/$current_wm"
+      elif [[ -d "$REPO_ROOT/../wm/$current_wm" ]]; then
+        path="$REPO_ROOT/../wm/$current_wm"
+      fi
+    fi
 
-build_wm_command() {
-  local operation=$1
-  local apply_mode=$2
-  local output_name=$3
-  local -n wm_output_ref=$output_name
+    [[ -n "$path" ]] || die "--wm $current_wm requiere --wm-path DIR"
 
-  wm_output_ref=(
-    "$WM_ENTRYPOINT"
-    "$operation"
-    "--profile=$WM_PROFILE"
-    "--backend=$BACKEND_REQUEST"
-    "--platform=$PLATFORM_REQUEST"
-    "--target=$TARGET_DIR"
-  )
+    wm_root=$(realpath -m -- "$path")
+    [[ -d "$wm_root" ]] || die "el checkout del WM no existe: $wm_root"
+    [[ "$wm_root" != "$base_root" && "$wm_root" != "$base_root/"* ]] || \
+      die "el checkout del WM debe estar fuera del repositorio base: $wm_root"
 
-  local wm_feature
-  for wm_feature in "${WM_FEATURES[@]}"; do
-    wm_output_ref+=("--feature=$wm_feature")
+    local entrypoint=""
+    case "$current_wm" in
+      bspwm)
+        entrypoint="$wm_root/bin/bspwm"
+        ;;
+      mangowm)
+        entrypoint="$wm_root/bin/mango"
+        ;;
+    esac
+
+    [[ -f "$entrypoint" && -x "$entrypoint" ]] || \
+      die "el checkout de $current_wm no expone el entrypoint ejecutable esperado: $entrypoint"
+
+    WM_PATHS["$current_wm"]="$wm_root"
+    WM_ENTRYPOINTS["$current_wm"]="$entrypoint"
   done
 
-  case "$MODE_SELECTION" in
-    packages)
-      wm_output_ref+=(--packages-only)
-      ;;
-    stow)
-      wm_output_ref+=(--stow-only)
-      ;;
-  esac
-
-  if [[ "$apply_mode" == 1 && "$operation" != doctor ]]; then
-    wm_output_ref+=(--apply)
-  fi
+  WM="${WMS[0]}"
+  WM_PATH="${WM_PATHS[${WMS[0]}]}"
+  WM_ENTRYPOINT="${WM_ENTRYPOINTS[${WMS[0]}]}"
 }
 
 run_wm_operation() {
   local operation=$1
   local apply_mode=$2
-  local -a wm_command=()
+  local current_wm
 
-  [[ -n "$WM" ]] || return 0
-  build_wm_command "$operation" "$apply_mode" wm_command
-  info "Delegando en el repositorio $WM ($WM_PATH)"
-  format_command "${wm_command[@]}"
-  "${wm_command[@]}"
+  (( ${#WMS[@]} > 0 )) || return 0
+
+  for current_wm in "${WMS[@]}"; do
+    local entrypoint="${WM_ENTRYPOINTS[$current_wm]}"
+    local wm_path="${WM_PATHS[$current_wm]}"
+    local -a wm_command=(
+      "$entrypoint"
+      "$operation"
+      "--profile=${WM_PROFILES[$current_wm]:-$WM_PROFILE}"
+      "--backend=$BACKEND_REQUEST"
+      "--platform=$PLATFORM_REQUEST"
+      "--target=$TARGET_DIR"
+    )
+
+    if [[ "$current_wm" == mangowm ]]; then
+      local wm_feature
+      for wm_feature in "${WM_FEATURES[@]}"; do
+        wm_command+=("--feature=$wm_feature")
+      done
+    fi
+
+    case "$MODE_SELECTION" in
+      packages)
+        wm_command+=(--packages-only)
+        ;;
+      stow)
+        wm_command+=(--stow-only)
+        ;;
+    esac
+
+    if [[ "$apply_mode" == 1 && "$operation" != doctor ]]; then
+      wm_command+=(--apply)
+    fi
+
+    info "Delegando en el repositorio $current_wm ($wm_path)"
+    format_command "${wm_command[@]}"
+    "${wm_command[@]}"
+  done
 }
 
 validate_wallpapers_checkout() {
@@ -742,10 +895,10 @@ validate_wallpapers_checkout() {
   command_exists realpath || die "falta el comando requerido: realpath"
 
   if [[ -z "$WALLPAPERS_PATH" ]]; then
-    if [[ -d "$REPO_ROOT/../walls" ]]; then
-      WALLPAPERS_PATH="$REPO_ROOT/../walls"
-    elif [[ -d "$TARGET_DIR/.dotfiles/walls" ]]; then
+    if [[ -d "$TARGET_DIR/.dotfiles/walls" ]]; then
       WALLPAPERS_PATH="$TARGET_DIR/.dotfiles/walls"
+    elif [[ -d "$REPO_ROOT/../walls" ]]; then
+      WALLPAPERS_PATH="$REPO_ROOT/../walls"
     elif [[ -L "$TARGET_DIR/.local/share/wallpapers" ]]; then
       local link_dest
       link_dest=$(readlink -f "$TARGET_DIR/.local/share/wallpapers" || true)
@@ -814,6 +967,81 @@ run_wallpapers_operation() {
   format_command "${walls_command[@]}"
   "${walls_command[@]}"
 }
+
+validate_private_checkout() {
+  local base_root private_root
+
+  (( PRIVATE == 1 )) || return 0
+  command_exists realpath || die "falta el comando requerido: realpath"
+
+  if [[ -z "$PRIVATE_PATH" ]]; then
+    if [[ -d "$TARGET_DIR/.dotfiles/private" ]]; then
+      PRIVATE_PATH="$TARGET_DIR/.dotfiles/private"
+    elif [[ -d "$REPO_ROOT/../private" ]]; then
+      PRIVATE_PATH="$REPO_ROOT/../private"
+    fi
+  fi
+
+  [[ -n "$PRIVATE_PATH" ]] || die "--private requiere un checkout disponible o la opción --private-path DIR"
+
+  base_root=$(realpath -m -- "$REPO_ROOT")
+  private_root=$(realpath -m -- "$PRIVATE_PATH")
+  [[ -d "$private_root" ]] || die "el checkout de la capa privada no existe: $private_root"
+  [[ "$private_root" != "$base_root" && "$private_root" != "$base_root/"* ]] || \
+    die "el checkout de la capa privada debe estar fuera del repositorio base: $private_root"
+
+  PRIVATE_ENTRYPOINT="$private_root/bin/dotfiles-private"
+  [[ -f "$PRIVATE_ENTRYPOINT" && -x "$PRIVATE_ENTRYPOINT" ]] || \
+    die "el checkout de la capa privada no expone el entrypoint ejecutable esperado: $PRIVATE_ENTRYPOINT"
+  PRIVATE_PATH=$private_root
+}
+
+build_private_command() {
+  local operation=$1
+  local apply_mode=$2
+  local output_name=$3
+  local -n private_output_ref=$output_name
+
+  private_output_ref=(
+    "$PRIVATE_ENTRYPOINT"
+    "$operation"
+    "--profile=$PRIVATE_PROFILE"
+    "--backend=$BACKEND_REQUEST"
+    "--platform=$PLATFORM_REQUEST"
+    "--target=$TARGET_DIR"
+  )
+
+  local work_item
+  for work_item in "${PRIVATE_WORK[@]}"; do
+    private_output_ref+=("--work=$work_item")
+  done
+
+  case "$MODE_SELECTION" in
+    packages)
+      private_output_ref+=(--packages-only)
+      ;;
+    stow)
+      private_output_ref+=(--stow-only)
+      ;;
+  esac
+
+  if [[ "$apply_mode" == 1 && "$operation" != doctor ]]; then
+    private_output_ref+=(--apply)
+  fi
+}
+
+run_private_operation() {
+  local operation=$1
+  local apply_mode=$2
+  local -a private_command=()
+
+  (( PRIVATE == 1 )) || return 0
+  build_private_command "$operation" "$apply_mode" private_command
+  info "Delegando en el repositorio privado ($PRIVATE_PATH)"
+  format_command "${private_command[@]}"
+  "${private_command[@]}"
+}
+
 
 
 # ShellCheck no puede seguir el array que se devuelve mediante nameref.
@@ -1323,7 +1551,14 @@ print_plan() {
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
   print_array "Features" FEATURES
 
-  if [[ -n "$WM" ]]; then
+  if (( ${#WMS[@]} > 1 )); then
+    printf '  %-24s %s\n' 'WMs opcionales:' "${WMS[*]}"
+    local current_wm
+    for current_wm in "${WMS[@]}"; do
+      printf '  %-24s %s\n' "  Checkout $current_wm:" "${WM_PATHS[$current_wm]:-desconocido}"
+    done
+    print_array "Features MangoWM" WM_FEATURES
+  elif [[ -n "$WM" ]]; then
     printf '  %-24s %s\n' 'WM opcional:' "$WM"
     printf '  %-24s %s\n' 'Checkout WM:' "$WM_PATH"
     printf '  %-24s %s\n' 'Perfil WM:' "$WM_PROFILE"
@@ -1332,6 +1567,12 @@ print_plan() {
 
   if (( WALLPAPERS == 1 )); then
     printf '  %-24s %s\n' 'Wallpapers:' "$WALLPAPERS_PATH"
+  fi
+
+  if (( PRIVATE == 1 )); then
+    printf '  %-24s %s\n' 'Capa privada:' "$PRIVATE_PATH"
+    printf '  %-24s %s\n' 'Perfil privado:' "$PRIVATE_PROFILE"
+    print_array "Trabajo privado" PRIVATE_WORK
   fi
 
   if (( SYSTEM_ENABLED == 1 )); then
@@ -1462,14 +1703,23 @@ unlink_dotfiles() {
 }
 
 bootstrap_with_optional_components() {
-  if [[ -n "$WM" && "$APPLY" == 1 ]]; then
-    info "Preflight del WM antes de modificar cualquiera de los dos alcances"
+  if (( ${#WMS[@]} > 0 )) && [[ "$APPLY" == 1 ]]; then
+    info "Preflight del WM antes de modificar la base"
     run_wm_operation bootstrap 0 || die "falló el preflight del repositorio $WM; no se modificó la base"
+  elif [[ -n "$WM" && "$APPLY" == 1 ]]; then
+    info "Preflight del WM antes de modificar la base"
+    run_wm_operation bootstrap 0 || die "falló el preflight del repositorio $WM; no se modificó la base"
+  fi
+
+  if (( PRIVATE == 1 && APPLY == 1 )); then
+    info "Preflight de la capa privada antes de modificar la base"
+    run_private_operation bootstrap 0 || die "falló el preflight de la capa privada; no se modificó la base"
   fi
 
   bootstrap
   run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap del repositorio $WM"
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
+  run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
 }
 
 doctor_with_optional_components() {
@@ -1486,32 +1736,524 @@ doctor_with_optional_components() {
     error "Doctor: falló la validación del repositorio de wallpapers"
     result=1
   fi
+  if ! run_private_operation doctor 0; then
+    error "Doctor: falló la validación de la capa privada"
+    result=1
+  fi
   return "$result"
 }
 
 unlink_with_optional_components() {
-  if [[ -n "$WM" && "$APPLY" == 1 ]]; then
-    info "Preflight de unlink del WM antes de modificar cualquiera de los dos alcances"
+  if (( ${#WMS[@]} > 0 )) && [[ "$APPLY" == 1 ]]; then
+    info "Preflight de unlink del WM antes de modificar la base"
     run_wm_operation unlink 0 || die "falló el preflight de unlink del repositorio $WM; no se modificó la base"
+  elif [[ -n "$WM" && "$APPLY" == 1 ]]; then
+    info "Preflight de unlink del WM antes de modificar la base"
+    run_wm_operation unlink 0 || die "falló el preflight de unlink del repositorio $WM; no se modificó la base"
+  fi
+
+  if (( PRIVATE == 1 && APPLY == 1 )); then
+    info "Preflight de unlink de la capa privada antes de modificar la base"
+    run_private_operation unlink 0 || die "falló el preflight de unlink de la capa privada; no se modificó la base"
   fi
 
   unlink_dotfiles
   run_wm_operation unlink "$APPLY" || die "falló el unlink del repositorio $WM"
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
+  run_private_operation unlink "$APPLY" || die "falló el unlink de la capa privada"
+}
+
+sync_environment() {
+  info "Iniciando re-sincronización local del entorno..."
+
+  if (( ${#WMS[@]} == 0 )); then
+    if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
+      append_unique WMS "mangowm"
+    fi
+    if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
+      append_unique WMS "bspwm"
+    fi
+  fi
+  if (( WALLPAPERS == 0 )); then
+    if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
+      WALLPAPERS=1
+    fi
+  fi
+  if (( PRIVATE == 0 )); then
+    if [[ -d "$TARGET_DIR/.dotfiles/private" || -d "$REPO_ROOT/../private" ]]; then
+      PRIVATE=1
+    fi
+  fi
+
+  validate_wm_checkout
+  validate_wallpapers_checkout
+  validate_private_checkout
+
+  APPLY=1
+  bootstrap_with_optional_components
+  info "Re-sincronización local completada exitosamente."
+}
+
+update_from_remote() {
+  info "Comprobando repositorios locales en $HOME/.dotfiles/..."
+  command_exists git || die "git es necesario para actualizar desde repositorios remotos"
+
+  local -a repos_to_update=()
+  repos_to_update+=("$REPO_ROOT")
+
+  local candidate
+  for candidate in \
+    "$REPO_ROOT/../wm/mangowm" "$TARGET_DIR/.dotfiles/wm/mangowm" \
+    "$REPO_ROOT/../wm/bspwm" "$TARGET_DIR/.dotfiles/wm/bspwm" \
+    "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
+    "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private"; do
+    if [[ -d "$candidate/.git" ]]; then
+      local real_cand
+      real_cand=$(realpath -m "$candidate")
+      append_unique repos_to_update "$real_cand"
+    fi
+  done
+
+  local repo
+  for repo in "${repos_to_update[@]}"; do
+    local repo_name=${repo##*/}
+    info "Verificando estado de Git en $repo_name ($repo)..."
+    local git_status
+    git_status=$(git -C "$repo" status --porcelain 2>/dev/null || true)
+    if [[ -n "$git_status" ]]; then
+      warn "El repositorio $repo_name tiene cambios locales sin confirmar; omitiendo git pull para proteger su trabajo"
+    else
+      info "Descargando actualizaciones en $repo_name..."
+      if ! git -C "$repo" pull --ff-only; then
+        warn "No se pudo realizar fast-forward en $repo_name; omitiendo"
+      fi
+    fi
+  done
+
+  info "Aplicando re-sincronización local tras la actualización remota..."
+  sync_environment
+}
+
+wizard_colors() {
+  if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && (( $(tput colors 2>/dev/null || echo 0) >= 8 )); then
+    C_RESET='\033[0m'
+    C_BOLD='\033[1m'
+    C_DIM='\033[2m'
+    C_PINK='\033[38;2;245;194;231m'
+    C_MAUVE='\033[38;2;203;166;247m'
+    C_BLUE='\033[38;2;137;180;250m'
+    C_GREEN='\033[38;2;166;227;161m'
+    C_YELLOW='\033[38;2;249;226;175m'
+    C_RED='\033[38;2;243;139;168m'
+    C_SUBTEXT='\033[38;2;166;173;200m'
+  else
+    C_RESET='' C_BOLD='' C_DIM='' C_PINK='' C_MAUVE='' C_BLUE=''
+    C_GREEN='' C_YELLOW='' C_RED='' C_SUBTEXT=''
+  fi
+}
+
+prompt_choice() {
+  local var_name=$1
+  local title=$2
+  shift 2
+  local -a options=("$@")
+  local choice=""
+
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$title" "$C_RESET"
+  local i=1
+  for opt in "${options[@]}"; do
+    printf '  %b[%d]%b %s\n' "$C_PINK" "$i" "$C_RESET" "$opt"
+    (( i++ ))
+  done
+
+  while true; do
+    printf '%bSelecciona una opción (1-%d): %b' "$C_BLUE" "${#options[@]}" "$C_RESET"
+    read -r choice || return 1
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+      printf -v "$var_name" '%d' "$(( choice - 1 ))"
+      return 0
+    fi
+    printf '%bOpción inválida. Intenta nuevamente.%b\n' "$C_RED" "$C_RESET"
+  done
+}
+
+prompt_yes_no() {
+  local question=$1
+  local default_val=${2:-Y}
+  local response=""
+  local prompt_suffix="[S/n]"
+  [[ "$default_val" =~ ^[Nn]$ ]] && prompt_suffix="[s/N]"
+
+  while true; do
+    printf '%b%s %b%s%b ' "${C_BOLD}" "$question" "${C_SUBTEXT}" "$prompt_suffix" "$C_RESET"
+    read -r response || return 1
+    if [[ -z "$response" ]]; then
+      response=$default_val
+    fi
+    case "$response" in
+      [sS]|[yY]|[sS][iI]|[yY][eE][sS])
+        return 0
+        ;;
+      [nN]|[nN][oO])
+        return 1
+        ;;
+      *)
+        printf '%bPor favor responde S o N.%b\n' "$C_RED" "$C_RESET"
+        ;;
+    esac
+  done
+}
+
+prompt_input() {
+  local prompt_text=$1
+  local default_text=${2-}
+  local var_name=$3
+  local -n result_ref=$var_name
+  local input_val=""
+
+  if [[ -n "$default_text" ]]; then
+    printf '%b%s %b[%s]: %b' "${C_BOLD}" "$prompt_text" "${C_SUBTEXT}" "$default_text" "$C_RESET"
+  else
+    printf '%b%s: %b' "${C_BOLD}" "$prompt_text" "$C_RESET"
+  fi
+  read -r input_val || return 1
+  if [[ -z "$input_val" && -n "$default_text" ]]; then
+    result_ref=$default_text
+  else
+    result_ref=$input_val
+  fi
+}
+
+wizard_clone_if_missing() {
+  local repo_name=$1
+  local default_url_https=$2
+  local default_url_ssh=$3
+  local target_dest=$4
+
+  if [[ -d "$target_dest" ]]; then
+    return 0
+  fi
+
+  printf '\n%b%s no está presente en %s.%b\n' "$C_YELLOW" "$repo_name" "$target_dest" "$C_RESET"
+  if prompt_yes_no "¿Deseas clonarlo automáticamente desde GitHub?" Y; then
+    local proto_choice=0
+    prompt_choice proto_choice "¿Qué protocolo deseas usar?" \
+      "HTTPS (Recomendado / Sin llaves SSH previas)" \
+      "SSH (Requiere claves SSH activas en GitHub)"
+    local clone_url="$default_url_https"
+    if (( proto_choice == 1 )); then
+      clone_url="$default_url_ssh"
+    fi
+
+    info "Clonando $repo_name ($clone_url) en $target_dest..."
+    mkdir -p "$(dirname "$target_dest")"
+    if git clone "$clone_url" "$target_dest"; then
+      info "$repo_name clonado exitosamente."
+      return 0
+    else
+      warn "No se pudo clonar $repo_name automáticamente."
+      return 1
+    fi
+  fi
+  return 1
+}
+
+run_interactive_wizard() {
+  wizard_colors
+
+  clear 2>/dev/null || true
+  printf '%b' "$C_MAUVE"
+  cat <<'EOF'
+╭─────────────────────────────────────────────────────────────╮
+│             ANTHONY PORTUGAL — DOTFILES WIZARD              │
+│       Instalación Modular y Guiada por Capas (Catppuccin)   │
+╰─────────────────────────────────────────────────────────────╯
+EOF
+  printf '%b\n' "$C_RESET"
+
+  printf '%bEstado actual detectado:%b\n' "${C_BOLD}" "$C_RESET"
+  printf '  • Base:     %b[✓ Presente]%b (%s)\n' "$C_GREEN" "$C_RESET" "$REPO_ROOT"
+
+  local mango_status="${C_SUBTEXT}[No presente]${C_RESET}"
+  if [[ -d "$REPO_ROOT/../wm/mangowm" || -d "$TARGET_DIR/.dotfiles/wm/mangowm" ]]; then
+    mango_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  fi
+  printf '  • MangoWM:  %b\n' "$mango_status"
+
+  local bspwm_status="${C_SUBTEXT}[No presente]${C_RESET}"
+  if [[ -d "$REPO_ROOT/../wm/bspwm" || -d "$TARGET_DIR/.dotfiles/wm/bspwm" ]]; then
+    bspwm_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  fi
+  printf '  • BSPWM:    %b\n' "$bspwm_status"
+
+  local walls_status="${C_SUBTEXT}[No presente]${C_RESET}"
+  if [[ -d "$REPO_ROOT/../walls" || -d "$TARGET_DIR/.dotfiles/walls" ]]; then
+    walls_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  fi
+  printf '  • Walls:    %b\n' "$walls_status"
+
+  local private_status="${C_SUBTEXT}[No presente]${C_RESET}"
+  if [[ -d "$REPO_ROOT/../private" || -d "$TARGET_DIR/.dotfiles/private" ]]; then
+    private_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  fi
+  printf '  • Private:  %b\n' "$private_status"
+
+  local action_choice=0
+  prompt_choice action_choice "¿Qué deseas hacer?" \
+    "Asistente de Configuración (Setup Wizard por Capas)" \
+    "Re-sincronizar Entorno Local (Sync enlaces y paquetes sin tocar Git)" \
+    "Actualizar desde GitHub (Remote Update + Sync)" \
+    "Diagnóstico de Salud (Doctor)" \
+    "Retirar Enlaces (Unlink)" \
+    "Salir"
+
+  case "$action_choice" in
+    1)
+      sync_environment || true
+      return 0
+      ;;
+    2)
+      update_from_remote || true
+      return 0
+      ;;
+    3)
+      doctor_with_optional_components || true
+      return 0
+      ;;
+    4)
+      unlink_with_optional_components || true
+      return 0
+      ;;
+    5)
+      info "Hasta luego."
+      return 0
+      ;;
+  esac
+
+  printf '\n%b=== ASISTENTE DE CONFIGURACIÓN POR CAPAS ===%b\n' "${C_BOLD}${C_PINK}" "$C_RESET"
+
+  local profile_choice=2
+  prompt_choice profile_choice "Paso 1: Selecciona el Perfil Base del Sistema" \
+    "Core (Zsh, Git, herramientas esenciales de terminal)" \
+    "CLI (Core + Micro, Yazi, Neovim/herramientas modernas)" \
+    "Desktop [Recomendado] (CLI + Tema GTK Catppuccin, fuentes, audio, portales XDG)"
+  case "$profile_choice" in
+    0) PROFILE="core" ;;
+    1) PROFILE="cli" ;;
+    2) PROFILE="desktop" ;;
+  esac
+
+  WMS=()
+  local wm_choice=0
+  prompt_choice wm_choice "Paso 2: Selecciona los Entornos de Ventana a configurar" \
+    "MangoWM (Wayland moderno + Waybar + Fuzzel + Mako)" \
+    "BSPWM (X11 clásico + Polybar + Rofi + Dunst + Picom)" \
+    "Ambos (MangoWM y BSPWM)" \
+    "Ninguno (Solo terminal / Ya poseo mi propio gestor)"
+
+  case "$wm_choice" in
+    0)
+      append_unique WMS "mangowm"
+      ;;
+    1)
+      append_unique WMS "bspwm"
+      ;;
+    2)
+      append_unique WMS "mangowm"
+      append_unique WMS "bspwm"
+      ;;
+    3)
+      ;;
+  esac
+
+  local wm
+  for wm in "${WMS[@]}"; do
+    local wm_target_path="$TARGET_DIR/.dotfiles/wm/$wm"
+    case "$wm" in
+      mangowm)
+        wizard_clone_if_missing "dotfiles-mangowm" \
+          "https://github.com/anthonyportugal/dotfiles-mangowm.git" \
+          "git@github.com:anthonyportugal/dotfiles-mangowm.git" \
+          "$wm_target_path" || true
+        ;;
+      bspwm)
+        wizard_clone_if_missing "dotfiles-bspwm" \
+          "https://github.com/anthonyportugal/dotfiles-bspwm.git" \
+          "git@github.com:anthonyportugal/dotfiles-bspwm.git" \
+          "$wm_target_path" || true
+        ;;
+    esac
+  done
+
+  WM_FEATURES=()
+  for wm in "${WMS[@]}"; do
+    if [[ "$wm" == "mangowm" ]]; then
+      printf '\n%bOpciones para MangoWM:%b\n' "${C_BOLD}" "$C_RESET"
+      if prompt_yes_no "  ¿Activar grabación de pantalla (wf-recorder, menú de audio, Waybar)?" Y; then
+        append_unique WM_FEATURES "recording"
+      fi
+      if prompt_yes_no "  ¿Activar soporte de laptop (brillo, control de batería)?" N; then
+        append_unique WM_FEATURES "laptop"
+      fi
+    fi
+  done
+
+  WALLPAPERS=0
+  printf '\n%bColección de Fondos de Pantalla:%b\n' "${C_BOLD}" "$C_RESET"
+  if prompt_yes_no "¿Deseas integrar la colección de wallpapers (anthonyportugal/walls)?" Y; then
+    WALLPAPERS=1
+    local walls_dest="$TARGET_DIR/.dotfiles/walls"
+    wizard_clone_if_missing "walls" \
+      "https://github.com/anthonyportugal/walls.git" \
+      "git@github.com:anthonyportugal/walls.git" \
+      "$walls_dest" || true
+  fi
+
+  PRIVATE=0
+  printf '\n%bCapa Privada de Configuración (Identidad, SSH, llaves):%b\n' "${C_BOLD}" "$C_RESET"
+  local existing_private=""
+  if [[ -d "$REPO_ROOT/../private" ]]; then
+    existing_private="$REPO_ROOT/../private"
+  elif [[ -d "$TARGET_DIR/.dotfiles/private" ]]; then
+    existing_private="$TARGET_DIR/.dotfiles/private"
+  fi
+
+  if [[ -n "$existing_private" ]]; then
+    if prompt_yes_no "Capa privada detectada en $existing_private. ¿Deseas integrarla?" Y; then
+      PRIVATE=1
+      PRIVATE_PATH="$existing_private"
+      if prompt_yes_no "  ¿Habilitar perfil de desarrollo 'development' (PNPM, dev paths, AI codex)?" Y; then
+        PRIVATE_PROFILE="development"
+      else
+        PRIVATE_PROFILE="core"
+      fi
+      if prompt_yes_no "  ¿Habilitar componente laboral (csti)?" N; then
+        PRIVATE_WORK+=("csti")
+      fi
+    fi
+  else
+    printf '%bNo se detectó capa privada en ~/.dotfiles/private.%b\n' "$C_SUBTEXT" "$C_RESET"
+    local custom_private_url=""
+    prompt_input "Ingresa la URL del repo privado a clonar (o ENTER para omitir)" "" custom_private_url
+    if [[ -n "$custom_private_url" ]]; then
+      local private_dest="$TARGET_DIR/.dotfiles/private"
+      info "Clonando repositorio privado en $private_dest..."
+      mkdir -p "$TARGET_DIR/.dotfiles"
+      if git clone "$custom_private_url" "$private_dest"; then
+        PRIVATE=1
+        PRIVATE_PATH="$private_dest"
+        info "Repositorio privado clonado exitosamente."
+      else
+        warn "No se pudo clonar el repositorio privado. Continuando sin capa privada."
+      fi
+    else
+      if prompt_yes_no "¿Deseas configurar tu identidad Git local (user.name y user.email)?" Y; then
+        local git_name="" git_email=""
+        prompt_input "Nombre para Git" "Anthony Portugal" git_name
+        prompt_input "Email para Git" "" git_email
+        if [[ -n "$git_name" && -n "$git_email" ]]; then
+          mkdir -p "$TARGET_DIR/.config/git"
+          git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.name "$git_name"
+          git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.email "$git_email"
+          info "Identidad Git guardada en ~/.config/git/local.gitconfig"
+        fi
+      fi
+    fi
+  fi
+
+  local mode_choice=0
+  prompt_choice mode_choice "Paso 6: Selecciona el Alcance de la Instalación" \
+    "Completo: Instalar paquetes del sistema (repo/AUR) + Enlaces Stow [Recomendado]" \
+    "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)"
+  if (( mode_choice == 1 )); then
+    MODE_SELECTION="stow"
+    SYSTEM_ENABLED=0
+    STOW_ENABLED=1
+  else
+    MODE_SELECTION="both"
+    SYSTEM_ENABLED=1
+    STOW_ENABLED=1
+  fi
+
+  printf '\n%b' "$C_BLUE"
+  cat <<EOF
+╭─────────────────────────────────────────────────────────────╮
+│              RESUMEN DEL PLAN DE INSTALACIÓN                │
+├─────────────────────────────────────────────────────────────┤
+EOF
+  printf '│  • Perfil Base:       %-38s│\n' "$PROFILE"
+  local wms_str="${WMS[*]:-(ninguno)}"
+  printf '│  • Window Managers:   %-38s│\n' "$wms_str"
+  local feat_str="${WM_FEATURES[*]:-(ninguna)}"
+  printf '│  • Features WM:       %-38s│\n' "$feat_str"
+  local walls_str="No"
+  (( WALLPAPERS == 1 )) && walls_str="Sí (${WALLPAPERS_PATH:-~/.dotfiles/walls})"
+  printf '│  • Wallpapers:        %-38s│\n' "$walls_str"
+  local priv_str="No"
+  (( PRIVATE == 1 )) && priv_str="Sí (${PRIVATE_PATH:-~/.dotfiles/private})"
+  printf '│  • Capa Privada:      %-38s│\n' "$priv_str"
+  printf '│  • Modo de Operación: %-38s│\n' "$MODE_SELECTION"
+  printf '│  • Directorio Target: %-38s│\n' "$TARGET_DIR"
+  cat <<'EOF'
+╰─────────────────────────────────────────────────────────────╯
+EOF
+  printf '%b\n' "$C_RESET"
+
+  local final_choice=0
+  prompt_choice final_choice "¿Cómo deseas proceder?" \
+    "Aplicar los cambios ahora mismo (--apply)" \
+    "Simulación previa (Dry-Run: ver qué enlaces y paquetes se tocarían sin modificar nada)" \
+    "Cancelar y salir"
+
+  case "$final_choice" in
+    0)
+      APPLY=1
+      ;;
+    1)
+      APPLY=0
+      ;;
+    2)
+      info "Operación cancelada por el usuario."
+      return 0
+      ;;
+  esac
+
+  COMMAND="bootstrap"
+  validate_wm_checkout
+  validate_wallpapers_checkout
+  validate_private_checkout
+  bootstrap_with_optional_components
 }
 
 main() {
   parse_args "$@"
-  validate_wm_checkout
-  validate_wallpapers_checkout
+
   case "$COMMAND" in
+    setup|install)
+      run_interactive_wizard
+      ;;
+    sync)
+      sync_environment
+      ;;
+    update)
+      update_from_remote
+      ;;
     bootstrap)
+      validate_wm_checkout
+      validate_wallpapers_checkout
+      validate_private_checkout
       bootstrap_with_optional_components
       ;;
     doctor)
+      validate_wm_checkout
+      validate_wallpapers_checkout
+      validate_private_checkout
       doctor_with_optional_components
       ;;
     unlink)
+      validate_wm_checkout
+      validate_wallpapers_checkout
+      validate_private_checkout
       unlink_with_optional_components
       ;;
   esac

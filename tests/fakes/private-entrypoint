@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+: "${DOTFILES_PRIVATE_TEST_LOG:?DOTFILES_PRIVATE_TEST_LOG no está definida}"
+printf '%q ' "$(basename "$0")" "$@" >> "$DOTFILES_PRIVATE_TEST_LOG"
+printf '\n' >> "$DOTFILES_PRIVATE_TEST_LOG"

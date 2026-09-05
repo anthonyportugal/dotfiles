@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 : "${DOTFILES_WM_TEST_LOG:?DOTFILES_WM_TEST_LOG no está definida}"
 
-printf '%q ' "$@" >> "$DOTFILES_WM_TEST_LOG"
+printf '%q ' "$(basename "$0")" "$@" >> "$DOTFILES_WM_TEST_LOG"
 printf '\n' >> "$DOTFILES_WM_TEST_LOG"
 
 case "${DOTFILES_WM_TEST_FAILURE-}" in
