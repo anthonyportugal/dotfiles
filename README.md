@@ -72,9 +72,19 @@ Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machin
 
 ## 🚀 Installation & Quickstart
 
-### 1. Interactive Setup Wizard (Recommended)
+### 1. One-Line Installation (Recommended for New Machines)
 
-For clean machines or step-by-step guided configuration across the entire dotfiles ecosystem, run the installer script or `setup`:
+Deploy the entire ecosystem with a single command. It automatically clones the base repository into `~/.dotfiles/base` and launches the interactive setup wizard:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+```
+
+The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone missing ones, configures selected Window Managers (MangoWM, BSPWM, both, or none), the wallpapers layer, and the private layer (or local Git identity fallback).
+
+### 2. If You Already Cloned the Repository
+
+If you already have `~/.dotfiles/base` locally, run the wizard directly:
 
 ```bash
 # Option A: Via the bootstrap installer
@@ -84,9 +94,7 @@ For clean machines or step-by-step guided configuration across the entire dotfil
 ./bin/dotfiles
 ```
 
-The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone missing ones, configures selected Window Managers (MangoWM, BSPWM, both, or none), the wallpapers layer, and the private layer (or local Git identity fallback).
-
-### 2. Manual Command-Line Orchestration
+### 3. Manual Command-Line Orchestration
 
 You can also orchestrate components directly using explicit flags:
 
@@ -108,7 +116,7 @@ You can also orchestrate components directly using explicit flags:
     --apply
   ```
 
-### 3. Lifecycle Management: Local Sync & Remote Updates
+### 4. Lifecycle Management: Local Sync & Remote Updates
 
 - **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks, validates packages, and renders local session configurations without touching Git or altering commit history:
   ```bash

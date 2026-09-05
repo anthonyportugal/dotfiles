@@ -72,9 +72,19 @@ Valores Base Públicos  ──►  Capa Privada Opcional  ──►  Sobrescritu
 
 ## 🚀 Instalación y Uso Rápido
 
-### 1. Asistente de Instalación Rápida e Interactiva (Recomendado)
+### 1. Instalación con un Solo Comando (Recomendado para Máquinas Nuevas)
 
-Si estás en una máquina nueva o deseas configurar el ecosistema guiado paso a paso, ejecuta el instalador o el comando `setup`:
+Despliega todo el ecosistema con una sola instrucción. Clona automáticamente el repositorio base en `~/.dotfiles/base` e inicia el asistente interactivo de configuración:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+```
+
+El asistente detectará automáticamente los repositorios existentes en `$HOME/.dotfiles/`, clonará los faltantes si lo deseas, configurará los gestores de ventanas seleccionados (MangoWM, BSPWM o ambos), los wallpapers y la capa privada (o su fallback de identidad Git local).
+
+### 2. Si ya tienes el repositorio clonado
+
+Si ya te encuentras en `~/.dotfiles/base`, inicia el asistente directamente:
 
 ```bash
 # Opción A: Mediante el script instalador
@@ -84,11 +94,9 @@ Si estás en una máquina nueva o deseas configurar el ecosistema guiado paso a 
 ./bin/dotfiles
 ```
 
-El asistente detectará automáticamente los repositorios existentes en `$HOME/.dotfiles/`, clonará los faltantes si lo deseas, configurará los gestores de ventanas seleccionados (MangoWM, BSPWM o ambos), los wallpapers y la capa privada (o su fallback local).
+### 3. Despliegue Manual por Línea de Comandos
 
-### 2. Despliegue Manual por Línea de Comandos
-
-También puedes orquestar las capas mediante comandos directos:
+También puedes orquestar las capas mediante comandos directos con flags explícitos sin el asistente:
 
 - **Perfil Desktop Completo:**
   ```bash
@@ -108,7 +116,7 @@ También puedes orquestar las capas mediante comandos directos:
     --apply
   ```
 
-### 3. Ciclo de Vida: Sincronización y Actualizaciones
+### 4. Ciclo de Vida: Sincronización y Actualizaciones
 
 - **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow, valida paquetes y regenera configuraciones locales sin tocar Git ni alterar tu historial:
   ```bash
