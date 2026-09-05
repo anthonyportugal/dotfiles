@@ -73,18 +73,25 @@ Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machin
 
 ## 🚀 Installation & Quickstart
 
-### 1. Clone the Base Repository
+### 1. Interactive Setup Wizard (Recommended)
+
+For clean machines or step-by-step guided configuration across the entire dotfiles ecosystem, run the installer script or `setup`:
 
 ```bash
-mkdir -p "$HOME/.dotfiles"
-git clone --branch refactor/modular-dotfiles \
-  https://github.com/anthonyportugal/dotfiles.git "$HOME/.dotfiles/base"
-cd "$HOME/.dotfiles/base"
+# Option A: Via the bootstrap installer
+./install.sh
+
+# Option B: Directly via the CLI (automatically opens the wizard if run with no args in a TTY)
+./bin/dotfiles
 ```
 
-### 2. Bootstrap the Base System
+The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone missing ones, configures selected Window Managers (MangoWM, BSPWM, both, or none), the wallpapers layer, and the private layer (or local Git identity fallback).
 
-- **Desktop Profile (Recommended):**
+### 2. Manual Command-Line Orchestration
+
+You can also orchestrate components directly using explicit flags:
+
+- **Full Desktop Profile:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop --apply
   ```
@@ -92,33 +99,31 @@ cd "$HOME/.dotfiles/base"
   ```bash
   ./bin/dotfiles bootstrap --profile core --apply
   ```
-
-### 3. Optional: Compose with a Window Manager
-The base CLI can orchestrate the installation of standalone WM repositories via `--wm-path`:
-
-- **Compose with MangoWM (Wayland):**
+- **Compose with WMs, Wallpapers, and Private Layer:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
-    --wm-profile desktop --apply
-  ```
-- **Compose with BSPWM (X11):**
-  ```bash
-  ./bin/dotfiles bootstrap --profile desktop \
+    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" --wm-feature recording \
     --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
-    --wm-profile desktop --apply
+    --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
+    --private --private-path "$HOME/.dotfiles/private" \
+    --apply
   ```
 
-### Helpful Bootstrap Flags
-- **Dry-run simulation (Safe check):** Omit `--apply` to inspect planned operations without modifying files:
+### 3. Lifecycle Management: Local Sync & Remote Updates
+
+- **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks, validates packages, and renders local session configurations without touching Git or altering commit history:
   ```bash
-  ./bin/dotfiles bootstrap --profile desktop
+  ./bin/dotfiles sync
   ```
-- **Diagnostics:** Verify links and configuration health:
+- **Remote Update (`update`):** Safely checks Git status in all managed repositories under `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`). Repositories with uncommitted working tree changes are safely skipped to protect local work, clean repositories perform `git pull --ff-only`, followed by an automatic local `sync`:
+  ```bash
+  ./bin/dotfiles update
+  ```
+- **System Diagnostics (`doctor`):** Inspects link integrity, shells, and system dependencies:
   ```bash
   ./bin/dotfiles doctor --profile desktop
   ```
-- **Unlink:** Safely remove managed symlinks:
+- **Unlink / Clean (`unlink`):** Safely removes managed symlinks:
   ```bash
   ./bin/dotfiles unlink --profile desktop --apply
   ```

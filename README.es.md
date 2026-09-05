@@ -73,52 +73,57 @@ Valores Base Públicos  ──►  Capa Privada Opcional  ──►  Sobrescritu
 
 ## 🚀 Instalación y Uso Rápido
 
-### 1. Clonar el Repositorio Base
+### 1. Asistente de Instalación Rápida e Interactiva (Recomendado)
+
+Si estás en una máquina nueva o deseas configurar el ecosistema guiado paso a paso, ejecuta el instalador o el comando `setup`:
 
 ```bash
-mkdir -p "$HOME/.dotfiles"
-git clone --branch refactor/modular-dotfiles \
-  https://github.com/anthonyportugal/dotfiles.git "$HOME/.dotfiles/base"
-cd "$HOME/.dotfiles/base"
+# Opción A: Mediante el script instalador
+./install.sh
+
+# Opción B: Directamente desde el CLI (inicia el asistente si se invoca sin argumentos en una terminal)
+./bin/dotfiles
 ```
 
-### 2. Desplegar el Sistema Base
+El asistente detectará automáticamente los repositorios existentes en `$HOME/.dotfiles/`, clonará los faltantes si lo deseas, configurará los gestores de ventanas seleccionados (MangoWM, BSPWM o ambos), los wallpapers y la capa privada (o su fallback local).
 
-- **Perfil Desktop (Recomendado):**
+### 2. Despliegue Manual por Línea de Comandos
+
+También puedes orquestar las capas mediante comandos directos:
+
+- **Perfil Desktop Completo:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop --apply
   ```
-- **Perfil Core Mínimo (Solo Shell + Git):**
+- **Perfil Core Mínimo (Shell + Git):**
   ```bash
   ./bin/dotfiles bootstrap --profile core --apply
   ```
-
-### 3. Opcional: Componer con un Gestor de Ventanas
-El CLI base puede coordinar la instalación de repositorios de WM independientes mediante `--wm-path`:
-
-- **Componer con MangoWM (Wayland):**
+- **Componer con WMs, Wallpapers y Capa Privada:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
-    --wm-profile desktop --apply
-  ```
-- **Componer con BSPWM (X11):**
-  ```bash
-  ./bin/dotfiles bootstrap --profile desktop \
+    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" --wm-feature recording \
     --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
-    --wm-profile desktop --apply
+    --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
+    --private --private-path "$HOME/.dotfiles/private" \
+    --apply
   ```
 
-### Opciones Útiles del Asistente
-- **Simulación Dry-run (Comprobación segura):** Omite `--apply` para inspeccionar las operaciones planificadas sin modificar archivos:
+### 3. Ciclo de Vida: Sincronización y Actualizaciones
+
+- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow, valida paquetes y regenera configuraciones locales sin tocar Git ni alterar tu historial:
   ```bash
-  ./bin/dotfiles bootstrap --profile desktop
+  ./bin/dotfiles sync
   ```
-- **Diagnóstico del sistema:** Verifica el estado de los enlaces y la configuración:
+- **Actualización Remota (`update`):** Verifica el estado de cada repositorio en `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`). Si el repositorio está limpio realiza un `git pull --ff-only` seguro (omitiendo repositorios con cambios locales sin confirmar para proteger tu trabajo) y luego ejecuta una sincronización automática:
+  ```bash
+  ./bin/dotfiles update
+  ```
+- **Diagnóstico del Sistema (`doctor`):** Verifica el estado de los enlaces, shells y dependencias:
   ```bash
   ./bin/dotfiles doctor --profile desktop
   ```
-- **Desvincular / Limpiar:** Retira los enlaces simbólicos de forma limpia:
+- **Desvincular / Limpieza (`unlink`):** Retira los enlaces simbólicos de forma limpia:
   ```bash
   ./bin/dotfiles unlink --profile desktop --apply
   ```
