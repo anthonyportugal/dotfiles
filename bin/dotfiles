@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 PROGRAM_NAME=${0##*/}
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+SCRIPT_DIR=$(cd -- "$(dirname -- "$(realpath -e -- "${BASH_SOURCE[0]}")")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 STOW_DIR="$REPO_ROOT/home"
 PACKAGES_DIR="$REPO_ROOT/packages"
@@ -1830,11 +1830,24 @@ sync_environment() {
   info "Iniciando re-sincronización local del entorno..."
 
   if (( ${#WMS[@]} == 0 )); then
-    if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
-      append_unique WMS "mangowm"
-    fi
-    if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
-      append_unique WMS "bspwm"
+    local mango_linked=0 bspwm_linked=0
+    [[ -L "$TARGET_DIR/.config/mango/config.conf" ]] && mango_linked=1
+    [[ -L "$TARGET_DIR/.config/bspwm/bspwmrc" ]] && bspwm_linked=1
+
+    if (( mango_linked == 1 || bspwm_linked == 1 )); then
+      if (( mango_linked == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
+        append_unique WMS "mangowm"
+      fi
+      if (( bspwm_linked == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
+        append_unique WMS "bspwm"
+      fi
+    else
+      if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
+        append_unique WMS "mangowm"
+      fi
+      if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
+        append_unique WMS "bspwm"
+      fi
     fi
   fi
   if (( WALLPAPERS == 0 )); then
