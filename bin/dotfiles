@@ -1496,6 +1496,66 @@ validate_session_preferences() {
   info "Preferencia GTK validada: prefer-dark"
 }
 
+link_cli_command() {
+  (( STOW_ENABLED == 1 )) || return 0
+  local target_bin="$TARGET_DIR/.local/bin"
+  local bin_link="$target_bin/dotfiles"
+  local script_source="$SCRIPT_DIR/dotfiles"
+
+  mkdir -p -- "$target_bin" 2>/dev/null || return 0
+
+  if [[ -L "$bin_link" ]]; then
+    local current_target
+    current_target=$(readlink -f -- "$bin_link" || true)
+    if [[ "$current_target" == "$script_source" ]]; then
+      info "Comando dotfiles ya enlazado en $bin_link"
+    else
+      ln -sfn -- "$script_source" "$bin_link"
+      info "Comando dotfiles actualizado en $bin_link"
+    fi
+  elif [[ -e "$bin_link" ]]; then
+    warn "$bin_link ya existe y no es un enlace simbólico. No se sobrescribirá."
+  else
+    ln -sfn -- "$script_source" "$bin_link"
+    info "Comando dotfiles enlazado en $bin_link"
+  fi
+}
+
+unlink_cli_command() {
+  local bin_link="$TARGET_DIR/.local/bin/dotfiles"
+  local script_source="$SCRIPT_DIR/dotfiles"
+
+  if [[ -L "$bin_link" ]]; then
+    local current_target
+    current_target=$(readlink -f -- "$bin_link" || true)
+    if [[ "$current_target" == "$script_source" ]]; then
+      rm -f -- "$bin_link"
+      info "Enlace del comando dotfiles retirado: $bin_link"
+    else
+      warn "$bin_link enlaza a $current_target (ajeno a este repositorio). Omitiendo."
+    fi
+  fi
+}
+
+validate_cli_command() {
+  (( STOW_ENABLED == 1 )) || return 0
+  local bin_link="$TARGET_DIR/.local/bin/dotfiles"
+  local script_source="$SCRIPT_DIR/dotfiles"
+
+  if [[ -L "$bin_link" ]]; then
+    local current_target
+    current_target=$(readlink -f -- "$bin_link" || true)
+    if [[ "$current_target" == "$script_source" ]]; then
+      info "Comando CLI validado: $bin_link"
+      return 0
+    else
+      warn "$bin_link enlaza a $current_target en lugar de $script_source"
+      return 0
+    fi
+  fi
+  return 0
+}
+
 preflight() {
   command_exists find || die "falta el comando requerido: find"
   command_exists realpath || die "falta el comando requerido: realpath"
@@ -1635,6 +1695,7 @@ bootstrap() {
     run_stow install 0 || die "GNU Stow no pudo crear los enlaces"
     validate_links_installed || die "falló la validación posterior de enlaces"
     apply_session_preferences
+    link_cli_command
   fi
 
   if (( SYSTEM_ENABLED == 1 )); then
@@ -1671,6 +1732,7 @@ doctor() {
     fi
     validate_links_installed || result=1
     validate_session_preferences || result=1
+    validate_cli_command || result=1
   fi
 
   report_zsh_activation
@@ -1699,6 +1761,7 @@ unlink_dotfiles() {
   info "Retirando enlaces GNU Stow; no se eliminarán paquetes ni archivos ajenos"
   run_stow delete 0 || die "GNU Stow no pudo retirar los enlaces"
   validate_links_unlinked || die "falló la validación posterior de unlink"
+  unlink_cli_command
   info "Unlink completado"
 }
 
