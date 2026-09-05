@@ -127,12 +127,12 @@ El entorno está diseñado con **Catppuccin Mocha** utilizando **Pink (`#f5c2e7`
 | `Super + Shift + Return` | Abrir terminal Foot flotante |
 | `Super + D` | Abrir lanzador de aplicaciones Fuzzel |
 | `Super + B` | Abrir navegador web predeterminado (Brave) |
-| `Super + Shift + E` | Abrir gestor de archivos gráfico (Thunar) |
+| `Super + E` | Abrir gestor de archivos gráfico (Thunar) |
 | `Super + L` | Bloquear pantalla de inmediato (Swaylock) |
 | `Super + X` | Abrir menú de apagado/sesión (Wlogout) |
 | `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Fuzzel) |
-| `Super + Shift + Q` | Cerrar sesión de MangoWM |
-| `Super + Shift + R` | Recargar configuración de MangoWM |
+| `Super + Escape` | Recargar configuración de MangoWM |
+| `Super + Shift + Escape` | Cerrar sesión de MangoWM |
 | `Super + T` | Alternar modos de mosaico (*Dwindle, Tile, Grid, Monocle, Scroller*) |
 | `Super + N` | Alternar luz nocturna cálida (Gammastep con indicador en Waybar) |
 | `Super + W` / `Super + Ctrl + W` | Seleccionar fondo de pantalla interactivo con Fuzzel (Swaybg) |
@@ -140,7 +140,8 @@ El entorno está diseñado con **Catppuccin Mocha** utilizando **Pink (`#f5c2e7`
 | `Print` / `Super + Print` / `Super + Shift + S` | Captura de región con editor de anotaciones Satty |
 | `Shift + Print` | Captura de pantalla completa con editor Satty |
 | `Ctrl + Print` | Copiar captura de región directo al portapapeles |
-| `Super + Ctrl + R` | Alternar grabación de pantalla *(requiere feature recording)* |
+| `Super + R` / `Super + Shift + R` | Grabación de pantalla completa / por región (wf-recorder) |
+| `Super + Alt + R` | Menú de opciones de audio para grabación (Fuzzel) |
 
 ---
 

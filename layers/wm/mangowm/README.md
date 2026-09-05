@@ -142,12 +142,12 @@ The desktop is styled with **Catppuccin Mocha** featuring **Pink (`#f5c2e7`)** a
 | `Super + Shift + Return` | Open floating Foot terminal |
 | `Super + D` | Open Fuzzel application launcher |
 | `Super + B` | Open default web browser (Brave) |
-| `Super + Shift + E` | Open graphical file manager (Thunar) |
+| `Super + E` | Open graphical file manager (Thunar) |
 | `Super + L` | Lock screen immediately (Swaylock) |
 | `Super + X` | Open session power menu (Wlogout) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Fuzzel) |
-| `Super + Shift + Q` | Quit MangoWM session |
-| `Super + Shift + R` | Reload MangoWM configuration |
+| `Super + Escape` | Reload MangoWM configuration |
+| `Super + Shift + Escape` | Quit MangoWM session |
 | `Super + T` | Cycle tiling layouts (*Dwindle, Tile, Grid, Monocle, Scroller*) |
 | `Super + N` | Toggle warm night light (Gammastep with real-time Waybar status) |
 | `Super + W` / `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel (Swaybg) |
@@ -155,7 +155,8 @@ The desktop is styled with **Catppuccin Mocha** featuring **Pink (`#f5c2e7`)** a
 | `Print` / `Super + Print` / `Super + Shift + S` | Interactive region screenshot with Satty annotation editor |
 | `Shift + Print` | Fullscreen screenshot with Satty editor |
 | `Ctrl + Print` | Copy region screenshot directly to clipboard |
-| `Super + Ctrl + R` | Toggle screen recording *(requires recording feature)* |
+| `Super + R` / `Super + Shift + R` | Fullscreen / Interactive region screen recording (wf-recorder) |
+| `Super + Alt + R` | Screen recording menu with audio options (Fuzzel) |
 
 ---
 
