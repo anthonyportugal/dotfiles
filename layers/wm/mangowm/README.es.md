@@ -4,6 +4,10 @@
 
 Sesión Wayland autónoma, modular y minimalista configurada para **CachyOS** y **Arch Linux** utilizando [MangoWM](https://github.com/DreamMaoMao/mangowm) como compositor principal de ventanas en mosaico dinámico con el tema Catppuccin Mocha.
 
+<p align="center">
+  <img src="assets/screenshot.webp" alt="Vista previa de MangoWM Desktop" width="100%">
+</p>
+
 > [!NOTE]
 > **Trabajo en progreso:** Este repositorio se encuentra activamente mantenido y actualmente en etapa de finalización (P12). Ha sido exhaustivamente validado tanto en máquinas virtuales como en hardware físico real (Laptop HP ProBook 440 G10 en CachyOS con LUKS + Limine + Ly). Está diseñado para funcionar de manera 100% independiente o integrado con el ecosistema de dotfiles principal en [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (rama `refactor/modular-dotfiles`).
 

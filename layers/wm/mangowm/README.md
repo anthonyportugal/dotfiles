@@ -4,6 +4,10 @@
 
 Autonomous, modular, and minimal Wayland session configured for **CachyOS** and **Arch Linux** using [MangoWM](https://github.com/DreamMaoMao/mangowm) as the primary dynamic tiling compositor with the Catppuccin Mocha theme.
 
+<p align="center">
+  <img src="assets/screenshot.webp" alt="MangoWM Desktop Preview" width="100%">
+</p>
+
 > [!NOTE]
 > **Work in progress:** This repository is actively maintained. P11 standalone candidate completed and initial validation started in a VM where MangoWM boots, followed by physical hardware validation on HP ProBook 440 G10 (CachyOS + LUKS + Limine + Ly). It is designed to work standalone or integrated with the main modular dotfiles ecosystem at [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (currently on branch `refactor/modular-dotfiles`).
 
