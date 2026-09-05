@@ -133,7 +133,7 @@ También puedes orquestar las capas mediante comandos directos:
 ## 🌐 Repositorios Relacionados
 
 - 🪟 **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm):** Sesión Wayland con mosaico dinámico (MangoWM + Waybar + Swaylock + Catppuccin Mocha).
-- 🪟 **[bspwm](https://github.com/anthonyportugal/bspwm):** Sesión X11 independiente (BSPWM + Polybar + Rofi + Picom + Dunst).
+- 🪟 **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm):** Sesión X11 independiente (BSPWM + Polybar + Rofi + Picom + Dunst).
 - 🔒 **Dotfiles Privados (`dotfiles-private`):** Capa opcional para configuraciones personales y laborales no secretas.
 
 ---

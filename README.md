@@ -133,7 +133,7 @@ You can also orchestrate components directly using explicit flags:
 ## 🌐 Connected Repositories
 
 - 🪟 **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm):** Dynamic tiling Wayland session (MangoWM + Waybar + Swaylock + Catppuccin Mocha).
-- 🪟 **[bspwm](https://github.com/anthonyportugal/bspwm):** Standalone X11 tiling session (BSPWM + Polybar + Rofi + Picom + Dunst).
+- 🪟 **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm):** Standalone X11 tiling session (BSPWM + Polybar + Rofi + Picom + Dunst).
 - 🔒 **Private Dotfiles (`dotfiles-private`):** Optional layer for non-secret personal and work configurations.
 
 ---
