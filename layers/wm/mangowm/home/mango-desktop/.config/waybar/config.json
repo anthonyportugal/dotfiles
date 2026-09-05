@@ -32,16 +32,26 @@
     "on-click": "$HOME/.local/lib/mangowm/launcher"
   },
   "mpris": {
-    "format": "{player_icon} {title} - {artist}",
-    "format-paused": "{status_icon} <i>{title} - {artist}</i>",
+    "format": "{player_icon} {dynamic}",
+    "format-paused": "{status_icon} <i>{dynamic}</i>",
+    "max-length": 28,
+    "dynamic-len": 24,
+    "title-len": 16,
+    "artist-len": 12,
     "dynamic-order": ["title", "artist"],
-    "dynamic-len": 32,
+    "dynamic-importance-order": ["title", "artist"],
+    "ellipsis": "…",
+    "tooltip-format": "{player} ({status})\n{title} - {artist}",
+    "tooltip-format-paused": "{player} ({status})\n<i>{title} - {artist}</i>",
     "interval": 1,
     "player-icons": {
       "default": "󰐊",
       "spotify": "󰓇",
       "firefox": "󰈹",
-      "chromium": "󰊴"
+      "chromium": "",
+      "brave": "",
+      "chrome": "",
+      "mpv": "🎵"
     },
     "status-icons": {
       "paused": "󰏤"
