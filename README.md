@@ -4,9 +4,8 @@
 
 Public, modular, and portable base configuration for **CachyOS** and **Arch Linux** environments. It establishes a consistent shell experience, essential CLI tools, common cross-session applications, and system preferences completely independent of the chosen Window Manager or compositor.
 
-> [!NOTE]
-> **Work in progress:** This repository is undergoing active refactoring on branch `refactor/modular-dotfiles` ([github.com/anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles)).
-> It provides the standalone foundation for user environments and seamlessly integrates with independent window managers, compositors, and an optional private configuration layer.
+> [!TIP]
+> This repository provides the standalone foundation for user environments and seamlessly integrates with independent window managers, compositors, and an optional private configuration layer.
 
 ---
 

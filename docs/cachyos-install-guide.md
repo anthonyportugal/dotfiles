@@ -216,7 +216,7 @@ sudo systemctl enable --now bluetooth
 sudo pacman -S --needed git bash
 
 # 2. Ejecutar el instalador guiado
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/refactor/modular-dotfiles/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
 *El asistente interactivo te guiará paso a paso para seleccionar el perfil Desktop, activar MangoWM (o BSPWM), habilitar la feature de laptop, integrar wallpapers y configurar la capa privada o identidad Git.*
 
@@ -227,7 +227,7 @@ sudo pacman -S --needed base-devel git
 
 # 2. Clonar repositorios
 mkdir -p ~/.dotfiles/{base,wm}
-git clone -b refactor/modular-dotfiles https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles/base
+git clone https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles/base
 git clone https://github.com/anthonyportugal/dotfiles-mangowm.git ~/.dotfiles/wm/mangowm
 
 # 3. Bootstrap completo para laptop

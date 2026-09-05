@@ -8,7 +8,7 @@ set -Eeuo pipefail
 
 main() {
   local dotfiles_repo="${DOTFILES_REPO:-https://github.com/anthonyportugal/dotfiles.git}"
-  local dotfiles_branch="${DOTFILES_BRANCH:-refactor/modular-dotfiles}"
+  local dotfiles_branch="${DOTFILES_BRANCH:-main}"
   local target_base="${DOTFILES_BASE_DIR:-$HOME/.dotfiles/base}"
 
   # Determine if we are already inside the base repository

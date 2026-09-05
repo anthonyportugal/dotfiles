@@ -4,9 +4,8 @@
 
 Configuración base pública, modular y portable para entornos **CachyOS** y **Arch Linux**. Establece una experiencia consistente de terminal, utilidades de línea de comandos esenciales, aplicaciones compartidas y preferencias del sistema, de manera totalmente independiente del gestor de ventanas o compositor seleccionado.
 
-> [!NOTE]
-> **Trabajo en progreso:** Este repositorio se encuentra bajo refactorización activa en la rama `refactor/modular-dotfiles` ([github.com/anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles)).
-> Proporciona la base autónoma para el entorno de usuario y se integra limpiamente con gestores de ventanas, compositores y una capa de configuración privada opcional.
+> [!TIP]
+> Este repositorio proporciona la base autónoma para el entorno de usuario y se integra limpiamente con gestores de ventanas, compositores y una capa de configuración privada opcional.
 
 ---
 
