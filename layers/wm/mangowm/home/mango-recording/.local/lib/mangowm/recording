@@ -26,6 +26,19 @@ recordings_dir() {
   printf '%s\n' "$videos_dir/Recordings"
 }
 
+cleanup_audio() {
+  local modules_file
+  modules_file="$(mangowm_runtime_dir)/recording.audio_modules"
+  if [[ -r "$modules_file" ]]; then
+    while read -r mod_id; do
+      if [[ "$mod_id" =~ ^[0-9]+$ ]] && command -v pactl >/dev/null 2>&1; then
+        pactl unload-module "$mod_id" 2>/dev/null || true
+      fi
+    done < "$modules_file"
+    rm -f -- "$modules_file"
+  fi
+}
+
 start_recording() {
   local mode=${1:-fullscreen}
   local audio=${2:-none}
@@ -46,6 +59,8 @@ start_recording() {
     recorder+=(-g "$geometry")
   fi
 
+  cleanup_audio
+
   case "$audio" in
     mic)
       recorder+=(-a)
@@ -57,6 +72,31 @@ start_recording() {
       fi
       if [[ -n "$default_sink" ]]; then
         recorder+=("-a${default_sink}.monitor")
+      else
+        recorder+=(-a)
+      fi
+      ;;
+    both)
+      if command -v pactl >/dev/null 2>&1; then
+        local null_id="" loop1_id="" loop2_id="" def_sink="" def_source="" modules_file
+        def_sink=$(pactl get-default-sink 2>/dev/null || true)
+        def_source=$(pactl get-default-source 2>/dev/null || true)
+        null_id=$(pactl load-module module-null-sink sink_name=mangowm_rec_mix sink_properties=device.description="MangoWM-Record-Mix" 2>/dev/null || true)
+        if [[ -n "$null_id" ]]; then
+          modules_file="$(mangowm_runtime_dir)/recording.audio_modules"
+          printf '%s\n' "$null_id" > "$modules_file"
+          if [[ -n "$def_sink" ]]; then
+            loop1_id=$(pactl load-module module-loopback source="${def_sink}.monitor" sink=mangowm_rec_mix latency_msec=20 2>/dev/null || true)
+            [[ -n "$loop1_id" ]] && printf '%s\n' "$loop1_id" >> "$modules_file"
+          fi
+          if [[ -n "$def_source" ]]; then
+            loop2_id=$(pactl load-module module-loopback source="$def_source" sink=mangowm_rec_mix latency_msec=20 2>/dev/null || true)
+            [[ -n "$loop2_id" ]] && printf '%s\n' "$loop2_id" >> "$modules_file"
+          fi
+          recorder+=("-amangowm_rec_mix.monitor")
+        else
+          recorder+=(-a)
+        fi
       else
         recorder+=(-a)
       fi
@@ -82,6 +122,7 @@ start_recording() {
   case "$audio" in
     mic) audio_note=" (con micrófono)" ;;
     desktop) audio_note=" (con audio del sistema)" ;;
+    both) audio_note=" (con micrófono y audio del sistema)" ;;
   esac
   mangowm_notify low 'Grabación iniciada' "$destination$audio_note"
 }
@@ -89,6 +130,8 @@ start_recording() {
 stop_recording() {
   local destination_file
   destination_file="$(mangowm_runtime_dir)/recording.destination"
+
+  cleanup_audio
 
   if ! is_active; then
     rm -f -- "$destination_file"
@@ -121,17 +164,25 @@ menu() {
     return 0
   fi
   mangowm_require fuzzel
+  local theme_dir
+  theme_dir="$(mangowm_theme_dir)"
   local choice
   choice=$(printf '%s\n' \
     "⏺️   Pantalla completa (Mudo)" \
     "🎙️   Pantalla completa + Micrófono" \
     "🔊   Pantalla completa + Audio PC" \
+    "🎙️🔊 Pantalla completa + Micrófono y Audio PC" \
     "✂️   Región de pantalla (Mudo)" \
     "🎙️   Región de pantalla + Micrófono" \
-    "🔊   Región de pantalla + Audio PC" | \
-    fuzzel --dmenu --prompt="Grabador de Pantalla ❯ " --lines=6 --width=38 || true)
+    "🔊   Región de pantalla + Audio PC" \
+    "🎙️🔊 Región de pantalla + Micrófono y Audio PC" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="Grabador de Pantalla ❯ " --lines=8 --width=46 || true)
 
   case "$choice" in
+    *"Pantalla completa + Micrófono y Audio PC"*)
+      start_recording fullscreen both
+      ;;
     *"Pantalla completa + Micrófono"*)
       start_recording fullscreen mic
       ;;
@@ -140,6 +191,9 @@ menu() {
       ;;
     *"Pantalla completa"*)
       start_recording fullscreen none
+      ;;
+    *"Región de pantalla + Micrófono y Audio PC"*)
+      start_recording region both
       ;;
     *"Región de pantalla + Micrófono"*)
       start_recording region mic
