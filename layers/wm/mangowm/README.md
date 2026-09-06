@@ -12,7 +12,7 @@
 
 *Read this in other languages:* [Español](README.es.md)
 
-Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** and **CachyOS** using [MangoWM**](https://github.com/mangowm/mango)** as the primary dynamic tiling compositor, styled with the Catppuccin Mocha palette with Pink accents. It functions completely standalone or composed with the primary modular dotfiles ecosystem.
+Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** and **CachyOS** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, styled with the Catppuccin Mocha palette with Pink accents. It functions completely standalone or composed with the primary modular dotfiles ecosystem.
 
 <p align="center">
   <img src="assets/screenshot.webp" alt="MangoWM Desktop Preview" width="100%">
