@@ -1,3 +1,8 @@
+typeset dotfiles_zsh_completions_dir="${XDG_CONFIG_HOME:-$HOME/.config}/zsh/completions"
+if [[ -d "$dotfiles_zsh_completions_dir" ]]; then
+  fpath=("$dotfiles_zsh_completions_dir" $fpath)
+fi
+
 # The Arch/CachyOS zsh-completions package installs definitions in
 # /usr/share/zsh/site-functions, already present in Zsh's default fpath.
 autoload -Uz compinit
@@ -10,4 +15,4 @@ else
   compinit -i -D
 fi
 
-unset dotfiles_zsh_cache_dir
+unset dotfiles_zsh_cache_dir dotfiles_zsh_completions_dir

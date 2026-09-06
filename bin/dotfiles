@@ -37,6 +37,7 @@ PRIVATE_PATH=""
 PRIVATE_PROFILE="core"
 PRIVATE_ENTRYPOINT=""
 declare -a PRIVATE_WORK=()
+COMPLETION_SHELL="zsh"
 
 PLATFORM=""
 BACKEND=""
@@ -89,15 +90,17 @@ Uso:
   $PROGRAM_NAME bootstrap [opciones]
   $PROGRAM_NAME doctor [opciones]
   $PROGRAM_NAME unlink [opciones]
+  $PROGRAM_NAME completion [bash|zsh]
   $PROGRAM_NAME help
 
 Comandos:
-  setup      Asistente interactivo guiado para configurar e instalar por capas.
-  sync       Re-sincroniza enlaces locales y paquetes sin tocar repositorios Git.
-  update     Descarga actualizaciones de GitHub (fast-forward) y re-sincroniza.
-  bootstrap  Resuelve dependencias y enlaces. Sólo modifica con --apply.
-  doctor     Comprueba dependencias, sintaxis y enlaces sin modificar nada.
-  unlink     Retira únicamente los enlaces Stow. Sólo modifica con --apply.
+  setup       Asistente interactivo guiado para configurar e instalar por capas.
+  sync        Re-sincroniza enlaces locales y paquetes sin tocar repositorios Git.
+  update      Descarga actualizaciones de GitHub (fast-forward) y re-sincroniza.
+  bootstrap   Resuelve dependencias y enlaces. Sólo modifica con --apply.
+  doctor      Comprueba dependencias, sintaxis y enlaces sin modificar nada.
+  unlink      Retira únicamente los enlaces Stow. Sólo modifica con --apply.
+  completion  Genera scripts de autocompletado para el shell (bash|zsh).
 
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
@@ -156,6 +159,10 @@ parse_args() {
 
   case "$COMMAND" in
     bootstrap|doctor|unlink|sync|update|setup|install)
+      ;;
+    completion)
+      COMPLETION_SHELL=${1:-zsh}
+      return 0
       ;;
     help|-h|--help)
       usage
@@ -2301,6 +2308,150 @@ EOF
   bootstrap_with_optional_components
 }
 
+cmd_completion() {
+  local shell_target=${COMPLETION_SHELL:-zsh}
+  case "$shell_target" in
+    zsh)
+      cat <<'EOF'
+#compdef dotfiles
+
+_dotfiles() {
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
+
+  local -a commands
+  commands=(
+    'setup:Asistente interactivo guiado para configurar e instalar por capas'
+    'sync:Re-sincroniza enlaces locales y paquetes sin tocar repositorios Git'
+    'update:Descarga actualizaciones de GitHub (fast-forward) y re-sincroniza'
+    'bootstrap:Resuelve dependencias y enlaces. Sólo modifica con --apply'
+    'doctor:Comprueba dependencias, sintaxis y enlaces sin modificar nada'
+    'unlink:Retira únicamente los enlaces Stow. Sólo modifica con --apply'
+    'completion:Genera scripts de autocompletado para el shell (bash|zsh)'
+    'help:Muestra la ayuda'
+  )
+
+  local -a common_options
+  common_options=(
+    '--profile[Perfil acumulativo]:perfil:(core cli desktop)'
+    '*--feature[Feature opt-in]:feature:(yazi-extras)'
+    '--backend[Backend de paquetes]:backend:(auto shelly paru yay pacman)'
+    '--platform[Plataforma detectada u override]:plataforma:(auto cachyos arch)'
+    '--target[Home objetivo]:directorio:_files -/'
+    '--packages-only[Opera o valida sólo paquetes del sistema]'
+    '--stow-only[Opera o valida sólo paquetes Stow]'
+    '*--wm[Integra opcionalmente un WM independiente]:wm:(bspwm mangowm)'
+    '--wm-path[Checkout externo del repositorio del WM]:directorio:_files -/'
+    '--wm-profile[Perfil propio del WM]:perfil:(core desktop)'
+    '*--wm-feature[Feature de MangoWM]:feature:(laptop recording)'
+    '--wallpapers[Integra la colección de wallpapers (anthonyportugal/walls)]'
+    '--wallpapers-path[Checkout externo del repositorio de wallpapers]:directorio:_files -/'
+    '--private[Integra la capa privada (anthonyportugal/dotfiles-private)]'
+    '--private-path[Checkout externo del repositorio privado]:directorio:_files -/'
+    '--private-profile[Perfil de la capa privada]:perfil:(core dev)'
+    '*--private-work[Añade un componente laboral a la capa privada]:nombre:'
+    '--apply[Aplica bootstrap/unlink; sin él hay dry-run]'
+    '(-h --help)'{-h,--help}'[Muestra la ayuda]'
+  )
+
+  _arguments -C \
+    '1: :->command' \
+    '*:: :->args' && return 0
+
+  case "$state" in
+    command)
+      _describe -t commands 'comando dotfiles' commands
+      ;;
+    args)
+      case "$line[1]" in
+        completion)
+          _arguments '1:shell:(bash zsh)'
+          ;;
+        setup|sync|update|bootstrap|doctor|unlink)
+          _arguments -s $common_options
+          ;;
+        help)
+          _describe -t commands 'comando' commands
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_dotfiles "$@"
+EOF
+      ;;
+    bash)
+      cat <<'EOF'
+_dotfiles_completion() {
+  local cur prev words cword
+  _init_completion || return
+
+  local commands="setup sync update bootstrap doctor unlink completion help"
+  local options="--profile --feature --backend --platform --target --packages-only --stow-only --wm --wm-path --wm-profile --wm-feature --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --apply -h --help"
+
+  if (( cword == 1 )); then
+    COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+    return 0
+  fi
+
+  case "$prev" in
+    --profile)
+      COMPREPLY=( $(compgen -W "core cli desktop" -- "$cur") )
+      return 0
+      ;;
+    --feature)
+      COMPREPLY=( $(compgen -W "yazi-extras" -- "$cur") )
+      return 0
+      ;;
+    --backend)
+      COMPREPLY=( $(compgen -W "auto shelly paru yay pacman" -- "$cur") )
+      return 0
+      ;;
+    --platform)
+      COMPREPLY=( $(compgen -W "auto cachyos arch" -- "$cur") )
+      return 0
+      ;;
+    --wm)
+      COMPREPLY=( $(compgen -W "bspwm mangowm" -- "$cur") )
+      return 0
+      ;;
+    --wm-profile)
+      COMPREPLY=( $(compgen -W "core desktop" -- "$cur") )
+      return 0
+      ;;
+    --wm-feature)
+      COMPREPLY=( $(compgen -W "laptop recording" -- "$cur") )
+      return 0
+      ;;
+    --private-profile)
+      COMPREPLY=( $(compgen -W "core dev" -- "$cur") )
+      return 0
+      ;;
+    --target|--wm-path|--wallpapers-path|--private-path)
+      COMPREPLY=( $(compgen -d -- "$cur") )
+      return 0
+      ;;
+    completion)
+      COMPREPLY=( $(compgen -W "bash zsh" -- "$cur") )
+      return 0
+      ;;
+  esac
+
+  if [[ "$cur" == -* ]]; then
+    COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+  fi
+}
+
+complete -F _dotfiles_completion dotfiles
+EOF
+      ;;
+    *)
+      usage_error "shell no soportado para completion: $shell_target (use: bash, zsh)"
+      ;;
+  esac
+}
+
 main() {
   parse_args "$@"
 
@@ -2331,6 +2482,9 @@ main() {
       validate_wallpapers_checkout
       validate_private_checkout
       unlink_with_optional_components
+      ;;
+    completion)
+      cmd_completion
       ;;
   esac
 }
