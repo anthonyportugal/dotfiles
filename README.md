@@ -129,7 +129,7 @@ You can also orchestrate components directly using explicit flags:
 - **Compose with WMs, Wallpapers, and Private Layer:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" --wm-feature recording \
+    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
     --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --private --private-path "$HOME/.dotfiles/private" \

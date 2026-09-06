@@ -129,7 +129,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
 - **Composición con WMs, Wallpapers y Capa Privada:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" --wm-feature recording \
+    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
     --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --private --private-path "$HOME/.dotfiles/private" \
