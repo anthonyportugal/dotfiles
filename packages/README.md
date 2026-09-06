@@ -97,7 +97,7 @@ manifiestos internos de otro repositorio.
 La base posee aplicaciones independientes de sesión como Alacritty, mpv,
 Playerctl, Brave, Zathura, Micro, Yazi y Thunar. Su perfil `desktop` instala
 Alacritty y JetBrains Mono y enlaza una única configuración Catppuccin para X11
-y Wayland. bspwm poseerá sus componentes X11; Mango poseerá MangoWC, Waybar,
-launcher y utilidades específicas de Wayland. La orquestación futura invocará
-el entrypoint público de cada repositorio y no leerá ni modificará sus
+y Wayland. bspwm posee sus componentes X11; Mango posee MangoWM, Waybar,
+launcher y utilidades específicas de Wayland. La orquestación de `dotfiles` invoca
+el entrypoint público de cada repositorio y no lee ni modifica sus
 manifiestos internos.
