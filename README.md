@@ -1,11 +1,31 @@
 # Dotfiles (Base Repository)
 
+<p align="center">
+  <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
+  <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
+  <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
+  <a href="https://www.gnu.org/software/stow/"><img src="https://img.shields.io/badge/Manager-GNU_Stow-informational?style=flat-square" alt="GNU Stow"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+</p>
+
 *Read this in other languages:* [Español](README.es.md)
 
-Public, modular, and portable base configuration for **CachyOS** and **Arch Linux** environments. It establishes a consistent shell experience, essential CLI tools, common cross-session applications, and system preferences completely independent of the chosen Window Manager or compositor.
+Public, modular, and portable base configuration optimized for **Arch Linux** and **CachyOS** environments. It establishes a consistent shell experience, essential CLI tools, common cross-session applications, and system preferences completely independent of the chosen Window Manager or compositor.
 
 > [!TIP]
 > This repository provides the standalone foundation for user environments and seamlessly integrates with independent window managers, compositors, and an optional private configuration layer.
+
+---
+
+## ✨ Key Highlights
+
+- ⚡ **Instant CLI & Shell:** High-performance Zsh environment with Starship prompt, syntax-highlighting, auto-suggestions, Fzf, and Zoxide.
+- 🛡️ **Fail-Closed Privacy:** Strict 3-tier precedence (`base` ──► `private` ──► `local`) ensuring work identities, signing keys, and secrets never leak to public repositories.
+- 🎛️ **Multi-WM Orchestration:** Seamlessly coordinates standalone window managers ([dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm) for Wayland and [dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm) for X11).
+- 🔄 **Safe Lifecycle CLI:** Built-in `sync`, `update` (with working-tree protection against overwriting dirty state), and system `doctor` diagnostics.
+- 🚀 **One-Command Bootstrap:** Interactive onboarding wizard deployable directly via `curl` on fresh machine installations.
+- 🎨 **Unified Aesthetic:** Seamless Catppuccin Mocha theming across Starship, Bat, Micro, Yazi, Foot, and Alacritty.
 
 ---
 
@@ -139,9 +159,12 @@ You can also orchestrate components directly using explicit flags:
 
 ## 🌐 Connected Repositories
 
-- 🪟 **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm):** Dynamic tiling Wayland session (MangoWM + Waybar + Swaylock + Catppuccin Mocha).
-- 🪟 **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm):** Standalone X11 tiling session (BSPWM + Polybar + Rofi + Picom + Dunst).
-- 🔒 **Private Dotfiles (`dotfiles-private`):** Optional layer for non-secret personal and work configurations.
+| Repository | Capability | Display Protocol |
+| :--- | :--- | :--- |
+| **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Dynamic tiling session (Waybar + Fuzzel + Swaylock + Satty) | Wayland |
+| **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Standalone tiling session (Polybar + Rofi + Picom + Dunst) | X11 |
+| **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection and management CLI | Multi-display |
+| **`dotfiles-private`** | Private layer for identities, signing keys, and work profiles | Local / Secure |
 
 ---
 
