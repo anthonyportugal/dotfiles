@@ -21,7 +21,6 @@ MODE_SELECTION="both"
 PLATFORM=""
 BACKEND=""
 
-declare -a FEATURES=()
 declare -a REPO_PACKAGES=()
 declare -a AUR_PACKAGES=()
 declare -a EXTERNAL_PACKAGES=()
@@ -75,7 +74,6 @@ Comandos:
 
 Opciones:
   --profile core|desktop           Perfil acumulativo (default: desktop).
-  --feature laptop|recording       Feature opt-in; se puede repetir.
   --backend auto|shelly|paru|yay|pacman
                                     Backend de paquetes (default: auto).
   --platform auto|cachyos|arch    Plataforma detectada u override explícito.
@@ -87,8 +85,8 @@ Opciones:
 
 Ejemplos:
   $PROGRAM_NAME bootstrap --profile desktop
-  $PROGRAM_NAME bootstrap --profile desktop --feature laptop --apply
-  $PROGRAM_NAME doctor --profile desktop --feature recording
+  $PROGRAM_NAME bootstrap --profile desktop --apply
+  $PROGRAM_NAME doctor --profile desktop
   $PROGRAM_NAME unlink --profile desktop
   $PROGRAM_NAME unlink --profile desktop --apply
 EOF
@@ -135,13 +133,13 @@ parse_args() {
         ;;
       --feature)
         require_option_value "$1" "${2-}"
-        FEATURES+=("$2")
+        warn "el flag --feature está deprecado; las capacidades están integradas en el perfil desktop"
         shift 2
         ;;
       --feature=*)
         local feature_value=${1#*=}
         require_option_value "--feature" "$feature_value"
-        FEATURES+=("$feature_value")
+        warn "el flag --feature está deprecado; las capacidades están integradas en el perfil desktop"
         shift
         ;;
       --backend)
@@ -313,22 +311,6 @@ append_manifest_unique() {
   done
 }
 
-validate_features() {
-  local feature
-  local -a unique_features=()
-
-  for feature in "${FEATURES[@]}"; do
-    case "$feature" in
-      laptop|recording)
-        append_unique unique_features "$feature"
-        ;;
-      *)
-        usage_error "feature no soportado: $feature"
-        ;;
-    esac
-  done
-  FEATURES=("${unique_features[@]}")
-}
 
 read_os_release_value() {
   local requested_key=$1
@@ -369,7 +351,7 @@ detect_platform() {
 
 resolve_system_packages() {
   local -a tiers=()
-  local tier feature
+  local tier
 
   REPO_PACKAGES=()
   AUR_PACKAGES=()
@@ -389,17 +371,11 @@ resolve_system_packages() {
     append_manifest_unique AUR_PACKAGES "$PACKAGES_DIR/aur/$tier.txt"
     append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/$tier.txt"
   done
-
-  for feature in "${FEATURES[@]}"; do
-    append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/repo/$feature.txt"
-    append_manifest_unique AUR_PACKAGES "$PACKAGES_DIR/aur/$feature.txt"
-    append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/$feature.txt"
-  done
 }
 
 resolve_stow_packages() {
   local -a tiers=()
-  local tier feature package_name
+  local tier package_name
 
   STOW_PACKAGES=()
   case "$PROFILE" in
@@ -415,16 +391,6 @@ resolve_stow_packages() {
     local -a tier_packages=()
     read_manifest "$PACKAGES_DIR/stow/$tier.txt" tier_packages
     for package_name in "${tier_packages[@]}"; do
-      [[ -d "$STOW_DIR/$package_name" ]] || \
-        die "el paquete Stow '$package_name' no existe bajo $STOW_DIR"
-      append_unique STOW_PACKAGES "$package_name"
-    done
-  done
-
-  for feature in "${FEATURES[@]}"; do
-    local -a feature_packages=()
-    read_manifest "$PACKAGES_DIR/stow/$feature.txt" feature_packages
-    for package_name in "${feature_packages[@]}"; do
       [[ -d "$STOW_DIR/$package_name" ]] || \
         die "el paquete Stow '$package_name' no existe bajo $STOW_DIR"
       append_unique STOW_PACKAGES "$package_name"
@@ -992,7 +958,6 @@ preflight() {
 }
 
 prepare() {
-  validate_features
   preflight
 
   if (( SYSTEM_ENABLED == 1 )); then
@@ -1021,7 +986,6 @@ print_plan() {
   printf '  %-24s %s\n' 'Comando:' "$COMMAND"
   printf '  %-24s %s\n' 'Modo:' "$execution_mode"
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
-  print_array "Features" FEATURES
   if (( SYSTEM_ENABLED == 1 )); then
     printf '  %-24s %s\n' 'Plataforma:' "$PLATFORM"
     printf '  %-24s %s\n' 'Backend:' "$BACKEND"

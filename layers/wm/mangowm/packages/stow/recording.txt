@@ -1,1 +1,0 @@
-# Integrated into the mango package

@@ -128,17 +128,15 @@ for backend in shelly paru yay; do
 done
 
 PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
-  --profile desktop --feature laptop --feature recording --feature laptop \
+  --profile desktop \
   --packages-only --platform arch --backend shelly \
   > "$TEST_ROOT/shelly.out"
 grep -q 'shelly install standard' "$TEST_ROOT/shelly.out" || \
   fail "falta el comando de repositorio para Shelly"
 grep -Eq 'shelly install aur .*mangowm.*wlogout' "$TEST_ROOT/shelly.out" || \
   fail "Shelly no conserva el lote AUR declarado"
-grep -Eq 'Features:[[:space:]]+laptop recording$' "$TEST_ROOT/shelly.out" || \
-  fail "las features repetidas no se deduplicaron"
 grep -Eq 'Paquetes repo:[[:space:]].*brightnessctl.*wf-recorder' \
-  "$TEST_ROOT/shelly.out" || fail "las features no añadieron sus paquetes"
+  "$TEST_ROOT/shelly.out" || fail "el perfil desktop no añadió brightnessctl y wf-recorder"
 
 PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
   --profile core --packages-only --platform cachyos \
@@ -167,11 +165,9 @@ fi
 grep -q 'pacman sólo gestiona repositorios' "$TEST_ROOT/pacman.out" || \
   fail "pacman no explicó su límite de capacidad"
 
-if "$MANGO" bootstrap --profile core --feature unknown --stow-only \
-    --target "$TARGET_DIR" > "$TEST_ROOT/feature.out" 2>&1; then
-  fail "se aceptó una feature desconocida"
-fi
-grep -q 'feature no soportado: unknown' "$TEST_ROOT/feature.out" || \
-  fail "la feature inválida no produjo un error accionable"
+"$MANGO" bootstrap --profile core --feature laptop --stow-only \
+  --target "$TARGET_DIR" > "$TEST_ROOT/feature.out" 2>&1 || true
+grep -q 'deprecado' "$TEST_ROOT/feature.out" || \
+  fail "el flag --feature no emitió advertencia de deprecación"
 
-printf 'OK: bootstrap, doctor, unlink, features y adaptadores validados\n'
+printf 'OK: bootstrap, doctor, unlink y adaptadores validados\n'

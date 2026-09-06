@@ -62,7 +62,7 @@ check_backend_order() {
 }
 
 for manifest in \
-  "$REPO_ROOT"/packages/{repo,aur,external,stow}/{core,desktop,laptop,recording}.txt; do
+  "$REPO_ROOT"/packages/{repo,aur,external,stow}/{core,desktop}.txt; do
   check_manifest "$manifest"
 done
 check_backend_order "$REPO_ROOT/packages/package-backends.txt"

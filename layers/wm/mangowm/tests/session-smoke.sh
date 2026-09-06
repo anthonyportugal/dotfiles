@@ -39,7 +39,7 @@ mkdir -p "$TARGET" "$STATE" "$RUNTIME" "$FAKE_BIN" "$MEDIA_ROOT"
 : > "$LOG"
 : > "$SERVICE_STATE"
 
-"$MANGO" bootstrap --profile desktop --feature laptop --feature recording \
+"$MANGO" bootstrap --profile desktop \
   --stow-only --target "$TARGET" --apply >/dev/null 2>&1
 
 for managed_path in \
@@ -210,10 +210,10 @@ grep -Fqx "bind=SUPER,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo Super+W para seleccionar wallpaper'
 
-"$MANGO" doctor --profile desktop --feature laptop --feature recording \
+"$MANGO" doctor --profile desktop \
   --stow-only --target "$TARGET" >/dev/null 2>&1
-"$MANGO" unlink --profile desktop --feature laptop --feature recording \
+"$MANGO" unlink --profile desktop \
   --stow-only --target "$TARGET" --apply >/dev/null 2>&1
 [[ ! -e "$TARGET/.config/mango/config.conf" ]] || fail 'unlink dejó enlaces de sesión'
 
-printf 'OK: sesión, tema, wrappers y features MangoWM validados\n'
+printf 'OK: sesión, tema y wrappers MangoWM validados\n'

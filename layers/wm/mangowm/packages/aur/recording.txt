@@ -1,1 +1,0 @@
-# The recording feature currently needs no AUR packages.
