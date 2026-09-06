@@ -1,8 +1,7 @@
 # Arquitectura de MangoWM
 
-Este documento describe el alcance aprobado de P11 y el contrato que deberá
-preservar la implementación. El plan histórico global permanece en el
-repositorio base; este archivo sólo contiene decisiones duraderas de MangoWM.
+Este documento describe la arquitectura técnica y las decisiones duraderas
+que preserva la implementación modular de MangoWM.
 
 ## Principios
 
@@ -103,7 +102,7 @@ un daemon de grabación en background.
 ## Contrato de temas
 
 La fuente es una paleta de texto plano con `schema=1`, identificador, metadatos,
-colores Catppuccin y roles semánticos resueltos. El parser futuro deberá:
+colores Catppuccin y roles semánticos resueltos. El parser `mango-theme` cumple las siguientes reglas:
 
 1. rechazar claves desconocidas, faltantes o duplicadas;
 2. aceptar sólo IDs seguros y colores hex RGB en minúsculas;
@@ -169,6 +168,6 @@ un cambio atómico de symlink. El bootstrap aplicado materializa la revisión
 inicial en el XDG state del target; `unlink` no elimina estado runtime del
 usuario.
 
-La prueba real del compositor, del package manager y del display manager queda
-deliberadamente en P10. Las pruebas de P11 sólo usan homes y procesos falsos
-aislados.
+Las pruebas automatizadas de smoke usan homes y procesos falsos aislados,
+mientras que la validación del compositor, package manager y display manager
+se realiza en entornos de sistema completos.

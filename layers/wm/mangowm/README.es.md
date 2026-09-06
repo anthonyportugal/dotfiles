@@ -8,8 +8,8 @@ Sesión Wayland autónoma, modular y minimalista configurada para **CachyOS** y 
   <img src="assets/screenshot.webp" alt="Vista previa de MangoWM Desktop" width="100%">
 </p>
 
-> [!NOTE]
-> **Trabajo en progreso:** Este repositorio se encuentra activamente mantenido y actualmente en etapa de finalización (P12). Ha sido exhaustivamente validado tanto en máquinas virtuales como en hardware físico real (Laptop HP ProBook 440 G10 en CachyOS con LUKS + Limine + Ly). Está diseñado para funcionar de manera 100% independiente o integrado con el ecosistema de dotfiles principal en [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) (rama `refactor/modular-dotfiles`).
+> [!TIP]
+> Este repositorio proporciona un entorno de escritorio Wayland autónomo y listo para producción, integrándose limpiamente con el ecosistema de dotfiles base.
 
 ---
 
@@ -105,7 +105,7 @@ Instala únicamente el compositor, terminal y lanzador sin barra de estado ni de
 ## 🔗 Integración con Dotfiles Base
 
 Aunque este repositorio funciona de forma **100% independiente**, se integra limpiamente con el ecosistema principal de dotfiles modulares:
-- 🌐 **Repositorio Principal:** [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles) *(Rama activa: `refactor/modular-dotfiles`)*
+- 🌐 **Repositorio Principal:** [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles)
 - **Ecosistema Compartido:** Cuando se instala junto al repositorio base, MangoWM sincroniza automáticamente preferencias globales de modo oscuro, alias de shell compartidos, configuraciones de Neovim y tokens de tema GTK mediante `$HOME/.local/lib/dotfiles/session-preferences`.
 
 ---
