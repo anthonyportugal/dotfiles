@@ -12,9 +12,7 @@
     "idle_inhibitor",
     "tray"
   ],
-  "modules-center": [
-    "ext/workspaces"
-  ],
+  "modules-center": ["ext/workspaces"],
   "modules-right": [
     "wireplumber",
     "backlight",
@@ -43,7 +41,6 @@
     "ellipsis": "…",
     "tooltip-format": "{player} ({status})\n{title} - {artist}",
     "tooltip-format-paused": "{player} ({status})\n<i>{title} - {artist}</i>",
-    "interval": 1,
     "player-icons": {
       "default": "󰐊",
       "spotify": "󰓇",
@@ -126,7 +123,7 @@
     "format": "{}",
     "return-type": "json",
     "exec": "$HOME/.local/lib/mangowm/power-profile waybar",
-    "interval": 3,
+    "interval": "once",
     "signal": 8,
     "on-click": "$HOME/.local/lib/mangowm/power-profile select",
     "tooltip": true
