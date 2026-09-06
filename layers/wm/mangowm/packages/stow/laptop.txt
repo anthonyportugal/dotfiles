@@ -1,1 +1,1 @@
-mango-laptop
+# Integrated into the mango package

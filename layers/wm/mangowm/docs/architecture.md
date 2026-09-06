@@ -33,20 +33,16 @@ No será dueño de:
 - wallpapers obligatorios, secrets, private keys o clipboard history;
 - configuración privada o local de una organización/máquina.
 
-## Perfiles y features
+## Perfiles y alcances
 
-Los perfiles serán acumulativos:
+Los perfiles del sistema son acumulativos:
 
 ```text
 core
 └── desktop
-    ├── feature laptop
-    └── feature recording
 ```
 
-`core` será una sesión mínima segura; `desktop` será el default usable. Las
-features no se activarán implícitamente por detectar hardware: la detección
-sirve para degradar con claridad, no para cambiar la selección declarada.
+`core` instala los paquetes mínimos para una sesión segura; `desktop` añade la barra de estado, menús de energía, utilidades de captura, grabación de pantalla, noche y brillo. Ambos perfiles enlazan el único paquete Stow `mango`. Los scripts y atajos de teclado degradan limpiamente en ausencia de los binarios correspondientes.
 
 ## Seguridad de sesión
 
@@ -130,8 +126,7 @@ instala silenciosamente temas GTK externos.
 - Clipboard history y persistence serán opt-in por su impacto de privacidad.
 - XWayland y Satellite estarán disponibles para compatibilidad, sin forzar
   escalado fraccional a todos los equipos.
-- Brightnessctl sólo pertenecerá a la feature `laptop`; Gammastep no se tratará
-  como control de backlight.
+- Brightnessctl y Gammastep están integrados en el perfil desktop, degradándose limpiamente en entornos sin backlight o hardware no soportado.
 
 ## Contrato público
 
@@ -143,16 +138,15 @@ doctor     validación read-only
 unlink     dry-run por defecto; sólo retira symlinks propios
 ```
 
-Usa perfiles `core|desktop`, features `laptop|recording`, backends
-`auto|shelly|paru|yay|pacman`, plataforma `auto|cachyos|arch`, target explícito
-y modos `--packages-only`/`--stow-only`. La base podrá delegar en este contrato
-sin leer manifests ni metadata Git de MangoWM.
+Usa perfiles `core|desktop`, backends `auto|shelly|paru|yay|pacman`, plataforma
+`auto|cachyos|arch`, target explícito y modos `--packages-only`/`--stow-only`. La base
+podrá delegar en este contrato sin leer manifests ni metadata Git de MangoWM.
 
-La implementación usa cuatro paquetes Stow: `mango`, `mango-desktop`,
-`mango-laptop` y `mango-recording`. El primero posee la sesión core; los demás
-sólo materializan archivos de su perfil/feature. `config.local.conf` conserva
-la última precedencia y las políticas del bootstrap rechazan cualquier ruta
-fuera del ownership declarado.
+La implementación usa un único paquete Stow: `mango`, compartido entre los perfiles
+`core` y `desktop`. Los scripts y atajos de escritorio (Waybar, wlogout, Satty, night light,
+grabación de pantalla y control de brillo) se degradan limpiamente si los binarios
+opcionales no están presentes en el sistema. `config.local.conf` conserva la última
+precedencia y las políticas del bootstrap rechazan cualquier ruta fuera del ownership declarado.
 
 ## Ciclo de sesión
 

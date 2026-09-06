@@ -1,4 +1,5 @@
 blueman
+brightnessctl
 gammastep
 grim
 libnotify
@@ -8,5 +9,6 @@ slurp
 ttf-jetbrains-mono
 ttf-nerd-fonts-symbols-mono
 waybar
+wf-recorder
 xdg-user-dirs
 xwayland-satellite

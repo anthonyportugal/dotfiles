@@ -28,54 +28,44 @@ Sesión Wayland autónoma, modular y minimalista optimizada para **Arch Linux** 
 - 🚀 **Mosaico Wayland Dinámico:** Compositor moderno de última generación con cambio de disposiciones en caliente (*Dwindle, Tile, Grid, Monocle, Scroller*).
 - 🎨 **Tematización Dinámica Atómica:** Motor integrado `mango-theme` que compila la paleta de colores para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout.
 - 📊 **Waybar y Notificaciones a Medida:** Barra de estado con controles interactivos, reproducción multimedia en vivo, estado de red, batería y notificaciones con Mako.
-- 💻 **Perfiles para Portátiles y Creadores:** Módulos opcionales bajo demanda para brillo por hardware (`brightnessctl`) y grabación de pantalla (`wf-recorder`).
+- 💻 **Laptop y Grabación Integradas:** Control de brillo por hardware (`brightnessctl`) y grabación fluida de pantalla (`wf-recorder`) listos para usar sin configuración adicional.
 - 🌙 **Confort Visual y Luz Nocturna:** Integración con Gammastep para ajuste de temperatura de color con estado en vivo y conmutable desde Waybar.
-- 🔒 **GNU Stow y Cero Basura:** Arquitectura por capas (`core`, `desktop`, `features`) con simulación segura (dry-run) y diagnósticos de salud del sistema (`doctor`).
+- 🔒 **GNU Stow y Cero Basura:** Arquitectura limpia de 2 niveles (`core`, `desktop`) con simulación segura (dry-run) y diagnósticos de salud del sistema (`doctor`).
 
 ---
 
 ## 🧱 Arquitectura Modular
 
-Este repositorio utiliza una **arquitectura modular por capas** administrada mediante [GNU Stow](https://www.gnu.org/software/stow/). Cada componente está aislado en paquetes, permitiendo instalaciones personalizadas para PCs de escritorio, portátiles o sistemas mínimos sin bloatware.
+La configuración de MangoWM está organizada en perfiles acumulativos administrados mediante [GNU Stow](https://www.gnu.org/software/stow/):
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│                     CAPA 3: FEATURES (Bajo Demanda)                    │
-│  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
-│  │         mango-laptop         │    │       mango-recording        │  │
-│  │  • Control de brillo por     │    │  • Grabación ligera de       │  │
-│  │    hardware (brightnessctl)  │    │    pantalla (wf-recorder)    │  │
-│  │  • Atajos de brillo Fn       │    │  • Atajo Super+Ctrl+R        │  │
-│  │  • Hooks de batería          │    │  • Indicador de grabación    │  │
-│  └──────────────────────────────┘    └──────────────────────────────┘  │
-├────────────────────────────────────────────────────────────────────────┤
-│                   CAPA 2: PERFIL DESKTOP (UX y Shell)                  │
+│                      MANGO DESKTOP ECOSYSTEM (WAYLAND)                 │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                          mango-desktop                           │  │
-│  │  • Barra de estado (Waybar)        • Menú de energía (wlogout)   │  │
-│  │  • Fondos de pantalla (Swaybg)     • Luz nocturna (Gammastep)    │  │
-│  │  • Editor de capturas (Satty)      • Control de audio multimedia │  │
+│  │                   PERFIL DESKTOP (UX y Shell)                    │  │
+│  │  • Barra de Estado: Waybar (Catppuccin Pink, Detección Dinámica) │  │
+│  │  • Menú de Apps y Apagado: Fuzzel, Wlogout                       │  │
+│  │  • Notificaciones y Bloqueo: Mako, Swaylock-effects, Swayidle    │  │
+│  │  • Fondos y Multimedia: Swaybg, Playerctl, MPV-MPRIS             │  │
+│  │  • Luz Nocturna y Grabación: Gammastep, WF-Recorder              │  │
+│  │  • Brillo por Hardware y Audio: Brightnessctl, WirePlumber       │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
-├────────────────────────────────────────────────────────────────────────┤
-│                     CAPA 1: CORE (Base Minimalista)                    │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                              mango                               │  │
-│  │  • Compositor MangoWM              • Terminal (Foot)             │  │
-│  │  • Lanzador de apps (Fuzzel)       • Bloqueador (Swaylock)       │  │
-│  │  • Notificaciones (Mako)           • Renderizador de tema        │  │
-│  │  • Portales de escritorio Wayland  • Gestión central de ventanas │  │
+│  │                     PERFIL CORE (Wayland Mínimo)                 │  │
+│  │  • Gestor de Ventanas: MangoWM (Compositor de Mosaico Dinámico)  │  │
+│  │  • Terminal: Foot (Nativo de Wayland, Tema Catppuccin)           │  │
+│  │  • Lanzador y Portales: Fuzzel, Portales XDG Desktop             │  │
+│  │  • Motor de Tema: mango-theme (Compilación Atómica Dinámica)     │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Desglose de Capas
+### Desglose de Perfiles
 
-| Paquete | Propósito | Cuándo Instalar |
-| :--- | :--- | :--- |
-| **`mango`** *(Core)* | Base indispensable: configuración del compositor, terminal, lanzador, bloqueador, notificaciones y tema. | **Siempre requerido.** |
-| **`mango-desktop`** | Experiencia completa: barra de estado (`Waybar`), menú de energía (`wlogout`), fondos (`Swaybg`), luz nocturna y editor de capturas (`Satty`). | **Escritorios estándar y VMs.** |
-| **`mango-laptop`** | Control de brillo por hardware (`brightnessctl`), teclas Fn y hooks de batería. | **Solo en portátiles.** |
-| **`mango-recording`** | Script y atajos dedicados para grabación fluida de pantalla mediante `wf-recorder`. | **Creadores de contenido / Bajo demanda.** |
+| Perfil | Paquete Stow | Contenido | Destino recomendado |
+| :--- | :--- | :--- | :--- |
+| **`core`** | `mango` | Compositor MangoWM, terminal Foot, lanzador Fuzzel, Swaylock, Swayidle, Mako, portales y motor `mango-theme`. | Sistemas mínimos, servidores con Wayland o entornos headless. |
+| **`desktop`** | Reutiliza `mango` | `core` más barra Waybar, menú de energía Wlogout, fondos Swaybg, Gammastep, capturas Satty, grabación WF-Recorder y controles de brillo. | Estaciones de trabajo completas, portátiles y VMs. |
 
 ---
 
@@ -102,31 +92,17 @@ Este repositorio utiliza una **arquitectura modular por capas** administrada med
 
 La CLI incluida `./bin/mango` gestiona la instalación de paquetes y los enlaces simbólicos de GNU Stow con seguridad dry-run integrada.
 
-### 1. Escritorio Estándar / Máquina Virtual (Recomendado)
+### 1. Experiencia de Escritorio Completa (Recomendado)
 
-Instala la base `mango` y el perfil `mango-desktop`:
+Instala todos los paquetes de escritorio y enlaza la configuración unificada de `mango`:
 
 ```bash
 ./bin/mango bootstrap --profile desktop --apply
 ```
 
-### 2. Configuración para Portátiles
+### 2. Sesión Core Minimalista (Solo Gestor de Ventanas)
 
-Instala `mango` + `mango-desktop` + `mango-laptop` (agrega teclas de brillo e integración de batería):
-
-```bash
-./bin/mango bootstrap --profile desktop --feature laptop --apply
-```
-
-### 3. Estación de Trabajo Completa (con Grabación de Pantalla)
-
-```bash
-./bin/mango bootstrap --profile desktop --feature laptop --feature recording --apply
-```
-
-### 4. Sesión Core Minimalista (Solo Gestor de Ventanas)
-
-Instala solo el compositor, la terminal y el lanzador sin barras de estado ni daemons de escritorio:
+Instala solo el compositor, la terminal, el lanzador y el bloqueador sin barras de estado ni daemons de escritorio:
 
 ```bash
 ./bin/mango bootstrap --profile core --apply

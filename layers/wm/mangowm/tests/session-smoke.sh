@@ -45,8 +45,6 @@ mkdir -p "$TARGET" "$STATE" "$RUNTIME" "$FAKE_BIN" "$MEDIA_ROOT"
 for managed_path in \
   .config/mango/config.conf \
   .config/mango/conf.d/50-desktop.conf \
-  .config/mango/conf.d/60-laptop.conf \
-  .config/mango/conf.d/60-recording.conf \
   .config/waybar/config.json \
   .config/wlogout/layout \
   .config/swayidle/config \
@@ -166,6 +164,13 @@ grep -q '^wl-copy .*--type.*image/png' "$LOG" || fail 'la captura no llegó al c
 grep -Fqx "bind=SUPER+SHIFT,S,spawn,\$HOME/.local/lib/mangowm/screenshot annotate" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo explícito Super+Shift+S para anotar'
+grep -Fqx "bind=SUPER,R,spawn,\$HOME/.local/lib/mangowm/recording toggle" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo Super+R para grabar en 50-desktop.conf'
+grep -Fqx "bind=NONE,XF86MonBrightnessUp,spawn,\$HOME/.local/lib/mangowm/brightness up" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo XF86MonBrightnessUp en 50-desktop.conf'
+
 
 "$TARGET/.local/lib/mangowm/night-light" on
 "$TARGET/.local/lib/mangowm/night-light" off

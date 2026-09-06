@@ -1,1 +1,1 @@
-wf-recorder
+# Integrated into desktop.txt

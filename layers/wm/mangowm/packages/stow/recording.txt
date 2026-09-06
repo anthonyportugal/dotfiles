@@ -1,1 +1,1 @@
-mango-recording
+# Integrated into the mango package

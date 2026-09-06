@@ -34,6 +34,7 @@ declare -a MISSING_AUR_PACKAGES=()
 declare -a LINK_MISSING=()
 declare -a LINK_CONFLICTS=()
 declare -a LINK_DUPLICATES=()
+declare -a LINK_REPLACE=()
 LINK_OK=0
 
 info() {
@@ -628,6 +629,60 @@ execute_package_install() {
   return 0
 }
 
+is_repo_symlink() {
+  local target_link=$1
+  [[ -L "$target_link" ]] || return 1
+
+  local dest
+  dest=$(realpath -m -- "$target_link" 2>/dev/null || true)
+  local repo_canon stow_canon dots_canon
+  repo_canon=$(realpath -m -- "$REPO_ROOT" 2>/dev/null || true)
+  stow_canon=$(realpath -m -- "$STOW_DIR" 2>/dev/null || true)
+  dots_canon=$(realpath -m -- "$TARGET_DIR/.dotfiles" 2>/dev/null || true)
+
+  if [[ -n "$repo_canon" && ( "$dest" == "$repo_canon/"* || "$dest" == "$repo_canon" ) ]]; then
+    return 0
+  fi
+  if [[ -n "$stow_canon" && ( "$dest" == "$stow_canon/"* || "$dest" == "$stow_canon" ) ]]; then
+    return 0
+  fi
+  if [[ -n "$dots_canon" && "$dest" == "$dots_canon/"* ]]; then
+    return 0
+  fi
+  return 1
+}
+
+prune_dangling_dotfiles_links() {
+  local apply=${1:-0}
+  local repo_canon stow_canon dots_canon
+  repo_canon=$(realpath -m -- "$REPO_ROOT" 2>/dev/null || true)
+  stow_canon=$(realpath -m -- "$STOW_DIR" 2>/dev/null || true)
+  dots_canon=$(realpath -m -- "$TARGET_DIR/.dotfiles" 2>/dev/null || true)
+
+  local -a search_dirs=()
+  for dir in "$TARGET_DIR/.config/mango" "$TARGET_DIR/.config/waybar" "$TARGET_DIR/.config/wlogout" \
+             "$TARGET_DIR/.config/swayidle" "$TARGET_DIR/.config/xdg-desktop-portal" \
+             "$TARGET_DIR/.local/bin" "$TARGET_DIR/.local/lib/mangowm"; do
+    [[ -d "$dir" ]] && search_dirs+=("$dir")
+  done
+  (( ${#search_dirs[@]} > 0 )) || return 0
+
+  while IFS= read -r -d '' dead_link; do
+    local dest
+    dest=$(realpath -m -- "$dead_link" 2>/dev/null || true)
+    if [[ -n "$dest" && ( "$dest" == "$repo_canon/"* || "$dest" == "$repo_canon" || \
+          "$dest" == "$stow_canon/"* || "$dest" == "$stow_canon" || \
+          "$dest" == "$dots_canon/"* ) ]]; then
+      if (( apply == 1 )); then
+        info "Eliminando enlace huérfano: $dead_link"
+        rm -f -- "$dead_link"
+      else
+        warn "Enlace huérfano detectado: $dead_link"
+      fi
+    fi
+  done < <(find "${search_dirs[@]}" -xtype l -print0 2>/dev/null || true)
+}
+
 inspect_links() {
   local package_name package_dir source_path relative_path target_path
   local canonical_source canonical_target existing_source link_value
@@ -640,6 +695,7 @@ inspect_links() {
   LINK_MISSING=()
   LINK_CONFLICTS=()
   LINK_DUPLICATES=()
+  LINK_REPLACE=()
 
   for package_name in "${STOW_PACKAGES[@]}"; do
     package_dir="$STOW_DIR/$package_name"
@@ -692,6 +748,8 @@ inspect_links() {
         canonical_target=$(realpath -m -- "$target_path")
         if [[ "$canonical_source" == "$canonical_target" ]]; then
           ((LINK_OK += 1))
+        elif is_repo_symlink "$target_path"; then
+          LINK_REPLACE+=("$target_path")
         else
           link_value=$(readlink -- "$target_path" || true)
           LINK_CONFLICTS+=("$target_path (symlink a $link_value)")
@@ -725,7 +783,9 @@ ensure_no_link_collisions() {
   if (( ${#LINK_DUPLICATES[@]} > 0 || ${#LINK_CONFLICTS[@]} > 0 )); then
     return 1
   fi
-  info "Preflight Stow: $LINK_OK enlaces correctos, ${#LINK_MISSING[@]} por crear, 0 colisiones"
+  local replace_msg=""
+  (( ${#LINK_REPLACE[@]} > 0 )) && replace_msg=", ${#LINK_REPLACE[@]} por actualizar"
+  info "Preflight Stow: $LINK_OK enlaces correctos, ${#LINK_MISSING[@]} por crear$replace_msg, 0 colisiones"
   return 0
 }
 
@@ -790,26 +850,11 @@ validate_stow_scope() {
         mango:.config/swayidle|mango:.config/swayidle/*|\
         mango:.config/xdg-desktop-portal|\
         mango:.config/xdg-desktop-portal/mango-portals.conf|\
+        mango:.config/waybar|mango:.config/waybar/*|\
+        mango:.config/wlogout|mango:.config/wlogout/*|\
         mango:.local|mango:.local/bin|mango:.local/bin/mango-theme|\
         mango:.local/bin/mangowm-session|mango:.local/lib|\
-        mango:.local/lib/mangowm|mango:.local/lib/mangowm/*|\
-        mango-desktop:.config|mango-desktop:.config/mango|\
-        mango-desktop:.config/mango/conf.d|\
-        mango-desktop:.config/mango/conf.d/50-desktop.conf|\
-        mango-desktop:.config/waybar|mango-desktop:.config/waybar/*|\
-        mango-desktop:.config/wlogout|mango-desktop:.config/wlogout/*|\
-        mango-desktop:.local|mango-desktop:.local/lib|\
-        mango-desktop:.local/lib/mangowm|mango-desktop:.local/lib/mangowm/*|\
-        mango-laptop:.config|mango-laptop:.config/mango|\
-        mango-laptop:.config/mango/conf.d|\
-        mango-laptop:.config/mango/conf.d/60-laptop.conf|\
-        mango-laptop:.local|mango-laptop:.local/lib|\
-        mango-laptop:.local/lib/mangowm|mango-laptop:.local/lib/mangowm/brightness|\
-        mango-recording:.config|mango-recording:.config/mango|\
-        mango-recording:.config/mango/conf.d|\
-        mango-recording:.config/mango/conf.d/60-recording.conf|\
-        mango-recording:.local|mango-recording:.local/lib|\
-        mango-recording:.local/lib/mangowm|mango-recording:.local/lib/mangowm/recording)
+        mango:.local/lib/mangowm|mango:.local/lib/mangowm/*)
           ;;
         *)
           unexpected_path=$source_path
@@ -1040,11 +1085,18 @@ bootstrap() {
     validate_mango_config || die "la configuración de MangoWM dejó de ser válida"
     validate_theme_source || die "la fuente del tema dejó de ser válida"
     ensure_no_link_collisions || die "apareció una colisión antes de enlazar"
+    if (( ${#LINK_REPLACE[@]} > 0 )); then
+      info "Reemplazando ${#LINK_REPLACE[@]} enlaces obsoletos previos del repositorio"
+      for replace_target in "${LINK_REPLACE[@]}"; do
+        rm -f -- "$replace_target"
+      done
+    fi
     info "Última simulación de GNU Stow antes de aplicar"
     run_stow install 1 || die "la simulación de GNU Stow falló"
     info "Aplicando enlaces GNU Stow"
     run_stow install 0 || die "GNU Stow no pudo crear los enlaces"
     validate_links_installed || die "falló la validación posterior de enlaces"
+    prune_dangling_dotfiles_links 1
     render_theme_for_target
   fi
 
@@ -1077,6 +1129,7 @@ doctor() {
       result=1
     fi
     validate_links_installed || result=1
+    prune_dangling_dotfiles_links 0
   fi
 
   if (( result == 0 )); then
@@ -1105,6 +1158,7 @@ unlink_dotfiles() {
 
   info "Retirando enlaces GNU Stow; no se eliminarán paquetes ni archivos ajenos"
   run_stow delete 0 || die "GNU Stow no pudo retirar los enlaces"
+  prune_dangling_dotfiles_links 1
   validate_links_unlinked || die "falló la validación posterior de unlink"
   info "Unlink completado"
 }

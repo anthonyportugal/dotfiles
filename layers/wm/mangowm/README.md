@@ -28,54 +28,44 @@ Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** an
 - 🚀 **Dynamic Wayland Tiling:** Next-generation dynamic tiling compositor with runtime layout switching (*Dwindle, Tile, Grid, Monocle, Scroller*).
 - 🎨 **Atomic Dynamic Theming:** Built-in `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout.
 - 📊 **Tailored Waybar & Notifications:** Sleek status bar with interactive popups, live media controls, network status, battery monitors, and Mako notifications.
-- 💻 **Laptop & Creator Features:** Optional, on-demand modules for hardware brightness (`brightnessctl`) and screen recording (`wf-recorder`).
+- 💻 **Integrated Laptop & Recording:** Out-of-the-box hardware brightness control (`brightnessctl`) and Wayland screen recording (`wf-recorder`).
 - 🌙 **Eye Comfort & Night Light:** Integrated Gammastep warm color temperature with real-time toggle and status in Waybar.
-- 🔒 **GNU Stow & Zero Bloat:** Layered architecture (`core`, `desktop`, `features`) with built-in dry-run safety and health checks (`doctor`).
+- 🔒 **GNU Stow & Zero Bloat:** Clean 2-tier architecture (`core`, `desktop`) with built-in dry-run safety and health checks (`doctor`).
 
 ---
 
 ## 🧱 Modular Architecture
 
-This repository uses a **layered modular architecture** managed via [GNU Stow](https://www.gnu.org/software/stow/). Each component is isolated into packages, allowing tailored installations for desktops, laptops, or minimal systems with zero bloat.
+The MangoWM configuration is organized into cumulative profiles managed with [GNU Stow](https://www.gnu.org/software/stow/):
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│                     LAYER 3: FEATURES (On-Demand)                      │
-│  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
-│  │         mango-laptop         │    │       mango-recording        │  │
-│  │  • Hardware backlight        │    │  • Lightweight screen        │  │
-│  │    control (brightnessctl)   │    │    recording (wf-recorder)   │  │
-│  │  • Fn brightness shortcuts   │    │  • Super+Ctrl+R keybinding   │  │
-│  │  • Battery status hooks      │    │  • Recording status badge    │  │
-│  └──────────────────────────────┘    └──────────────────────────────┘  │
-├────────────────────────────────────────────────────────────────────────┤
-│                  LAYER 2: DESKTOP PROFILE (UX & Shell)                 │
+│                      MANGO DESKTOP ECOSYSTEM (WAYLAND)                 │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                          mango-desktop                           │  │
-│  │  • Status bar (Waybar)             • Power menu (wlogout)        │  │
-│  │  • Wallpaper engine (Swaybg)       • Night light (Gammastep)     │  │
-│  │  • Screenshot editor (Satty)       • Multimedia audio control    │  │
+│  │                    DESKTOP PROFILE (UX & Shell)                  │  │
+│  │  • Status Bar: Waybar (Catppuccin Pink, Dynamic Interfaces)      │  │
+│  │  • App Launcher & Power Menu: Fuzzel, Wlogout                    │  │
+│  │  • Notifications & Lock: Mako, Swaylock-effects, Swayidle        │  │
+│  │  • Wallpaper & Media: Swaybg, Playerctl, MPV-MPRIS               │  │
+│  │  • Night Light & Recording: Gammastep, WF-Recorder               │  │
+│  │  • Hardware Backlight & Audio: Brightnessctl, WirePlumber        │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
-├────────────────────────────────────────────────────────────────────────┤
-│                    LAYER 1: CORE (Minimal Foundation)                  │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                              mango                               │  │
-│  │  • MangoWM tiling compositor       • Terminal (Foot)             │  │
-│  │  • App launcher (Fuzzel)           • Screen locker (Swaylock)    │  │
-│  │  • Notifications (Mako)            • Catppuccin theme engine     │  │
-│  │  • Wayland Desktop Portals         • Core window management      │  │
+│  │                      CORE PROFILE (Minimal Wayland)              │  │
+│  │  • Window Manager: MangoWM (Dynamic Tiling Compositor)           │  │
+│  │  • Terminal: Foot (Wayland Native, Catppuccin Theme)             │  │
+│  │  • App Launcher & Portals: Fuzzel, XDG Desktop Portals           │  │
+│  │  • Theme Engine: mango-theme (Dynamic Atomic Compilation)        │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Layer Breakdown
+### Profile Breakdown
 
-| Package | Purpose | When to Install |
-| :--- | :--- | :--- |
-| **`mango`** *(Core)* | Indispensable foundation: compositor configs, terminal, launcher, screen locker, notifications, and theme renderer. | **Always required.** |
-| **`mango-desktop`** | Full desktop experience: status bar (`Waybar`), power menu (`wlogout`), wallpapers (`Swaybg`), night light, and screenshot editor (`Satty`). | **Standard Desktops & VMs.** |
-| **`mango-laptop`** | Hardware backlight control (`brightnessctl`), Fn brightness bindings, and power hooks. | **Laptops only.** |
-| **`mango-recording`** | Dedicated screen recording shortcut and script using `wf-recorder`. | **Content creators / On-demand.** |
+| Profile | Stow Package | Contents | Intended Target |
+| :--- | :--- | :--- | :--- |
+| **`core`** | `mango` | Compositor, terminal, launcher, notifications, screen locker, idle daemon, portals, and `mango-theme` engine. | Minimal systems, servers with Wayland, headless setups. |
+| **`desktop`** | Reuses `mango` | Core + Waybar status bar, Wlogout power menu, Swaybg wallpapers, Gammastep, Satty screenshot editor, WF-Recorder, and brightness controls. | Full desktop workstations, laptops, and VMs. |
 
 ---
 
@@ -89,12 +79,12 @@ This repository uses a **layered modular architecture** managed via [GNU Stow](h
 | **Terminal** | `foot` | Blazing fast, lightweight Wayland-native terminal emulator |
 | **Notifications** | `mako` | Lightweight Wayland notification daemon |
 | **Screen Locker** | `swaylock` | Screen locker with idle management via `swayidle` |
-| **Power Menu** | `wlogout` | Wayland-native logout, suspend, and reboot menu |
-| **Wallpaper** | `swaybg` | Lightweight Wayland wallpaper engine |
-| **Night Light** | `gammastep` | Smooth display color temperature adjustment for eye comfort |
-| **Audio / Media** | PipeWire & Playerctl | Modern audio stack with MPRIS media integration |
-| **Screenshots** | `satty` & `grim` | Fast region selection with interactive annotation editor |
-| **Screen Recording** | `wf-recorder` | Hardware-accelerated Wayland screen recorder |
+| **Power Menu** | `wlogout` | Interactive session logout, suspend, and reboot menu |
+| **Wallpaper** | `swaybg` | Lightweight Wayland wallpaper setter |
+| **Night Light** | `gammastep` | Warm color temperature adjustment |
+| **Audio / Media** | PipeWire & Playerctl | Modern audio stack with MPRIS media control |
+| **Screenshots** | `satty` & `grim` | Region capture with interactive annotation editor |
+| **Screen Recording** | `wf-recorder` | Hardware-accelerated screen video recording |
 
 ---
 
@@ -102,31 +92,17 @@ This repository uses a **layered modular architecture** managed via [GNU Stow](h
 
 The included `./bin/mango` CLI handles package installation and GNU Stow symlinking with built-in dry-run safety.
 
-### 1. Standard Desktop / Virtual Machine (Recommended)
+### 1. Full Desktop Experience (Recommended)
 
-Installs `mango` core and `mango-desktop`:
+Installs all desktop packages and links the unified `mango` configuration:
 
 ```bash
 ./bin/mango bootstrap --profile desktop --apply
 ```
 
-### 2. Laptop Setup
+### 2. Minimal Core Session (Window Manager Only)
 
-Installs `mango` + `mango-desktop` + `mango-laptop` (adds brightness keys and battery integrations):
-
-```bash
-./bin/mango bootstrap --profile desktop --feature laptop --apply
-```
-
-### 3. Full Workstation (with Screen Recording)
-
-```bash
-./bin/mango bootstrap --profile desktop --feature laptop --feature recording --apply
-```
-
-### 4. Minimal Core (Window Manager Only)
-
-Installs only the compositor, terminal, and launcher without status bars or desktop daemons:
+Installs only the compositor, terminal, launcher, and screen locker without status bars or desktop daemons:
 
 ```bash
 ./bin/mango bootstrap --profile core --apply

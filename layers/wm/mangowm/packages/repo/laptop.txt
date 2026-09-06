@@ -1,1 +1,1 @@
-brightnessctl
+# Integrated into desktop.txt

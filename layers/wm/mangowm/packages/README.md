@@ -13,16 +13,9 @@ repositorios rolling. La procedencia se separa en `repo/`, `aur/` y
 | Selección | Contenido |
 | --- | --- |
 | `core` | Compositor, terminal, launcher, notificaciones, lock/idle, clipboard, portales, Polkit, audio y XWayland base. |
-| `desktop` | `core` más Waybar, screenshots anotables, night light, fuentes y Satellite. |
-| feature `laptop` | Brightnessctl para backlights reales. |
-| feature `recording` | wf-recorder bajo demanda. |
+| `desktop` | `core` más Waybar, wlogout, wallpapers, screenshots anotables, night light, grabación con wf-recorder, control de brillo con brightnessctl, fuentes y Satellite. |
 
-El perfil default es `desktop`. Las features son opt-in y no se activan
-silenciosamente por detección de hardware.
-
-La misma composición se aplica a Stow: `mango` pertenece a `core`,
-`mango-desktop` al perfil `desktop`, y cada feature añade exactamente su paquete
-homónimo. De este modo una selección no instala wrappers huérfanos.
+Ambos perfiles seleccionan el único paquete Stow `mango`. El perfil predeterminado es `desktop`.
 
 ## Procedencia
 

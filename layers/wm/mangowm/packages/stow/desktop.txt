@@ -1,1 +1,1 @@
-mango-desktop
+# The desktop profile reuses the mango package selected by core.
