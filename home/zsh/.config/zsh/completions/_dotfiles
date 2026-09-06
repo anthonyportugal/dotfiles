@@ -28,7 +28,6 @@ _dotfiles() {
     '*--wm[Integra opcionalmente un WM independiente]:wm:(bspwm mangowm)'
     '--wm-path[Checkout externo del repositorio del WM]:directorio:_files -/'
     '--wm-profile[Perfil propio del WM]:perfil:(core desktop)'
-    '*--wm-feature[Feature de MangoWM]:feature:(laptop recording)'
     '--wallpapers[Integra la colección de wallpapers (anthonyportugal/walls)]'
     '--wallpapers-path[Checkout externo del repositorio de wallpapers]:directorio:_files -/'
     '--private[Integra la capa privada (anthonyportugal/dotfiles-private)]'

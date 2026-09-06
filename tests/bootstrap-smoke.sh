@@ -157,12 +157,9 @@ grep -Fq -- "$wm_target_argument --stow-only" "$WM_LOG" || \
 : > "$WM_LOG"
 DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" bootstrap \
   --profile core --stow-only --target "$WM_TARGET" \
-  --wm mangowm --wm-path "$WM_REPO" --wm-profile desktop \
-  --wm-feature laptop --wm-feature recording --wm-feature laptop
+  --wm mangowm --wm-path "$WM_REPO" --wm-profile desktop
 grep -q -- 'bootstrap --profile=desktop' "$WM_LOG" || \
   fail "la base no resolvió el entrypoint de MangoWM"
-grep -q -- '--feature=laptop --feature=recording' "$WM_LOG" || \
-  fail "las features de MangoWM no se propagaron o deduplicaron"
 
 : > "$WM_LOG"
 DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" doctor \
@@ -211,14 +208,11 @@ if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
 fi
 grep -q 'debe estar fuera del repositorio base' "$TEST_ROOT/wm-nested.out" || \
   fail "no se explicó el límite de independencia del checkout WM"
-if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
-    --wm bspwm --wm-path "$WM_REPO" --wm-feature laptop \
-    > "$TEST_ROOT/wm-feature-bspwm.out" 2>&1; then
-  fail "bspwm aceptó una feature exclusiva de MangoWM"
-fi
-grep -q 'sólo es compatible con --wm mangowm' \
-  "$TEST_ROOT/wm-feature-bspwm.out" || \
-  fail "la feature de WM incompatible no produjo un error accionable"
+"$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+  --wm mangowm --wm-path "$WM_REPO" --wm-feature laptop \
+  > "$TEST_ROOT/wm-feature-deprecate.out" 2>&1 || true
+grep -q 'deprecado' "$TEST_ROOT/wm-feature-deprecate.out" || \
+  fail "la opción --wm-feature no produjo advertencia de deprecación"
 
 # Integración con repositorio de wallpapers (anthonyportugal/walls)
 : > "$WALLS_LOG"

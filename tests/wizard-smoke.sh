@@ -51,7 +51,7 @@ DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 "$DOTFILES" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
-  --wm mangowm --wm-path "$WM_MANGO" --wm-feature recording \
+  --wm mangowm --wm-path "$WM_MANGO" \
   --wm bspwm --wm-path "$WM_BSPWM" \
   --wallpapers --wallpapers-path "$WALLS_REPO" \
   --private --private-path "$PRIVATE_REPO" --private-profile development --private-work csti \
@@ -60,7 +60,6 @@ DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 # Verify that both WMs, walls and private were invoked
 grep -q 'mango' "$WM_LOG" || fail "MangoWM no fue ejecutado en multi-WM"
 grep -q 'bspwm' "$WM_LOG" || fail "BSPWM no fue ejecutado en multi-WM"
-grep -q 'recording' "$WM_LOG" || fail "MangoWM feature recording no fue transmitida"
 grep -q 'link' "$WALLS_LOG" || fail "Walls link no fue invocado"
 grep -q 'csti' "$PRIVATE_LOG" || fail "Private work csti no fue invocado"
 grep -q 'development' "$PRIVATE_LOG" || fail "Private profile development no fue invocado"

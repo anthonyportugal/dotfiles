@@ -43,7 +43,6 @@ PLATFORM=""
 BACKEND=""
 
 declare -a FEATURES=()
-declare -a WM_FEATURES=()
 declare -a REPO_PACKAGES=()
 declare -a AUR_PACKAGES=()
 declare -a EXTERNAL_PACKAGES=()
@@ -115,7 +114,6 @@ Opciones:
   --wm bspwm|mangowm              Integra opcionalmente un WM independiente (repetible).
   --wm-path DIR                   Checkout externo del repositorio del WM.
   --wm-profile core|desktop       Perfil propio del WM (default: desktop).
-  --wm-feature laptop|recording   Feature de MangoWM; se puede repetir.
   --wallpapers                    Integra la colección de wallpapers (anthonyportugal/walls).
   --wallpapers-path DIR           Checkout externo del repositorio de wallpapers.
   --private                       Integra la capa privada (anthonyportugal/dotfiles-private).
@@ -309,13 +307,13 @@ parse_args() {
         ;;
       --wm-feature)
         require_option_value "$1" "${2-}"
-        WM_FEATURES+=("$2")
+        warn "el flag --wm-feature está deprecado; las capacidades están integradas en el perfil desktop del WM"
         shift 2
         ;;
       --wm-feature=*)
         local wm_feature_value=${1#*=}
         require_option_value "--wm-feature" "$wm_feature_value"
-        WM_FEATURES+=("$wm_feature_value")
+        warn "el flag --wm-feature está deprecado; las capacidades están integradas en el perfil desktop del WM"
         shift
         ;;
       --wallpapers)
@@ -448,25 +446,7 @@ parse_args() {
     else
       [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
       (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
-      (( ${#WM_FEATURES[@]} == 0 )) || usage_error "--wm-feature requiere --wm mangowm"
     fi
-  fi
-
-  if (( ${#WM_FEATURES[@]} > 0 )); then
-    [[ "$WM" == mangowm || " ${WMS[*]} " =~ " mangowm " ]] || usage_error "--wm-feature sólo es compatible con --wm mangowm"
-    local wm_feature
-    local -a unique_wm_features=()
-    for wm_feature in "${WM_FEATURES[@]}"; do
-      case "$wm_feature" in
-        laptop|recording)
-          append_unique unique_wm_features "$wm_feature"
-          ;;
-        *)
-          usage_error "feature de WM no soportado: $wm_feature"
-          ;;
-      esac
-    done
-    WM_FEATURES=("${unique_wm_features[@]}")
   fi
 
   if (( PRIVATE == 1 )); then
@@ -869,13 +849,6 @@ run_wm_operation() {
       "--platform=$PLATFORM_REQUEST"
       "--target=$TARGET_DIR"
     )
-
-    if [[ "$current_wm" == mangowm ]]; then
-      local wm_feature
-      for wm_feature in "${WM_FEATURES[@]}"; do
-        wm_command+=("--feature=$wm_feature")
-      done
-    fi
 
     case "$MODE_SELECTION" in
       packages)
@@ -1703,12 +1676,10 @@ print_plan() {
     for current_wm in "${WMS[@]}"; do
       printf '  %-24s %s\n' "  Checkout $current_wm:" "${WM_PATHS[$current_wm]:-desconocido}"
     done
-    print_array "Features MangoWM" WM_FEATURES
   elif [[ -n "$WM" ]]; then
     printf '  %-24s %s\n' 'WM opcional:' "$WM"
     printf '  %-24s %s\n' 'Checkout WM:' "$WM_PATH"
     printf '  %-24s %s\n' 'Perfil WM:' "$WM_PROFILE"
-    print_array "Features WM" WM_FEATURES
   fi
 
   if (( WALLPAPERS == 1 )); then
@@ -2256,8 +2227,6 @@ EOF
     esac
   done
 
-  WM_FEATURES=()
-
   WALLPAPERS=0
   printf '\n%bColección de Fondos de Pantalla:%b\n' "${C_BOLD}" "$C_RESET"
   if prompt_yes_no "¿Deseas integrar la colección de wallpapers (anthonyportugal/walls)?" Y; then
@@ -2344,8 +2313,6 @@ EOF
   printf '│  • Perfil Base:       %-38s│\n' "$PROFILE"
   local wms_str="${WMS[*]:-(ninguno)}"
   printf '│  • Window Managers:   %-38s│\n' "$wms_str"
-  local feat_str="${WM_FEATURES[*]:-(ninguna)}"
-  printf '│  • Features WM:       %-38s│\n' "$feat_str"
   local walls_str="No"
   (( WALLPAPERS == 1 )) && walls_str="Sí (${WALLPAPERS_PATH:-~/.dotfiles/walls})"
   printf '│  • Wallpapers:        %-38s│\n' "$walls_str"
@@ -2420,7 +2387,6 @@ _dotfiles() {
     '*--wm[Integra opcionalmente un WM independiente]:wm:(bspwm mangowm)'
     '--wm-path[Checkout externo del repositorio del WM]:directorio:_files -/'
     '--wm-profile[Perfil propio del WM]:perfil:(core desktop)'
-    '*--wm-feature[Feature de MangoWM]:feature:(laptop recording)'
     '--wallpapers[Integra la colección de wallpapers (anthonyportugal/walls)]'
     '--wallpapers-path[Checkout externo del repositorio de wallpapers]:directorio:_files -/'
     '--private[Integra la capa privada (anthonyportugal/dotfiles-private)]'
@@ -2465,7 +2431,7 @@ _dotfiles_completion() {
   _init_completion || return
 
   local commands="setup sync update bootstrap doctor unlink completion help"
-  local options="--profile --feature --backend --platform --target --packages-only --stow-only --wm --wm-path --wm-profile --wm-feature --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --apply -h --help"
+  local options="--profile --feature --backend --platform --target --packages-only --stow-only --wm --wm-path --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --apply -h --help"
 
   if (( cword == 1 )); then
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -2495,10 +2461,6 @@ _dotfiles_completion() {
       ;;
     --wm-profile)
       COMPREPLY=( $(compgen -W "core desktop" -- "$cur") )
-      return 0
-      ;;
-    --wm-feature)
-      COMPREPLY=( $(compgen -W "laptop recording" -- "$cur") )
       return 0
       ;;
     --private-profile)
