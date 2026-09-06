@@ -1,8 +1,18 @@
 # MangoWM Dotfiles
 
+<p align="center">
+  <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
+  <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
+  <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
+  <a href="https://wayland.freedesktop.org"><img src="https://img.shields.io/badge/Display-Wayland-00599C?style=flat-square&logo=wayland&logoColor=white" alt="Wayland"></a>
+  <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha_Pink-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+</p>
+
 *Read this in other languages:* [Español](README.es.md)
 
-Autonomous, modular, and minimal Wayland session configured for **CachyOS** and **Arch Linux** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor with the Catppuccin Mocha theme.
+Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** and **CachyOS** using [MangoWM**](https://github.com/mangowm/mango)** as the primary dynamic tiling compositor, styled with the Catppuccin Mocha palette with Pink accents. It functions completely standalone or composed with the primary modular dotfiles ecosystem.
 
 <p align="center">
   <img src="assets/screenshot.webp" alt="MangoWM Desktop Preview" width="100%">
@@ -10,6 +20,17 @@ Autonomous, modular, and minimal Wayland session configured for **CachyOS** and 
 
 > [!TIP]
 > This repository provides a standalone, production-ready Wayland desktop environment and seamlessly integrates with the base dotfiles ecosystem.
+
+---
+
+## ✨ Key Highlights
+
+- 🚀 **Dynamic Wayland Tiling:** Next-generation dynamic tiling compositor with runtime layout switching (*Dwindle, Tile, Grid, Monocle, Scroller*).
+- 🎨 **Atomic Dynamic Theming:** Built-in `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout.
+- 📊 **Tailored Waybar & Notifications:** Sleek status bar with interactive popups, live media controls, network status, battery monitors, and Mako notifications.
+- 💻 **Laptop & Creator Features:** Optional, on-demand modules for hardware brightness (`brightnessctl`) and screen recording (`wf-recorder`).
+- 🌙 **Eye Comfort & Night Light:** Integrated Gammastep warm color temperature with real-time toggle and status in Waybar.
+- 🔒 **GNU Stow & Zero Bloat:** Layered architecture (`core`, `desktop`, `features`) with built-in dry-run safety and health checks (`doctor`).
 
 ---
 
@@ -58,6 +79,25 @@ This repository uses a **layered modular architecture** managed via [GNU Stow](h
 
 ---
 
+## 🛠️ Approved Tech Stack
+
+| Capability | Component | Purpose |
+| :--- | :--- | :--- |
+| **Compositor** | [`mangowm`](https://github.com/mangowm/mango) | Dynamic tiling Wayland compositor |
+| **Status Bar** | `waybar` | Highly customizable CSS-powered Wayland status bar |
+| **App Launcher** | `fuzzel` | Fast, lightweight Wayland application launcher |
+| **Terminal** | `foot` | Blazing fast, lightweight Wayland-native terminal emulator |
+| **Notifications** | `mako` | Lightweight Wayland notification daemon |
+| **Screen Locker** | `swaylock` | Screen locker with idle management via `swayidle` |
+| **Power Menu** | `wlogout` | Wayland-native logout, suspend, and reboot menu |
+| **Wallpaper** | `swaybg` | Lightweight Wayland wallpaper engine |
+| **Night Light** | `gammastep` | Smooth display color temperature adjustment for eye comfort |
+| **Audio / Media** | PipeWire & Playerctl | Modern audio stack with MPRIS media integration |
+| **Screenshots** | `satty` & `grim` | Fast region selection with interactive annotation editor |
+| **Screen Recording** | `wf-recorder` | Hardware-accelerated Wayland screen recorder |
+
+---
+
 ## 🚀 Installation & Profiles
 
 The included `./bin/mango` CLI handles package installation and GNU Stow symlinking with built-in dry-run safety.
@@ -95,24 +135,18 @@ Installs only the compositor, terminal, and launcher without status bars or desk
 ### Helpful Bootstrap Flags
 
 - **Dry-run simulation (Safe check):** Omit `--apply` to preview actions without touching the filesystem:
-
   ```bash
   ./bin/mango bootstrap --profile desktop
   ```
-
-- **Diagnostics:** Check health and link integrity:
-
+- **Diagnostics:** Check health, dependencies, and symlink integrity:
   ```bash
   ./bin/mango doctor --profile desktop
   ```
-
 - **Unlink / Clean:** Remove managed symlinks safely:
-
   ```bash
   ./bin/mango unlink --profile desktop --apply
   ```
-
-- **Supported AUR/Package Helpers:** `auto` (detects `shelly`, `paru`, `yay`), or specify via `--backend <name>`.
+- **AUR Backend:** Automatically detected (`shelly`, `paru`, `yay`), or manually specified via `--backend <name>`.
 
 ---
 
@@ -129,29 +163,42 @@ While this repository operates **100% standalone**, it seamlessly integrates wit
 
 The desktop is styled with **Catppuccin Mocha** featuring **Pink (`#f5c2e7`)** as the primary semantic accent.
 
-- Palette configuration: `themes/catppuccin-mocha-pink/palette.conf`
+- **Palette Configuration:** `themes/catppuccin-mocha-pink/palette.conf`
 - **Dynamic Atomic Rendering:** The `mango-theme` script parses palette tokens and generates runtime configuration files for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout under `$XDG_STATE_HOME/mangowm/theme/current/`.
 
 ---
 
 ## ⌨️ Primary Keybindings
 
+### Applications & Launchers
+
 | Shortcut | Action |
 | :--- | :--- |
-| `Super + Return` | Open Foot terminal |
+| `Super + Return` | Open Foot terminal (Tiling) |
 | `Super + Shift + Return` | Open floating Foot terminal |
 | `Super + D` | Open Fuzzel application launcher |
 | `Super + B` | Open default web browser (Brave) |
 | `Super + E` | Open graphical file manager (Thunar) |
+| `Super + F1` / `Super + Shift + ?` | Open interactive keybindings cheat sheet |
+
+### Window & Layout Management
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Super + C` / `Super + Shift + C` | Close / Kill focused window |
+| `Super + T` | Cycle tiling layouts (*Dwindle, Tile, Grid, Monocle, Scroller*) |
+| `Super + Escape` | Reload MangoWM configuration |
+| `Super + Shift + Escape` | Quit MangoWM session |
+
+### System & Utilities
+
+| Shortcut | Action |
+| :--- | :--- |
 | `Super + L` | Lock screen immediately (Swaylock) |
 | `Super + X` | Open session power menu (Wlogout) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Fuzzel) |
-| `Super + Escape` | Reload MangoWM configuration |
-| `Super + Shift + Escape` | Quit MangoWM session |
-| `Super + T` | Cycle tiling layouts (*Dwindle, Tile, Grid, Monocle, Scroller*) |
 | `Super + N` | Toggle warm night light (Gammastep with real-time Waybar status) |
 | `Super + W` / `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel (Swaybg) |
-| `Super + F1` / `Super + Shift + ?` | Open interactive keybindings cheat sheet |
 | `Print` / `Super + Print` / `Super + Shift + S` | Interactive region screenshot with Satty annotation editor |
 | `Shift + Print` | Fullscreen screenshot with Satty editor |
 | `Ctrl + Print` | Copy region screenshot directly to clipboard |
