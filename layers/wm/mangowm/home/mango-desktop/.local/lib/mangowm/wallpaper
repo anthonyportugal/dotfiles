@@ -77,6 +77,18 @@ restore_wallpaper() {
       return 0
     fi
   fi
+
+  local default_wall
+  for default_wall in \
+    "${XDG_DATA_HOME:-$HOME/.local/share}/wallpapers/w-001.webp" \
+    "${XDG_PICTURES_DIR:-$HOME/Pictures}/Wallpapers/w-001.webp" \
+    "${XDG_PICTURES_DIR:-$HOME/Pictures}/wallpapers/w-001.webp"; do
+    if [[ -r "$default_wall" ]]; then
+      apply_swaybg "$default_wall"
+      return 0
+    fi
+  done
+
   apply_swaybg ""
 }
 
@@ -94,7 +106,7 @@ select_wallpaper() {
 
   if (( ${#files[@]} == 0 )); then
     mangowm_notify normal 'Wallpaper' \
-      'No se encontraron imágenes en ~/Pictures/Wallpapers'
+      'No se encontraron imágenes en ~/.local/share/wallpapers ni ~/Pictures/Wallpapers'
     return 0
   fi
 
