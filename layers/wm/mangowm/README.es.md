@@ -2,7 +2,7 @@
 
 *Read this in other languages:* [English](README.md)
 
-Sesión Wayland autónoma, modular y minimalista configurada para **CachyOS** y **Arch Linux** utilizando [MangoWM](https://github.com/DreamMaoMao/mangowm) como compositor principal de ventanas en mosaico dinámico con el tema Catppuccin Mocha.
+Sesión Wayland autónoma, modular y minimalista configurada para **CachyOS** y **Arch Linux** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor principal de ventanas en mosaico dinámico con el tema Catppuccin Mocha.
 
 <p align="center">
   <img src="assets/screenshot.webp" alt="Vista previa de MangoWM Desktop" width="100%">
