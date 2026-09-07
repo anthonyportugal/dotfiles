@@ -19,6 +19,9 @@ Sesión Wayland autónoma, modular y minimalista optimizada para **Arch Linux** 
 </p>
 
 > [!TIP]
+> 🧩 **Ecosistema Modular de Dotfiles:**  
+> [Base y CLI](https://github.com/anthonyportugal/dotfiles) • **MangoWM (Wayland) [Actual]** • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls)
+> 
 > Este repositorio proporciona un entorno de escritorio Wayland autónomo y listo para producción, integrándose limpiamente con el ecosistema de dotfiles base.
 
 ---
