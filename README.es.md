@@ -14,6 +14,9 @@
 Configuración base pública, modular y portable optimizada para entornos **Arch Linux** y **CachyOS**. Establece una experiencia de terminal unificada, herramientas CLI esenciales, aplicaciones compartidas y preferencias de sistema con total independencia del gestor de ventanas o compositor seleccionado.
 
 > [!TIP]
+> 🧩 **Ecosistema Modular de Dotfiles:**  
+> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls)
+> 
 > Este repositorio proporciona la base fundamental para el entorno de usuario y se integra limpiamente con gestores de ventanas independientes, compositores y una capa de configuración privada opcional.
 
 ---

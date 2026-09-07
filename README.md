@@ -14,6 +14,9 @@
 Public, modular, and portable base configuration optimized for **Arch Linux** and **CachyOS** environments. It establishes a consistent shell experience, essential CLI tools, common cross-session applications, and system preferences completely independent of the chosen Window Manager or compositor.
 
 > [!TIP]
+> 🧩 **Modular Dotfiles Ecosystem:**  
+> **Base & CLI [Current]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls)
+> 
 > This repository provides the standalone foundation for user environments and seamlessly integrates with independent window managers, compositors, and an optional private configuration layer.
 
 ---
@@ -161,8 +164,8 @@ You can also orchestrate components directly using explicit flags:
 
 | Repository | Capability | Display Protocol |
 | :--- | :--- | :--- |
-| **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Dynamic tiling session (Waybar + Fuzzel + Swaylock + Satty) | Wayland |
-| **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Standalone tiling session (Polybar + Rofi + Picom + Dunst) | X11 |
+| **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Modern Wayland dynamic tiling session (Waybar + Fuzzel + Swaylock + Satty) | Wayland |
+| **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Standalone classic tiling session (Polybar + Rofi + Picom + Dunst) | X11 |
 | **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection and management CLI | Multi-display |
 | **`dotfiles-private`** | Private layer for identities, signing keys, and work profiles | Local / Secure |
 
