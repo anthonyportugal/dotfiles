@@ -24,6 +24,7 @@ MODE=""
 THEME_NAME="mauve"
 DRY_RUN=false
 CHECK_ONLY=false
+AUTO_INSTALL=false
 
 log_info()    { printf "${BLUE}[INFO]${RESET} %s\n" "$*"; }
 log_success() { printf "${GREEN}[OK]${RESET}   %s\n" "$*"; }
@@ -39,6 +40,7 @@ Options:
   -l, --ly              Install only Ly display manager configuration
   -b, --limine          Install only Limine bootloader theme
   -t, --theme <name>    Theme accent for Limine: mauve (default), pink, blue
+  -i, --install         Automatically install Ly package if not present (shelly/paru/yay/pacman)
   -n, --dry-run         Simulate installations without writing to disk
   -c, --check           Audit current state of Ly and Limine
   -h, --help            Show this help message
@@ -67,6 +69,10 @@ while [[ $# -gt 0 ]]; do
             THEME_NAME="$2"
             shift 2
             ;;
+        -i|--install)
+            AUTO_INSTALL=true
+            shift
+            ;;
         -n|--dry-run)
             DRY_RUN=true
             shift
@@ -87,7 +93,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-printf "\n${CYAN}${BOLD}"
+printf '%b' "\n${CYAN}${BOLD}"
 cat <<'BANNER'
     __      __  _____ __                                
    / /_  __/ /_/ __(_) /__  _____     _______  _______ _____
@@ -96,8 +102,8 @@ cat <<'BANNER'
 /_/\__, /\__/_/ /_/_/\___/____/    /____/\__, /____/_/      
   /____/                                /____/              
 BANNER
-printf "${RESET}\n"
-printf "${BOLD}Catppuccin Mocha • Ly Display Manager & Limine Bootloader${RESET}\n\n"
+printf '%b\n' "${RESET}"
+printf '%b\n\n' "${BOLD}Catppuccin Mocha • Ly Display Manager & Limine Bootloader${RESET}"
 
 # Run check mode if requested
 if [[ "${CHECK_ONLY}" == true ]]; then
@@ -110,7 +116,7 @@ fi
 
 # Interactive menu if no mode specified
 if [[ -z "${MODE}" ]]; then
-    printf "${BOLD}Select components to configure:${RESET}\n"
+    printf '%b\n' "${BOLD}Select components to configure:${RESET}"
     echo "  1) All (Ly + Limine)"
     echo "  2) Ly display manager only"
     echo "  3) Limine bootloader only"
@@ -142,19 +148,28 @@ fi
 # Ensure scripts exist and are executable
 chmod +x "${LY_SETUP}" "${LIMINE_SETUP}"
 
-FLAGS=()
+LY_FLAGS=()
+LIMINE_FLAGS=()
+
 if [[ "${DRY_RUN}" == true ]]; then
-    FLAGS+=("--dry-run")
+    LY_FLAGS+=("--dry-run")
+    LIMINE_FLAGS+=("--dry-run")
 fi
+
+if [[ "${AUTO_INSTALL}" == true ]]; then
+    LY_FLAGS+=("--install")
+fi
+
+LIMINE_FLAGS+=("--theme" "${THEME_NAME}")
 
 run_ly() {
     log_info "Executing Ly installer..."
-    "${LY_SETUP}" "${FLAGS[@]}"
+    "${LY_SETUP}" "${LY_FLAGS[@]}"
 }
 
 run_limine() {
     log_info "Executing Limine installer..."
-    "${LIMINE_SETUP}" --theme "${THEME_NAME}" "${FLAGS[@]}"
+    "${LIMINE_SETUP}" "${LIMINE_FLAGS[@]}"
 }
 
 case "${MODE}" in
@@ -171,4 +186,4 @@ case "${MODE}" in
         ;;
 esac
 
-printf "\n${GREEN}${BOLD}✓ Setup finished successfully!${RESET}\n\n"
+printf '%b\n\n' "\n${GREEN}${BOLD}✓ Setup finished successfully!${RESET}"

@@ -5,7 +5,7 @@
 # Safely installs the Catppuccin Mocha configuration to /etc/ly/
 # Supports both legacy INI (Ly <= 1.4.x) and modern Lua (Ly >= 1.5.x / master).
 # Injects Catppuccin Mocha palette into Linux Virtual Terminal via startup.sh.
-# Provides automatic timestamped backups, binary discovery, and service checks.
+# Provides automatic timestamped backups, package manager integration, and service checks.
 # ==============================================================================
 
 set -euo pipefail
@@ -29,6 +29,7 @@ TARGET_STARTUP="${TARGET_DIR}/startup.sh"
 
 DRY_RUN=false
 CHECK_ONLY=false
+AUTO_INSTALL=false
 
 log_info()    { printf "${BLUE}[INFO]${RESET} %s\n" "$*"; }
 log_success() { printf "${GREEN}[OK]${RESET}   %s\n" "$*"; }
@@ -40,6 +41,7 @@ usage() {
 Usage: sudo $(basename "$0") [OPTIONS]
 
 Options:
+  -i, --install     Automatically install Ly package if not detected
   -n, --dry-run     Simulate actions without writing any files
   -c, --check       Audit current Ly configuration and service state
   -h, --help        Show this help message
@@ -49,13 +51,17 @@ Description:
   Deploys config.ini, config.lua, and startup.sh (Linux VT palette injection)
   to ensure full compatibility across official packages (ly-dm / Ly 1.4.1)
   and manual source builds.
-  Preserves automatic timestamped backups of any existing configurations.
+  Supports automated installation via shelly, paru, yay, or pacman.
 USAGE
 }
 
 # Parse command line flags
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -i|--install)
+            AUTO_INSTALL=true
+            shift
+            ;;
         -n|--dry-run)
             DRY_RUN=true
             shift
@@ -76,9 +82,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-printf "${BOLD}================================================================${RESET}\n"
-printf "${BOLD}       Ly Display Manager - Catppuccin Mocha Installer          ${RESET}\n"
-printf "${BOLD}================================================================${RESET}\n\n"
+printf '%b\n' "${BOLD}================================================================${RESET}"
+printf '%b\n' "${BOLD}       Ly Display Manager - Catppuccin Mocha Installer          ${RESET}"
+printf '%b\n\n' "${BOLD}================================================================${RESET}"
 
 # Verify source configuration files exist
 if [[ ! -f "${SOURCE_INI}" ]]; then
@@ -93,6 +99,54 @@ if [[ ! -f "${SOURCE_STARTUP}" ]]; then
     log_error "Source startup script not found: ${SOURCE_STARTUP}"
     exit 1
 fi
+
+# Package manager discovery in ecosystem priority: shelly -> paru -> yay -> pacman
+detect_package_manager() {
+    for pm in shelly paru yay pacman; do
+        if command -v "${pm}" >/dev/null 2>&1; then
+            echo "${pm}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Install package using detected package manager
+install_ly_package() {
+    local pm
+    pm="$(detect_package_manager || true)"
+
+    if [[ -z "${pm}" ]]; then
+        log_error "No supported package manager found (shelly, paru, yay, pacman)."
+        return 1
+    fi
+
+    log_info "Installing 'ly' package using ${pm}..."
+
+    case "${pm}" in
+        shelly)
+            if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
+                sudo -u "${SUDO_USER}" shelly install standard ly
+            else
+                shelly install standard ly
+            fi
+            ;;
+        paru|yay)
+            if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
+                sudo -u "${SUDO_USER}" "${pm}" -S --needed --repo ly
+            else
+                "${pm}" -S --needed --repo ly
+            fi
+            ;;
+        pacman)
+            if [[ "$(id -u)" -eq 0 ]]; then
+                pacman -S --needed ly
+            else
+                sudo pacman -S --needed ly
+            fi
+            ;;
+    esac
+}
 
 # Multi-path binary discovery (supports ly, ly-dm, manual installs, and package builds)
 find_ly_binary() {
@@ -170,6 +224,7 @@ find_ly_service() {
 
 DETECTED_BIN="$(find_ly_binary || true)"
 DETECTED_SERVICE="$(find_ly_service || true)"
+DETECTED_PM="$(detect_package_manager || true)"
 
 # Check / Audit mode
 if [[ "${CHECK_ONLY}" == true ]]; then
@@ -178,6 +233,12 @@ if [[ "${CHECK_ONLY}" == true ]]; then
         log_success "Ly binary detected: ${DETECTED_BIN}"
     else
         log_warn "Ly binary was not found in common system paths or PATH."
+    fi
+
+    if [[ -n "${DETECTED_PM}" ]]; then
+        log_success "Active package manager: ${DETECTED_PM}"
+    else
+        log_warn "No supported package manager detected."
     fi
 
     if [[ -n "${DETECTED_SERVICE}" ]]; then
@@ -222,11 +283,32 @@ if [[ "${DRY_RUN}" == false && "$(id -u)" -ne 0 ]]; then
     exit 1
 fi
 
-if [[ -n "${DETECTED_BIN}" ]]; then
-    log_success "Found Ly binary: ${DETECTED_BIN}"
+# Handle missing Ly binary
+if [[ -z "${DETECTED_BIN}" ]]; then
+    log_warn "Ly binary was not found in system PATH."
+    if [[ -n "${DETECTED_PM}" ]]; then
+        if [[ "${AUTO_INSTALL}" == true ]]; then
+            if [[ "${DRY_RUN}" == true ]]; then
+                log_info "[DRY-RUN] Would install 'ly' package using ${DETECTED_PM}."
+            else
+                install_ly_package
+                DETECTED_BIN="$(find_ly_binary || true)"
+            fi
+        elif [[ "${DRY_RUN}" == true ]]; then
+            log_info "[DRY-RUN] Ly binary is not installed; would prompt for installation via ${DETECTED_PM}."
+        elif [[ -t 0 ]]; then
+            printf '%b' "\n${YELLOW}[PROMPT]${RESET} Ly is not installed. Would you like to install it with ${BOLD}${DETECTED_PM}${RESET}? [y/N]: "
+            read -r reply
+            if [[ "${reply}" =~ ^[yYsS]$ ]]; then
+                install_ly_package
+                DETECTED_BIN="$(find_ly_binary || true)"
+            fi
+        else
+            log_info "Tip: Run with -i or --install to automatically install Ly via ${DETECTED_PM}."
+        fi
+    fi
 else
-    log_warn "Could not automatically locate Ly binary in standard paths."
-    log_info "Configuration files will still be deployed to ${TARGET_DIR}."
+    log_success "Found Ly binary: ${DETECTED_BIN}"
 fi
 
 # Handle dry-run mode
@@ -291,14 +373,15 @@ install -m 0644 "${SOURCE_LUA}" "${TARGET_LUA}"
 log_success "Configurations and startup scripts deployed to ${TARGET_DIR}."
 
 # Service status and recommendations
+DETECTED_SERVICE="$(find_ly_service || true)"
 if [[ -n "${DETECTED_SERVICE}" ]]; then
     log_success "Service status: ${DETECTED_SERVICE}"
 else
     log_info "To enable Ly on boot, run:"
     if [[ -f "/usr/lib/systemd/system/ly@.service" || -f "/lib/systemd/system/ly@.service" ]]; then
-        printf "    ${BOLD}sudo systemctl enable ly@tty1.service${RESET}\n"
+        printf '%b\n' "    ${BOLD}sudo systemctl enable ly@tty1.service${RESET}"
     else
-        printf "    ${BOLD}sudo systemctl enable ly.service${RESET}\n"
+        printf '%b\n' "    ${BOLD}sudo systemctl enable ly.service${RESET}"
     fi
 
     # Check for competing display managers
@@ -310,6 +393,6 @@ else
     done
 fi
 
-printf "\n${GREEN}${BOLD}✓ Ly display manager configuration complete!${RESET}\n"
-printf "${BLUE}[NOTE]${RESET} Restart Ly (e.g. sudo systemctl restart ly@tty1.service) or reboot the machine\n"
+printf '%b\n' "\n${GREEN}${BOLD}✓ Ly display manager configuration complete!${RESET}"
+printf '%b\n' "${BLUE}[NOTE]${RESET} Restart Ly (e.g. sudo systemctl restart ly@tty1.service) or reboot the machine"
 printf "       to see the new Catppuccin Mocha palette and clock on your TTY.\n\n"

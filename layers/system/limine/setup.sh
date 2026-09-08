@@ -85,9 +85,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-printf "${BOLD}================================================================${RESET}\n"
-printf "${BOLD}       Limine Bootloader - Catppuccin Mocha Palette Injector    ${RESET}\n"
-printf "${BOLD}================================================================${RESET}\n\n"
+printf '%b\n' "${BOLD}================================================================${RESET}"
+printf '%b\n' "${BOLD}       Limine Bootloader - Catppuccin Mocha Palette Injector    ${RESET}"
+printf '%b\n\n' "${BOLD}================================================================${RESET}"
 
 # Validate selected theme
 THEME_FILE="${THEMES_DIR}/catppuccin-mocha-${THEME_NAME}.conf"
@@ -160,11 +160,13 @@ if [[ "${CHECK_ONLY}" == true ]]; then
     exit 0
 fi
 
-# Ensure root privileges
+# Ensure root privileges when modifying system boot files
 if [[ "${DRY_RUN}" == false && "$(id -u)" -ne 0 ]]; then
-    log_error "Modifying bootloader configurations requires root privileges."
-    printf "\nPlease run with sudo:\n  sudo %s\n\n" "$0"
-    exit 1
+    if [[ -z "${TARGET_CONFIG}" || ! -w "${TARGET_CONFIG}" ]]; then
+        log_error "Modifying bootloader configurations requires root privileges."
+        printf "\nPlease run with sudo:\n  sudo %s\n\n" "$0"
+        exit 1
+    fi
 fi
 
 if [[ -z "${TARGET_CONFIG}" ]]; then
@@ -241,8 +243,8 @@ if command -v limine-enroll-config >/dev/null 2>&1; then
         log_success "Secure Boot configuration checksum enrolled."
     else
         log_info "Note: If Secure Boot is enabled, update the config checksum by running:"
-        printf "    ${BOLD}sudo limine-enroll-config${RESET}\n"
+        printf '%b\n' "    ${BOLD}sudo limine-enroll-config${RESET}"
     fi
 fi
 
-printf "\n${GREEN}${BOLD}✓ Limine bootloader theme configuration complete!${RESET}\n"
+printf '%b\n' "\n${GREEN}${BOLD}✓ Limine bootloader theme configuration complete!${RESET}"
