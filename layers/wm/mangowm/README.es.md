@@ -1,26 +1,27 @@
 # MangoWM Dotfiles
 
 <p align="center">
+  <a href="https://github.com/anthonyportugal/dotfiles-mangowm/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-mangowm/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://wayland.freedesktop.org"><img src="https://img.shields.io/badge/Display-Wayland-00599C?style=flat-square&logo=wayland&logoColor=white" alt="Wayland"></a>
   <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
-  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha_Pink-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Tema"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="Licencia"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha_Pink-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
-*Read this in other languages:* [English](README.md)
+*Leer esto en otros idiomas:* [English](README.md)
 
-Sesión Wayland autónoma, modular y minimalista optimizada para **Arch Linux** y **CachyOS** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor principal de ventanas en mosaico dinámico con la paleta Catppuccin Mocha y acentos en Pink. Funciona de manera 100% independiente o compuesta con el ecosistema principal de dotfiles modulares.
+Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux** y **CachyOS** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor dinámico principal, estilizado con la paleta Catppuccin Mocha con acentos Rosa. Funciona de manera totalmente independiente o compuesta dentro del ecosistema modular de dotfiles.
 
 <p align="center">
-  <img src="assets/screenshot.webp" alt="Vista previa de MangoWM Desktop" width="100%">
+  <img src="assets/screenshot.webp" alt="Vista previa del escritorio MangoWM" width="100%">
 </p>
 
 > [!TIP]
 > 🧩 **Ecosistema Modular de Dotfiles:**  
-> [Base y CLI](https://github.com/anthonyportugal/dotfiles) • **MangoWM (Wayland) [Actual]** • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls)
+> [Base y CLI](https://github.com/anthonyportugal/dotfiles) • **MangoWM (Wayland) [Actual]** • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Capa del Sistema (Ly y Limine)](https://github.com/anthonyportugal/dotfiles-system)
 > 
 > Este repositorio proporciona un entorno de escritorio Wayland autónomo y listo para producción, integrándose limpiamente con el ecosistema de dotfiles base.
 
