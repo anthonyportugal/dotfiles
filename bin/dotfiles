@@ -828,6 +828,7 @@ validate_wm_checkout() {
 
   WM="${WMS[0]}"
   WM_PATH="${WM_PATHS[${WMS[0]}]}"
+  # shellcheck disable=SC2034
   WM_ENTRYPOINT="${WM_ENTRYPOINTS[${WMS[0]}]}"
 }
 
@@ -1980,7 +1981,6 @@ wizard_colors() {
   if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && (( $(tput colors 2>/dev/null || echo 0) >= 8 )); then
     C_RESET='\033[0m'
     C_BOLD='\033[1m'
-    C_DIM='\033[2m'
     C_PINK='\033[38;2;245;194;231m'
     C_MAUVE='\033[38;2;203;166;247m'
     C_BLUE='\033[38;2;137;180;250m'
@@ -1989,7 +1989,7 @@ wizard_colors() {
     C_RED='\033[38;2;243;139;168m'
     C_SUBTEXT='\033[38;2;166;173;200m'
   else
-    C_RESET='' C_BOLD='' C_DIM='' C_PINK='' C_MAUVE='' C_BLUE=''
+    C_RESET='' C_BOLD='' C_PINK='' C_MAUVE='' C_BLUE=''
     C_GREEN='' C_YELLOW='' C_RED='' C_SUBTEXT=''
   fi
 }
@@ -2046,6 +2046,7 @@ prompt_yes_no() {
   done
 }
 
+# shellcheck disable=SC2034
 prompt_input() {
   local prompt_text=$1
   local default_text=${2-}
