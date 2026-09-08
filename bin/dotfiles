@@ -1850,6 +1850,14 @@ bootstrap_with_optional_components() {
   run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap del repositorio $WM"
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
   run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
+
+  if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
+    local sys_flag="--all"
+    [[ "${SYSTEM_MODE:-all}" == "ly" ]] && sys_flag="--ly"
+    [[ "${SYSTEM_MODE:-all}" == "limine" ]] && sys_flag="--limine"
+    info "Siguiente paso recomendado (Capa del Sistema):"
+    info "  sudo $SYSTEM_PATH/install.sh $sys_flag --install"
+  fi
 }
 
 doctor_with_optional_components() {
@@ -1949,6 +1957,7 @@ update_from_remote() {
     "$REPO_ROOT/../wm/mangowm" "$TARGET_DIR/.dotfiles/wm/mangowm" \
     "$REPO_ROOT/../wm/bspwm" "$TARGET_DIR/.dotfiles/wm/bspwm" \
     "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
+    "$REPO_ROOT/../system" "$TARGET_DIR/.dotfiles/system" \
     "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private"; do
     if [[ -d "$candidate/.git" ]]; then
       local real_cand
@@ -2101,6 +2110,14 @@ wizard_clone_if_missing() {
   return 1
 }
 
+prettify_path() {
+  local p=${1:-}
+  local clean
+  clean="$(cd -P "$p" 2>/dev/null && pwd -P)" || clean="$p"
+  [[ "$clean" == "$HOME"* ]] && clean="~${clean#"$HOME"}"
+  printf '%s' "$clean"
+}
+
 run_interactive_wizard() {
   wizard_colors
 
@@ -2115,7 +2132,7 @@ EOF
   printf '%b\n' "$C_RESET"
 
   printf '%bEstado actual detectado:%b\n' "${C_BOLD}" "$C_RESET"
-  printf '  • Base:     %b[✓ Presente]%b (%s)\n' "$C_GREEN" "$C_RESET" "$REPO_ROOT"
+  printf '  • Base:     %b[✓ Presente]%b (%s)\n' "$C_GREEN" "$C_RESET" "$(prettify_path "$REPO_ROOT")"
 
   local mango_status="${C_SUBTEXT}[No presente]${C_RESET}"
   if [[ -d "$REPO_ROOT/../wm/mangowm" || -d "$TARGET_DIR/.dotfiles/wm/mangowm" ]]; then
@@ -2134,6 +2151,12 @@ EOF
     walls_status="${C_GREEN}[✓ Presente]${C_RESET}"
   fi
   printf '  • Walls:    %b\n' "$walls_status"
+
+  local system_status="${C_SUBTEXT}[No presente]${C_RESET}"
+  if [[ -d "$REPO_ROOT/../system" || -d "$TARGET_DIR/.dotfiles/system" ]]; then
+    system_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  fi
+  printf '  • System:   %b\n' "$system_status"
 
   local private_status="${C_SUBTEXT}[No presente]${C_RESET}"
   if [[ -d "$REPO_ROOT/../private" || -d "$TARGET_DIR/.dotfiles/private" ]]; then
@@ -2229,7 +2252,7 @@ EOF
   done
 
   WALLPAPERS=0
-  printf '\n%bColección de Fondos de Pantalla:%b\n' "${C_BOLD}" "$C_RESET"
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 3: Colección de Fondos de Pantalla (walls)" "$C_RESET"
   if prompt_yes_no "¿Deseas integrar la colección de wallpapers (anthonyportugal/walls)?" Y; then
     WALLPAPERS=1
     local walls_dest="$TARGET_DIR/.dotfiles/walls"
@@ -2239,8 +2262,59 @@ EOF
       "$walls_dest" || true
   fi
 
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 4: Capa del Sistema (Ly & Limine en dotfiles-system)" "$C_RESET"
+  local SYSTEM_INSTALL=0
+  local SYSTEM_MODE="all"
+  local SYSTEM_PATH=""
+  local system_selected="No"
+  local existing_system=""
+  if [[ -d "$REPO_ROOT/../system" ]]; then
+    existing_system="$REPO_ROOT/../system"
+  elif [[ -d "$TARGET_DIR/.dotfiles/system" ]]; then
+    existing_system="$TARGET_DIR/.dotfiles/system"
+  fi
+
+  if [[ -n "$existing_system" ]]; then
+    if prompt_yes_no "Capa del sistema detectada en $(prettify_path "$existing_system"). ¿Deseas instalarla/integrarla?" Y; then
+      SYSTEM_INSTALL=1
+      SYSTEM_PATH="$existing_system"
+    else
+      system_selected="No (omitida por el usuario)"
+    fi
+  else
+    printf '%bNo se detectó la capa del sistema en ~/.dotfiles/system.%b\n' "$C_SUBTEXT" "$C_RESET"
+    if prompt_yes_no "¿Deseas clonar e instalar la capa del sistema (anthonyportugal/dotfiles-system)?" Y; then
+      local system_dest="$TARGET_DIR/.dotfiles/system"
+      if wizard_clone_if_missing "dotfiles-system" \
+        "https://github.com/anthonyportugal/dotfiles-system.git" \
+        "git@github.com:anthonyportugal/dotfiles-system.git" \
+        "$system_dest"; then
+        SYSTEM_INSTALL=1
+        SYSTEM_PATH="$system_dest"
+      else
+        system_selected="No (falló la clonación)"
+      fi
+    else
+      system_selected="No (omitida por el usuario)"
+    fi
+  fi
+
+  if (( SYSTEM_INSTALL == 1 )); then
+    local sys_comp_choice=0
+    prompt_choice sys_comp_choice "Selecciona los componentes del sistema a configurar" \
+      "Completo: Bootloader Limine + Display Manager Ly [Recomendado]" \
+      "Solo Display Manager Ly" \
+      "Solo Bootloader Limine"
+    case "$sys_comp_choice" in
+      0) SYSTEM_MODE="all" ;;
+      1) SYSTEM_MODE="ly" ;;
+      2) SYSTEM_MODE="limine" ;;
+    esac
+    system_selected="Sí ($SYSTEM_MODE en $(prettify_path "$SYSTEM_PATH"))"
+  fi
+
   PRIVATE=0
-  printf '\n%bCapa Privada de Configuración (Identidad, SSH, llaves):%b\n' "${C_BOLD}" "$C_RESET"
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 5: Capa Privada de Configuración (dotfiles-private)" "$C_RESET"
   local existing_private=""
   if [[ -d "$REPO_ROOT/../private" ]]; then
     existing_private="$REPO_ROOT/../private"
@@ -2249,7 +2323,7 @@ EOF
   fi
 
   if [[ -n "$existing_private" ]]; then
-    if prompt_yes_no "Capa privada detectada en $existing_private. ¿Deseas integrarla?" Y; then
+    if prompt_yes_no "Capa privada detectada en $(prettify_path "$existing_private"). ¿Deseas integrarla?" Y; then
       PRIVATE=1
       PRIVATE_PATH="$existing_private"
       if prompt_yes_no "  ¿Habilitar perfil de desarrollo 'development' (PNPM, dev paths, AI codex)?" Y; then
@@ -2315,20 +2389,25 @@ EOF
   local wms_str="${WMS[*]:-(ninguno)}"
   printf '│  • Window Managers:   %-38s│\n' "$wms_str"
   local walls_str="No"
-  (( WALLPAPERS == 1 )) && walls_str="Sí (${WALLPAPERS_PATH:-~/.dotfiles/walls})"
+  if (( WALLPAPERS == 1 )); then
+    walls_str="Sí ($(prettify_path "${WALLPAPERS_PATH:-$TARGET_DIR/.dotfiles/walls}"))"
+  fi
   printf '│  • Wallpapers:        %-38s│\n' "$walls_str"
+  printf '│  • Capa del Sistema:  %-38s│\n' "$system_selected"
   local priv_str="No"
-  (( PRIVATE == 1 )) && priv_str="Sí (${PRIVATE_PATH:-~/.dotfiles/private})"
+  if (( PRIVATE == 1 )); then
+    priv_str="Sí ($(prettify_path "${PRIVATE_PATH:-$TARGET_DIR/.dotfiles/private}"))"
+  fi
   printf '│  • Capa Privada:      %-38s│\n' "$priv_str"
   printf '│  • Modo de Operación: %-38s│\n' "$MODE_SELECTION"
-  printf '│  • Directorio Target: %-38s│\n' "$TARGET_DIR"
+  printf '│  • Directorio Target: %-38s│\n' "$(prettify_path "$TARGET_DIR")"
   cat <<'EOF'
 ╰─────────────────────────────────────────────────────────────╯
 EOF
   printf '%b\n' "$C_RESET"
 
   local final_choice=0
-  prompt_choice final_choice "¿Cómo deseas proceder?" \
+  prompt_choice final_choice "Paso 7: ¿Cómo deseas proceder?" \
     "Aplicar los cambios ahora mismo (--apply)" \
     "Simulación previa (Dry-Run: ver qué enlaces y paquetes se tocarían sin modificar nada)" \
     "Cancelar y salir"
@@ -2351,6 +2430,16 @@ EOF
   validate_wallpapers_checkout
   validate_private_checkout
   bootstrap_with_optional_components
+
+  if (( APPLY == 1 )) && (( SYSTEM_INSTALL == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
+    local flag="--all"
+    [[ "${SYSTEM_MODE:-all}" == "ly" ]] && flag="--ly"
+    [[ "${SYSTEM_MODE:-all}" == "limine" ]] && flag="--limine"
+    printf '\n'
+    if prompt_yes_no "¿Deseas ejecutar ahora la configuración del sistema (sudo $SYSTEM_PATH/install.sh $flag --install)?" Y; then
+      sudo "$SYSTEM_PATH/install.sh" "$flag" --install || warn "La instalación del sistema retornó un código de salida no cero."
+    fi
+  fi
 }
 
 cmd_completion() {
