@@ -1,6 +1,7 @@
 # Configuraciones del Sistema (Ly y Limine)
 
 <p align="center">
+  <a href="https://github.com/anthonyportugal/dotfiles-system/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-system/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
@@ -27,8 +28,10 @@ Configuraciones modulares, reproducibles y no destructivas a nivel de sistema pa
 - 🛡️ **Personalización no destructiva del Bootloader:** Inyección pura de paleta en `limine.conf`. Parámetros del kernel, rutas initramfs, tiempos de espera y UUIDs de partición se mantienen 100% intactos.
 - 📦 **Respaldos Automáticos con Fecha y Hora:** Genera copias de seguridad inmutables (`.bak_YYYYMMDD_HHMMSS`) antes de modificar `/etc/ly/config.ini` o `/boot/limine.conf`.
 - 🔁 **Idempotencia Estricta:** Ejecutar los scripts múltiples veces nunca duplica líneas ni contamina archivos de configuración.
+- ⚡ **Instalación Asistida de Paquetes:** Detección automática del gestor de paquetes según la jerarquía del ecosistema (`shelly` → `paru` → `yay` → `pacman`), ofreciendo instalar paquetes ausentes.
+- 🧪 **Pruebas Automatizadas y CI:** Verificación completa mediante GitHub Actions y suite de pruebas no privilegiada con 16 aserciones de sintaxis, ShellCheck e idempotencia.
 - 🔍 **Simulación y Auditoría:** Modo de prueba (`--dry-run`) y diagnóstico del sistema (`--check`) para verificar rutas y compatibilidad sin realizar cambios.
-- 🕒 **Ly Display Manager Minimalista:** Pantalla de inicio TUI limpia con reloj en tiempo real (`%a %d %b %H:%M`), colores Catppuccin Mocha, soporte de color real de 24 bits y sin animaciones pesadas.
+- 🕒 **Ly Display Manager Minimalista:** Pantalla de inicio TUI limpia con reloj digital central (`bigclock = en`), reloj superior en tiempo real (`%a %d %b %H:%M`), colores Catppuccin Mocha, soporte de color real de 24 bits y sin animaciones pesadas.
 - 🎨 **Paletas Oficiales de Limine:** Obtenidas directamente de [catppuccin/limine](https://github.com/catppuccin/limine), con variantes de acento Mauve (predeterminado), Pink y Blue.
 
 ---
@@ -37,6 +40,7 @@ Configuraciones modulares, reproducibles y no destructivas a nivel de sistema pa
 
 ```text
 dotfiles-system/
+├── .github/workflows/ci.yml     # Flujo automatizado de CI con ShellCheck y pruebas
 ├── install.sh                  # Instalador maestro unificado (flags CLI + menú interactivo)
 ├── LICENSE                     # Licencia MIT
 ├── README.md                   # Documentación en Inglés
@@ -46,13 +50,15 @@ dotfiles-system/
 │   ├── config.lua              # Configuración Catppuccin Mocha (Lua para Ly >= 1.5+)
 │   ├── startup.sh              # Script inyector de paleta Catppuccin Mocha para TTY
 │   └── setup.sh                # Instalador modular para /etc/ly/
-└── limine/
-    ├── catppuccin-mocha.conf   # Tema activo por defecto (Mauve)
-    ├── setup.sh                # Inyector seguro de paleta para limine.conf
-    └── themes/
-        ├── catppuccin-mocha-blue.conf
-        ├── catppuccin-mocha-mauve.conf
-        └── catppuccin-mocha-pink.conf
+├── limine/
+│   ├── catppuccin-mocha.conf   # Tema activo por defecto (Mauve)
+│   ├── setup.sh                # Inyector seguro de paleta para limine.conf
+│   └── themes/
+│       ├── catppuccin-mocha-blue.conf
+│       ├── catppuccin-mocha-mauve.conf
+│       └── catppuccin-mocha-pink.conf
+└── tests/
+    └── test_suite.sh           # Suite automatizada de pruebas aisladas (sin root)
 ```
 
 ---
@@ -93,6 +99,9 @@ sudo ./install.sh
 # O instalación desatendida de todos los componentes
 sudo ./install.sh --all
 
+# Instalación asistida de paquetes ausentes (shelly/paru/yay/pacman)
+sudo ./install.sh --all --install
+
 # Seleccionar variante de acento para Limine (mauve, pink, blue)
 sudo ./install.sh --all --theme pink
 ```
@@ -103,11 +112,15 @@ Puedes instalar o actualizar componentes de manera individual:
 
 * **Solo Ly Display Manager:**
   ```bash
+  # Desplegar temas
   sudo ./ly/setup.sh
+
+  # O desplegar e instalar automáticamente el paquete si falta
+  sudo ./ly/setup.sh --install
   ```
   *Para habilitar Ly como display manager predeterminado en el arranque:*
   ```bash
-  sudo systemctl enable ly.service
+  sudo systemctl enable ly@tty1.service
   ```
 
 * **Solo Limine Bootloader:**
@@ -128,6 +141,24 @@ Puedes instalar o actualizar componentes de manera individual:
 > ```bash
 > sudo ./limine/setup.sh --enroll
 > ```
+
+---
+
+## 🧪 Pruebas Automatizadas
+
+El repositorio incluye una suite completa de pruebas no destructivas que se ejecuta en un entorno aislado y sin privilegios de root:
+
+```bash
+./tests/test_suite.sh
+```
+
+Las pruebas validan:
+1. **Sintaxis de Scripts de Shell:** Validación estática (`bash -n`) para todos los scripts.
+2. **Sintaxis de Bytecode Lua:** Compilación y verificación sintáctica de `ly/config.lua`.
+3. **Tokens y Paleta de Ly:** Confirma `start_cmd`, `bigclock = en` y declaraciones de escape de color TTY.
+4. **Integridad de Temas:** Valida los archivos de tema `mauve`, `pink` y `blue`.
+5. **Idempotencia y Seguridad del Bootloader:** Simulación de 3 pasadas asegurando que entradas del kernel, initramfs y UUIDs nunca se dupliquen o corrompan.
+6. **Diagnósticos CLI y Dry-Run:** Verifica que las banderas `--check`, `--dry-run` y `--help` operen limpiamente.
 
 ---
 
