@@ -1,6 +1,7 @@
 # Dotfiles (Repositorio Base)
 
 <p align="center">
+  <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
@@ -15,7 +16,7 @@ Configuración base pública, modular y portable optimizada para entornos **Arch
 
 > [!TIP]
 > 🧩 **Ecosistema Modular de Dotfiles:**  
-> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls)
+> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Capa del Sistema (Ly y Limine)](https://github.com/anthonyportugal/dotfiles-system)
 > 
 > Este repositorio proporciona la base fundamental para el entorno de usuario y se integra limpiamente con gestores de ventanas independientes, compositores y una capa de configuración privada opcional.
 
