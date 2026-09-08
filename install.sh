@@ -12,8 +12,8 @@ main() {
   local target_base="${DOTFILES_BASE_DIR:-$HOME/.dotfiles/base}"
 
   # Determine if we are already inside the base repository
-  local script_dir
-  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd -P || true)"
+  local script_dir=""
+  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd -P)" || script_dir=""
   if [[ -n "$script_dir" && -f "$script_dir/bin/dotfiles" ]]; then
     target_base="$script_dir"
   fi
