@@ -38,10 +38,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies (stow)
+      - name: Install dependencies (stow, zsh)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq stow
+          sudo apt-get install -y -qq stow zsh
 
       - name: Run bootstrap smoke test
         run: |
