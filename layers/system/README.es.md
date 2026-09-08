@@ -1,0 +1,164 @@
+# Configuraciones del Sistema (Ly y Limine)
+
+<p align="center">
+  <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
+  <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
+  <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
+  <a href="https://codeberg.org/fairyglade/ly"><img src="https://img.shields.io/badge/DM-Ly_1.4+-ff69b4?style=flat-square" alt="Ly"></a>
+  <a href="https://limine-bootloader.org/"><img src="https://img.shields.io/badge/Bootloader-Limine-blue?style=flat-square" alt="Limine"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+</p>
+
+*Leer esto en otros idiomas:* [English](README.md)
+
+Configuraciones modulares, reproducibles y no destructivas a nivel de sistema para **Arch Linux** y **CachyOS**. Administra la personalización del display manager ([Ly](https://codeberg.org/fairyglade/ly)) y del gestor de arranque ([Limine](https://limine-bootloader.org/)) bajo la paleta unificada **Catppuccin Mocha**, con respaldos automáticos por marca de tiempo y scripts de despliegue idempotentes.
+
+> [!TIP]
+> 🧩 **Ecosistema Modular de Dotfiles:**  
+> [Base y CLI](https://github.com/anthonyportugal/dotfiles) • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • **Capa del Sistema [Actual]**
+> 
+> Mientras que los dotfiles de usuario residen en `$HOME` y se gestionan sin privilegios con GNU Stow, los componentes que requieren permisos de superusuario (`/etc`, `/boot`) se mantienen aislados en este repositorio para máxima seguridad y estabilidad.
+
+---
+
+## ✨ Características Principales
+
+- 🛡️ **Personalización no destructiva del Bootloader:** Inyección pura de paleta en `limine.conf`. Parámetros del kernel, rutas initramfs, tiempos de espera y UUIDs de partición se mantienen 100% intactos.
+- 📦 **Respaldos Automáticos con Fecha y Hora:** Genera copias de seguridad inmutables (`.bak_YYYYMMDD_HHMMSS`) antes de modificar `/etc/ly/config.ini` o `/boot/limine.conf`.
+- 🔁 **Idempotencia Estricta:** Ejecutar los scripts múltiples veces nunca duplica líneas ni contamina archivos de configuración.
+- 🔍 **Simulación y Auditoría:** Modo de prueba (`--dry-run`) y diagnóstico del sistema (`--check`) para verificar rutas y compatibilidad sin realizar cambios.
+- 🕒 **Ly Display Manager Minimalista:** Pantalla de inicio TUI limpia con reloj en tiempo real (`%a %d %b %H:%M`), colores Catppuccin Mocha, soporte de color real de 24 bits y sin animaciones pesadas.
+- 🎨 **Paletas Oficiales de Limine:** Obtenidas directamente de [catppuccin/limine](https://github.com/catppuccin/limine), con variantes de acento Mauve (predeterminado), Pink y Blue.
+
+---
+
+## 🧱 Estructura del Repositorio
+
+```text
+dotfiles-system/
+├── install.sh                  # Instalador maestro unificado (flags CLI + menú interactivo)
+├── LICENSE                     # Licencia MIT
+├── README.md                   # Documentación en Inglés
+├── README.es.md                # Documentación en Español
+├── ly/
+│   ├── config.ini              # Configuración Catppuccin Mocha (INI para Ly <= 1.4)
+│   ├── config.lua              # Configuración Catppuccin Mocha (Lua para Ly >= 1.5+)
+│   ├── startup.sh              # Script inyector de paleta Catppuccin Mocha para TTY
+│   └── setup.sh                # Instalador modular para /etc/ly/
+└── limine/
+    ├── catppuccin-mocha.conf   # Tema activo por defecto (Mauve)
+    ├── setup.sh                # Inyector seguro de paleta para limine.conf
+    └── themes/
+        ├── catppuccin-mocha-blue.conf
+        ├── catppuccin-mocha-mauve.conf
+        └── catppuccin-mocha-pink.conf
+```
+
+---
+
+## 🚀 Instalación y Uso
+
+### 1. Clonar Repositorio
+
+```bash
+git clone https://github.com/anthonyportugal/dotfiles-system.git
+cd dotfiles-system
+```
+
+### 2. Auditoría del Estado del Sistema (Modo Seguro)
+
+Antes de aplicar cualquier cambio, puedes verificar qué componentes están instalados y dónde se encuentran las configuraciones activas:
+
+```bash
+./install.sh --check
+```
+
+### 3. Modo Simulación (Dry-Run)
+
+Simula la instalación para previsualizar exactamente qué acciones y rutas se utilizarían sin alterar el disco:
+
+```bash
+sudo ./install.sh --dry-run
+```
+
+### 4. Despliegue de Configuraciones
+
+#### Opción A: Instalador Maestro Unificado (Recomendado)
+
+```bash
+# Menú interactivo de selección
+sudo ./install.sh
+
+# O instalación desatendida de todos los componentes
+sudo ./install.sh --all
+
+# Seleccionar variante de acento para Limine (mauve, pink, blue)
+sudo ./install.sh --all --theme pink
+```
+
+#### Opción B: Instalación Modular
+
+Puedes instalar o actualizar componentes de manera individual:
+
+* **Solo Ly Display Manager:**
+  ```bash
+  sudo ./ly/setup.sh
+  ```
+  *Para habilitar Ly como display manager predeterminado en el arranque:*
+  ```bash
+  sudo systemctl enable ly.service
+  ```
+
+* **Solo Limine Bootloader:**
+  ```bash
+  # Instala el tema predeterminado (Mauve)
+  sudo ./limine/setup.sh
+
+  # O especifica un acento particular
+  sudo ./limine/setup.sh --theme pink
+
+  # Si tu archivo limine.conf está en una ruta personalizada
+  sudo ./limine/setup.sh --config /ruta/a/limine.conf
+  ```
+
+> [!NOTE]
+> **Secure Boot en CachyOS:**  
+> Si tienes Secure Boot activado en Limine 11.2+, añade la bandera `--enroll` para actualizar el checksum BLAKE2B automáticamente:
+> ```bash
+> sudo ./limine/setup.sh --enroll
+> ```
+
+---
+
+## 🔄 Restauración y Recuperación
+
+Dado que cada ejecución crea un respaldo con fecha y hora antes de tocar cualquier archivo, restaurar un estado previo es muy sencillo:
+
+### Restaurar Configuración de Ly
+```bash
+# Listar respaldos disponibles
+ls -la /etc/ly/config.ini.bak_*
+
+# Restaurar el respaldo deseado
+sudo cp /etc/ly/config.ini.bak_<TIMESTAMP> /etc/ly/config.ini
+```
+
+### Restaurar Configuración de Limine
+```bash
+# Listar respaldos disponibles
+ls -la /boot/limine*.bak_* /boot/limine/*.bak_* 2>/dev/null
+
+# Restaurar el respaldo deseado
+sudo cp /boot/limine.conf.bak_<TIMESTAMP> /boot/limine.conf
+```
+
+---
+
+## 📄 Licencia y Reconocimientos
+
+- **Licencia:** Distribuido bajo la [Licencia MIT](LICENSE).
+- **Temas:** Paletas de color inspiradas y obtenidas del [Proyecto Catppuccin](https://github.com/catppuccin/catppuccin) y [catppuccin/limine](https://github.com/catppuccin/limine).
+- **Proyectos Upstream:**
+  - [Ly Display Manager](https://codeberg.org/fairyglade/ly)
+  - [Limine Bootloader](https://limine-bootloader.org/)
