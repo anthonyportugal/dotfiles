@@ -42,7 +42,7 @@ printf '%b\n\n' "${BOLD}========================================================
 # ------------------------------------------------------------------------------
 printf '%b\n' "${BLUE}==> 1. Validating Shell Script Syntax (bash -n)...${RESET}"
 
-for script in install.sh ly/setup.sh ly/startup.sh limine/setup.sh; do
+for script in install.sh ly/setup.sh ly/startup.sh limine/setup.sh dns/setup.sh; do
     if bash -n "${REPO_DIR}/${script}"; then
         pass "Syntax valid: ${script}"
     else
@@ -173,9 +173,56 @@ fi
 rm -rf "${MOCK_DIR}"
 
 # ------------------------------------------------------------------------------
-# 6. Diagnostic & Dry-Run CLI Flags
+# 6. Verifying DNS-over-TLS (DoT) Configuration & Scripts
 # ------------------------------------------------------------------------------
-printf '%b\n' "\n${BLUE}==> 6. Testing Diagnostic & Dry-Run Flags...${RESET}"
+printf '%b\n' "\n${BLUE}==> 6. Verifying DNS-over-TLS Configuration & Scripts...${RESET}"
+
+for provider in quad9 cloudflare cloudflare-security adguard mullvad; do
+    if [[ -f "${REPO_DIR}/dns/providers/${provider}.conf" ]]; then
+        if grep -q "DNSOverTLS=yes" "${REPO_DIR}/dns/providers/${provider}.conf"; then
+            pass "DNS provider preset valid: ${provider}.conf"
+        else
+            fail "DNS provider ${provider}.conf missing DNSOverTLS=yes"
+        fi
+    else
+        fail "dns/providers/${provider}.conf not found"
+    fi
+done
+
+if "${REPO_DIR}/dns/setup.sh" --check < /dev/null >/dev/null 2>&1; then
+    pass "DNS installer --check flag executed successfully"
+else
+    fail "DNS installer --check flag failed"
+fi
+
+if "${REPO_DIR}/dns/setup.sh" --dry-run -p quad9 < /dev/null >/dev/null 2>&1; then
+    pass "DNS installer --dry-run (Quad9 default) executed without errors"
+else
+    fail "DNS installer --dry-run (Quad9 default) returned an error"
+fi
+
+if "${REPO_DIR}/dns/setup.sh" --dry-run -p cloudflare < /dev/null >/dev/null 2>&1; then
+    pass "DNS installer --dry-run (Cloudflare) executed without errors"
+else
+    fail "DNS installer --dry-run (Cloudflare) returned an error"
+fi
+
+if "${REPO_DIR}/dns/setup.sh" --dry-run -p cloudflare-security < /dev/null >/dev/null 2>&1; then
+    pass "DNS installer --dry-run (Cloudflare Security) executed without errors"
+else
+    fail "DNS installer --dry-run (Cloudflare Security) returned an error"
+fi
+
+if "${REPO_DIR}/dns/setup.sh" --dry-run --custom "45.90.28.0#test.nextdns.io" < /dev/null >/dev/null 2>&1; then
+    pass "DNS installer --dry-run (Custom NextDNS) executed without errors"
+else
+    fail "DNS installer --dry-run (Custom) returned an error"
+fi
+
+# ------------------------------------------------------------------------------
+# 7. Diagnostic, Composable & Dry-Run CLI Flags
+# ------------------------------------------------------------------------------
+printf '%b\n' "\n${BLUE}==> 7. Testing Diagnostic, Composable & Dry-Run Flags...${RESET}"
 
 if "${REPO_DIR}/install.sh" --check < /dev/null >/dev/null 2>&1; then
     pass "Master installer --check flag executed successfully"
@@ -187,6 +234,18 @@ if "${REPO_DIR}/install.sh" --dry-run --all < /dev/null >/dev/null 2>&1; then
     pass "Master installer --dry-run --all executed without errors"
 else
     fail "Master installer --dry-run --all returned an error"
+fi
+
+if "${REPO_DIR}/install.sh" --dry-run -l -d < /dev/null >/dev/null 2>&1; then
+    pass "Master installer composable flags (-l -d: Ly + DNS) executed without errors"
+else
+    fail "Master installer composable flags (-l -d) returned an error"
+fi
+
+if "${REPO_DIR}/install.sh" --dry-run -b -d -p adguard < /dev/null >/dev/null 2>&1; then
+    pass "Master installer composable flags (-b -d -p adguard: Limine + AdGuard) executed without errors"
+else
+    fail "Master installer composable flags (-b -d -p adguard) returned an error"
 fi
 
 if "${REPO_DIR}/install.sh" --help < /dev/null >/dev/null 2>&1; then

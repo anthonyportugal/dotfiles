@@ -33,6 +33,7 @@ Modular, reproducible, and non-destructive system-level configurations and themi
 - 🔍 **Dry-Run & System Audit:** Complete simulation mode (`--dry-run`) and diagnostic audit (`--check`) to inspect targets without making system changes.
 - 🕒 **Minimalist Ly Display Manager:** Clean TUI login screen with central digital clock (`bigclock = en`), real-time top clock (`%a %d %b %H:%M`), Catppuccin Mocha palette, true color support, and zero visual bloat.
 - 🎨 **Official Catppuccin Limine Palettes:** Sourced directly from [catppuccin/limine](https://github.com/catppuccin/limine), featuring Mauve (default), Pink, and Blue accents.
+- 🔒 **Encrypted DNS-over-TLS (DoT):** Native system-wide encrypted DNS via systemd-resolved and Quad9 (9.9.9.9) with Cloudflare fallback, zero background daemons.
 
 ---
 
@@ -45,6 +46,14 @@ dotfiles-system/
 ├── LICENSE                     # MIT License
 ├── README.md                   # English documentation
 ├── README.es.md                # Spanish documentation
+├── dns/
+│   ├── providers/              # Preconfigured DoT provider profiles
+│   │   ├── adguard.conf        # AdGuard DNS (ad and tracker blocking)
+│   │   ├── cloudflare.conf     # Cloudflare 1.1.1.1 (ultra-fast, general purpose)
+│   │   ├── cloudflare-security.conf # Cloudflare 1.1.1.2 (malware & phishing protection)
+│   │   ├── mullvad.conf        # Mullvad DNS (zero-logging, privacy)
+│   │   └── quad9.conf          # Quad9 9.9.9.9 (default, threat & malware blocking)
+│   └── setup.sh                # Modular installer for /etc/systemd/resolved.conf.d/
 ├── ly/
 │   ├── config.ini              # Catppuccin Mocha configuration (INI for Ly <= 1.4)
 │   ├── config.lua              # Catppuccin Mocha configuration (Lua for Ly >= 1.5+)
@@ -104,11 +113,26 @@ sudo ./install.sh --all --install
 
 # Select a custom Limine accent (mauve, pink, blue)
 sudo ./install.sh --all --theme pink
+
+# Composable flags: install only Ly and DNS (skip Limine)
+sudo ./install.sh --ly --dns --provider quad9
 ```
 
 #### Option B: Modular Installation
 
 You can install or update components individually:
+
+* **DNS-over-TLS (DoT) only:**
+  ```bash
+  # Deploy default provider (Quad9 9.9.9.9)
+  sudo ./dns/setup.sh
+
+  # Or select a preset: quad9, cloudflare, cloudflare-security, adguard, mullvad
+  sudo ./dns/setup.sh --provider adguard
+
+  # Or specify custom DoT endpoints (e.g. NextDNS)
+  sudo ./dns/setup.sh --custom "45.90.28.0#my-id.dns.nextdns.io"
+  ```
 
 * **Ly Display Manager only:**
   ```bash

@@ -33,6 +33,7 @@ Configuraciones modulares, reproducibles y no destructivas a nivel de sistema pa
 - 🔍 **Simulación y Auditoría:** Modo de prueba (`--dry-run`) y diagnóstico del sistema (`--check`) para verificar rutas y compatibilidad sin realizar cambios.
 - 🕒 **Ly Display Manager Minimalista:** Pantalla de inicio TUI limpia con reloj digital central (`bigclock = en`), reloj superior en tiempo real (`%a %d %b %H:%M`), colores Catppuccin Mocha, soporte de color real de 24 bits y sin animaciones pesadas.
 - 🎨 **Paletas Oficiales de Limine:** Obtenidas directamente de [catppuccin/limine](https://github.com/catppuccin/limine), con variantes de acento Mauve (predeterminado), Pink y Blue.
+- 🔒 **DNS Cifrado sobre TLS (DoT):** Resolución DNS cifrada nativa para todo el sistema mediante systemd-resolved y Quad9 (9.9.9.9) con respaldo en Cloudflare y sin daemons pesados.
 
 ---
 
@@ -45,6 +46,14 @@ dotfiles-system/
 ├── LICENSE                     # Licencia MIT
 ├── README.md                   # Documentación en Inglés
 ├── README.es.md                # Documentación en Español
+├── dns/
+│   ├── providers/              # Perfiles preconfigurados de proveedores DoT
+│   │   ├── adguard.conf        # AdGuard DNS (bloqueo de publicidad y rastreadores)
+│   │   ├── cloudflare.conf     # Cloudflare 1.1.1.1 (ultrarrápido, propósito general)
+│   │   ├── cloudflare-security.conf # Cloudflare 1.1.1.2 (bloqueo de malware y phishing)
+│   │   ├── mullvad.conf        # Mullvad DNS (sin registros, privacidad)
+│   │   └── quad9.conf          # Quad9 9.9.9.9 (predeterminado, bloqueo de malware y amenazas)
+│   └── setup.sh                # Instalador modular para /etc/systemd/resolved.conf.d/
 ├── ly/
 │   ├── config.ini              # Configuración Catppuccin Mocha (INI para Ly <= 1.4)
 │   ├── config.lua              # Configuración Catppuccin Mocha (Lua para Ly >= 1.5+)
@@ -102,13 +111,28 @@ sudo ./install.sh --all
 # Instalación asistida de paquetes ausentes (shelly/paru/yay/pacman)
 sudo ./install.sh --all --install
 
-# Seleccionar variante de acento para Limine (mauve, pink, blue)
+# Seleccionar un acento personalizado de Limine (mauve, pink, blue)
 sudo ./install.sh --all --theme pink
+
+# Flags componibles: instalar solo Ly y DNS (sin tocar Limine)
+sudo ./install.sh --ly --dns --provider quad9
 ```
 
 #### Opción B: Instalación Modular
 
 Puedes instalar o actualizar componentes de manera individual:
+
+* **Solo DNS-over-TLS (DoT):**
+  ```bash
+  # Desplegar proveedor predeterminado (Quad9 9.9.9.9)
+  sudo ./dns/setup.sh
+
+  # O seleccionar un perfil preconfigurado: quad9, cloudflare, cloudflare-security, adguard, mullvad
+  sudo ./dns/setup.sh --provider adguard
+
+  # O especificar endpoints DoT personalizados (ej. NextDNS)
+  sudo ./dns/setup.sh --custom "45.90.28.0#mi-id.dns.nextdns.io"
+  ```
 
 * **Solo Ly Display Manager:**
   ```bash
