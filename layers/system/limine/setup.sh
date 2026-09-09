@@ -177,7 +177,7 @@ if [[ -z "${TARGET_CONFIG}" ]]; then
     fi
     log_error "Could not find 'limine.conf' in any standard /boot location."
     log_info "If your configuration is in a custom path or mounted ESP partition, pass it with:"
-    printf "    ${BOLD}sudo %s --config /path/to/limine.conf${RESET}\n\n" "$0"
+    printf "    %bsudo %s --config /path/to/limine.conf%b\n\n" "${BOLD}" "$0" "${RESET}"
     exit 1
 fi
 

@@ -170,15 +170,15 @@ if [[ "${INSTALL_LY}" == false && "${INSTALL_LIMINE}" == false && "${INSTALL_DNS
             INSTALL_DNS=true
             ;;
         5)
-            printf "\n${BOLD}Configure Ly display manager?${RESET} [y/N]: "
+            printf "\n%bConfigure Ly display manager?%b [y/N]: " "${BOLD}" "${RESET}"
             read -r ans_ly
             [[ "${ans_ly}" =~ ^[yYsS]$ ]] && INSTALL_LY=true
 
-            printf "${BOLD}Configure Limine bootloader theme?${RESET} [y/N]: "
+            printf "%bConfigure Limine bootloader theme?%b [y/N]: " "${BOLD}" "${RESET}"
             read -r ans_limine
             [[ "${ans_limine}" =~ ^[yYsS]$ ]] && INSTALL_LIMINE=true
 
-            printf "${BOLD}Configure DNS-over-TLS?${RESET} [y/N]: "
+            printf "%bConfigure DNS-over-TLS?%b [y/N]: " "${BOLD}" "${RESET}"
             read -r ans_dns
             [[ "${ans_dns}" =~ ^[yYsS]$ ]] && INSTALL_DNS=true
             ;;
