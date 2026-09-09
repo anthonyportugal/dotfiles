@@ -260,7 +260,11 @@ else
     SOURCE_CONF="${PROVIDERS_DIR}/${PROVIDER_NAME}.conf"
     if [[ ! -f "${SOURCE_CONF}" ]]; then
         log_error "Provider configuration not found: ${SOURCE_CONF}"
-        log_info "Available providers in ${PROVIDERS_DIR}: $(ls -1 "${PROVIDERS_DIR}" | sed 's/\.conf//' | tr '\n' ' ')"
+        available_list=()
+        for p in "${PROVIDERS_DIR}"/*.conf; do
+            [[ -f "$p" ]] && available_list+=("$(basename "$p" .conf)")
+        done
+        log_info "Available providers: ${available_list[*]}"
         exit 1
     fi
     log_info "Selected provider: ${BOLD}${PROVIDER_NAME}${RESET}"
