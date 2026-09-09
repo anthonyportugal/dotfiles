@@ -15,6 +15,10 @@
 
 Configuraciones modulares, reproducibles y no destructivas a nivel de sistema para **Arch Linux** y **CachyOS**. Administra la personalización del display manager ([Ly](https://codeberg.org/fairyglade/ly)) y del gestor de arranque ([Limine](https://limine-bootloader.org/)) bajo la paleta unificada **Catppuccin Mocha**, con respaldos automáticos por marca de tiempo y scripts de despliegue idempotentes.
 
+<p align="center">
+  <img src="assets/ly-preview.webp" alt="Vista Previa de Ly Display Manager con Catppuccin Mocha" width="100%">
+</p>
+
 > [!TIP]
 > 🧩 **Ecosistema Modular de Dotfiles:**  
 > [Base y CLI](https://github.com/anthonyportugal/dotfiles) • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • **Capa del Sistema [Actual]**
