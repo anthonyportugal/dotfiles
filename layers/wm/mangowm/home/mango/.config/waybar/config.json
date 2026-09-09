@@ -98,7 +98,9 @@
     "format-linked": "󰈀 {ifname}",
     "format-disconnected": "󰤭 Offline",
     "tooltip-format": "{ifname}: {ipaddr}/{cidr} via {gwaddr}",
-    "tooltip-format-wifi": "{essid} ({signalStrength}%) {ipaddr}"
+    "tooltip-format-wifi": "{essid} ({signalStrength}%) {ipaddr}",
+    "on-click": "$HOME/.local/lib/mangowm/wifi select",
+    "on-click-right": "$HOME/.local/lib/mangowm/wifi toggle"
   },
   "bluetooth": {
     "format": "󰂯",

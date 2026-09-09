@@ -1,0 +1,413 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+command_name=${1:-select}
+
+mangowm_require nmcli
+mangowm_require fuzzel
+
+wifi_radio_status() {
+  nmcli radio wifi 2>/dev/null || printf 'disabled\n'
+}
+
+wifi_signal_icon() {
+  local signal=$1
+  if (( signal >= 75 )); then
+    printf '󰤨'
+  elif (( signal >= 50 )); then
+    printf '󰤥'
+  elif (( signal >= 25 )); then
+    printf '󰤢'
+  else
+    printf '󰤟'
+  fi
+}
+
+launch_nmtui() {
+  if command -v foot >/dev/null 2>&1; then
+    foot --app-id=floating-terminal -T "Network Manager (nmtui)" nmtui &
+  elif command -v nm-connection-editor >/dev/null 2>&1; then
+    nm-connection-editor &
+  else
+    mangowm_notify critical 'Wi-Fi' 'No se encontró nmtui ni terminal compatible'
+  fi
+}
+
+manage_saved_connections() {
+  local theme_dir
+  theme_dir=$(mangowm_theme_dir)
+
+  local -a saved_list=()
+  while IFS=':' read -r type name; do
+    if [[ "$type" == "802-11-wireless" && -n "$name" ]]; then
+      saved_list+=("$name")
+    fi
+  done < <(nmcli -g TYPE,NAME connection show 2>/dev/null || true)
+
+  if (( ${#saved_list[@]} == 0 )); then
+    mangowm_notify normal 'Wi-Fi' 'No hay redes Wi-Fi guardadas en el sistema'
+    return 0
+  fi
+
+  local -A label_to_saved=()
+  local -a formatted=()
+  local conn_name
+  for conn_name in "${saved_list[@]}"; do
+    local item="󰤨   $conn_name"
+    formatted+=("$item")
+    label_to_saved["$item"]="$conn_name"
+  done
+
+  local back_main="󰁍   Volver al menú principal"
+  formatted+=("$back_main")
+
+  local selected
+  local lines=${#formatted[@]}
+  (( lines > 11 )) && lines=11
+  selected=$(printf '%s\n' "${formatted[@]}" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="Red Guardada ❯ " --lines="$lines" --width=45 || true)
+
+  [[ -n "$selected" ]] || return 0
+
+  if [[ "$selected" == "$back_main" ]]; then
+    select_wifi_menu
+    return 0
+  fi
+
+  local target_name="${label_to_saved[$selected]-}"
+  [[ -n "$target_name" ]] || return 0
+
+  local back_saved="󰁍   Volver a redes guardadas"
+  local actions=(
+    "󰌘   Conectar a esta red"
+    "󰆴   Olvidar / Eliminar red"
+    "$back_saved"
+  )
+
+  local action
+  action=$(printf '%s\n' "${actions[@]}" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="$target_name ❯ " --lines=3 --width=35 || true)
+
+  case "$action" in
+    *"Conectar"*)
+      mangowm_notify low 'Wi-Fi' "Conectando a $target_name..."
+      if nmcli connection up id "$target_name" >/dev/null 2>&1; then
+        mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $target_name"
+      else
+        mangowm_notify critical 'Wi-Fi' "Fallo al conectar a $target_name"
+      fi
+      ;;
+    *"Olvidar"*)
+      if nmcli connection delete id "$target_name" >/dev/null 2>&1; then
+        mangowm_notify normal 'Wi-Fi' "Red eliminada: $target_name"
+      else
+        mangowm_notify critical 'Wi-Fi' "Fallo al eliminar: $target_name"
+      fi
+      manage_saved_connections
+      ;;
+    *"Volver"*)
+      manage_saved_connections
+      ;;
+  esac
+}
+
+show_active_connection_menu() {
+  local ssid=$1
+  local theme_dir
+  theme_dir=$(mangowm_theme_dir)
+
+  local back_main="󰁍   Volver al menú principal"
+  local actions=(
+    "󰤭   Desconectar de $ssid"
+    "󰆴   Olvidar / Eliminar red guardada"
+    "󰛳   Información de conexión"
+    "$back_main"
+  )
+
+  local selected
+  selected=$(printf '%s\n' "${actions[@]}" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="$ssid ❯ " --lines=4 --width=42 || true)
+
+  case "$selected" in
+    *"Desconectar"*)
+      if nmcli connection down id "$ssid" >/dev/null 2>&1; then
+        mangowm_notify normal 'Wi-Fi' "Desconectado de $ssid"
+      else
+        mangowm_notify critical 'Wi-Fi' "No se pudo desconectar de $ssid"
+      fi
+      ;;
+    *"Olvidar"*)
+      if nmcli connection delete id "$ssid" >/dev/null 2>&1; then
+        mangowm_notify normal 'Wi-Fi' "Red eliminada: $ssid"
+      else
+        mangowm_notify critical 'Wi-Fi' "Fallo al eliminar: $ssid"
+      fi
+      ;;
+    *"Información"*)
+      local ip gw dns
+      ip=$(nmcli -g IP4.ADDRESS connection show "$ssid" 2>/dev/null | head -n 1 || true)
+      gw=$(nmcli -g IP4.GATEWAY connection show "$ssid" 2>/dev/null || true)
+      dns=$(nmcli -g IP4.DNS connection show "$ssid" 2>/dev/null || true)
+      mangowm_notify normal "Detalles de $ssid" "IP: ${ip:-N/A}\nGateway: ${gw:-N/A}\nDNS: ${dns:-N/A}"
+      ;;
+    *"Volver"*)
+      select_wifi_menu
+      ;;
+  esac
+}
+
+connect_wifi_network() {
+  local ssid=$1
+  local security=$2
+  local is_saved=$3
+  local theme_dir
+  theme_dir=$(mangowm_theme_dir)
+
+  if [[ "$is_saved" == 1 ]]; then
+    mangowm_notify low 'Wi-Fi' "Conectando a $ssid..."
+    if nmcli connection up id "$ssid" >/dev/null 2>&1; then
+      mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+    else
+      mangowm_notify critical 'Wi-Fi' "Error al conectar a $ssid"
+    fi
+    return
+  fi
+
+  if [[ -n "$security" && "$security" != "--" ]]; then
+    local password
+    password=$(fuzzel --dmenu --password --config="$theme_dir/fuzzel.ini" \
+      --prompt="Contraseña ($ssid) ❯ " --lines=0 --width=38 || true)
+
+    [[ -n "$password" ]] || return 0
+
+    mangowm_notify low 'Wi-Fi' "Autenticando en $ssid..."
+    if nmcli device wifi connect "$ssid" password "$password" >/dev/null 2>&1; then
+      mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+    else
+      mangowm_notify critical 'Wi-Fi' "Error de autenticación en $ssid"
+    fi
+  else
+    mangowm_notify low 'Wi-Fi' "Conectando a red abierta $ssid..."
+    if nmcli device wifi connect "$ssid" >/dev/null 2>&1; then
+      mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+    else
+      mangowm_notify critical 'Wi-Fi' "Error al conectar a $ssid"
+    fi
+  fi
+}
+
+select_wifi_menu() {
+  local theme_dir
+  theme_dir=$(mangowm_theme_dir)
+
+  local radio
+  radio=$(wifi_radio_status)
+
+  if [[ "$radio" == "disabled" ]]; then
+    local disabled_options=(
+      "󰤨   Activar Wi-Fi"
+      "󰒓   Configuración avanzada (nmtui)"
+    )
+    local choice
+    choice=$(printf '%s\n' "${disabled_options[@]}" | \
+      fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+        --prompt="Wi-Fi (Desactivado) ❯ " --lines=2 --width=38 || true)
+
+    case "$choice" in
+      *"Activar Wi-Fi"*)
+        nmcli radio wifi on
+        mangowm_notify normal 'Wi-Fi' 'Wi-Fi activado'
+        ;;
+      *"Configuración avanzada"*)
+        launch_nmtui
+        ;;
+    esac
+    return 0
+  fi
+
+  local -A saved_map=()
+  while IFS=':' read -r type name; do
+    if [[ "$type" == "802-11-wireless" && -n "$name" ]]; then
+      saved_map["$name"]=1
+    fi
+  done < <(nmcli -g TYPE,NAME connection show 2>/dev/null || true)
+
+  local active_ssid=""
+  local active_signal="0"
+  local -A best_signal=()
+  local -A best_security=()
+  local -a ssids_order=()
+
+  while IFS=':' read -r in_use signal security ssid; do
+    [[ -n "$ssid" && "$ssid" != "--" ]] || continue
+
+    if [[ "$in_use" == "*" ]]; then
+      active_ssid="$ssid"
+      active_signal="$signal"
+    fi
+
+    if [[ -z "${best_signal[$ssid]-}" ]]; then
+      ssids_order+=("$ssid")
+      best_signal["$ssid"]=$signal
+      best_security["$ssid"]=$security
+    elif (( signal > best_signal[$ssid] )); then
+      best_signal["$ssid"]=$signal
+      best_security["$ssid"]=$security
+    fi
+  done < <(nmcli -g IN-USE,SIGNAL,SECURITY,SSID dev wifi list --rescan no 2>/dev/null || true)
+
+  declare -A label_to_ssid=()
+  declare -A label_to_action=()
+  declare -a menu_items=()
+
+  if [[ -n "$active_ssid" ]]; then
+    local active_label="󰄬   $active_ssid  ($active_signal%)  [Conectado]"
+    menu_items+=("$active_label")
+    label_to_ssid["$active_label"]="$active_ssid"
+  fi
+
+  local ssid
+  for ssid in "${ssids_order[@]}"; do
+    [[ "$ssid" != "$active_ssid" ]] || continue
+
+    local sig=${best_signal[$ssid]}
+    local sec=${best_security[$ssid]}
+    local sig_icon
+    sig_icon=$(wifi_signal_icon "$sig")
+    local sec_icon="  "
+    if [[ -n "$sec" && "$sec" != "--" ]]; then
+      sec_icon="󰌾"
+    fi
+
+    local saved_marker=""
+    if [[ -n "${saved_map[$ssid]-}" ]]; then
+      saved_marker=" [Guardada]"
+    fi
+
+    local label="$sig_icon   $ssid  ($sig%)  $sec_icon$saved_marker"
+    menu_items+=("$label")
+    label_to_ssid["$label"]="$ssid"
+  done
+
+  local act_off="󰤮   Desactivar Wi-Fi"
+  local act_scan="󰑐   Escanear redes"
+  local act_saved="󰆴   Redes guardadas (Administrar)"
+  local act_adv="󰒓   Configuración avanzada (nmtui)"
+
+  menu_items+=("$act_off" "$act_scan" "$act_saved" "$act_adv")
+  label_to_action["$act_off"]="off"
+  label_to_action["$act_scan"]="rescan"
+  label_to_action["$act_saved"]="saved"
+  label_to_action["$act_adv"]="nmtui"
+
+  local total_lines=${#menu_items[@]}
+  (( total_lines > 12 )) && total_lines=12
+
+  local selection
+  selection=$(printf '%s\n' "${menu_items[@]}" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="Wi-Fi ❯ " --lines="$total_lines" --width=46 || true)
+
+  [[ -n "$selection" ]] || return 0
+
+  local action=${label_to_action[$selection]-}
+  if [[ -n "$action" ]]; then
+    case "$action" in
+      off)
+        nmcli radio wifi off
+        mangowm_notify normal 'Wi-Fi' 'Wi-Fi desactivado'
+        ;;
+      rescan)
+        mangowm_notify low 'Wi-Fi' 'Escaneando redes cercanas...'
+        nmcli dev wifi rescan 2>/dev/null || true
+        sleep 1.5
+        select_wifi_menu
+        ;;
+      saved)
+        manage_saved_connections
+        ;;
+      nmtui)
+        launch_nmtui
+        ;;
+    esac
+    return 0
+  fi
+
+  local selected_ssid=${label_to_ssid[$selection]-}
+  if [[ -n "$selected_ssid" ]]; then
+    if [[ "$selected_ssid" == "$active_ssid" ]]; then
+      show_active_connection_menu "$selected_ssid"
+    else
+      local sec=${best_security[$selected_ssid]-}
+      local is_saved=0
+      [[ -n "${saved_map[$selected_ssid]-}" ]] && is_saved=1
+      connect_wifi_network "$selected_ssid" "$sec" "$is_saved"
+    fi
+  fi
+}
+
+toggle_wifi() {
+  local radio
+  radio=$(wifi_radio_status)
+  if [[ "$radio" == "enabled" ]]; then
+    nmcli radio wifi off
+    mangowm_notify normal 'Wi-Fi' 'Wi-Fi desactivado'
+  else
+    nmcli radio wifi on
+    mangowm_notify normal 'Wi-Fi' 'Wi-Fi activado'
+  fi
+}
+
+wifi_status() {
+  local radio
+  radio=$(wifi_radio_status)
+  if [[ "$radio" != "enabled" ]]; then
+    printf 'disabled\n'
+    return 0
+  fi
+
+  local active
+  active=$(nmcli -g IN-USE,SSID,SIGNAL dev wifi list 2>/dev/null | awk -F: '$1=="*"{print $2 " (" $3 "%)"}' | head -n 1)
+  if [[ -n "$active" ]]; then
+    printf '%s\n' "$active"
+  else
+    printf 'disconnected\n'
+  fi
+}
+
+case "$command_name" in
+  select|menu)
+    select_wifi_menu
+    ;;
+  toggle)
+    toggle_wifi
+    ;;
+  on)
+    nmcli radio wifi on
+    mangowm_notify normal 'Wi-Fi' 'Wi-Fi activado'
+    ;;
+  off)
+    nmcli radio wifi off
+    mangowm_notify normal 'Wi-Fi' 'Wi-Fi desactivado'
+    ;;
+  rescan)
+    nmcli dev wifi rescan
+    mangowm_notify low 'Wi-Fi' 'Escaneando redes...'
+    ;;
+  status)
+    wifi_status
+    ;;
+  saved)
+    manage_saved_connections
+    ;;
+  *)
+    printf 'Uso: %s select|toggle|on|off|rescan|status|saved\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac
