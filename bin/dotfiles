@@ -1852,11 +1852,19 @@ bootstrap_with_optional_components() {
   run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
-    local sys_flag="--all"
-    [[ "${SYSTEM_MODE:-all}" == "ly" ]] && sys_flag="--ly"
-    [[ "${SYSTEM_MODE:-all}" == "limine" ]] && sys_flag="--limine"
+    local -a sys_flags=()
+    case "${SYSTEM_MODE:-all}" in
+      ly)      sys_flags=("--ly") ;;
+      limine)  sys_flags=("--limine") ;;
+      dns)     sys_flags=("--dns") ;;
+      ly-dns)  sys_flags=("--ly" "--dns") ;;
+      *)       sys_flags=("--all") ;;
+    esac
+    if [[ "${SYSTEM_MODE:-all}" != "ly" && "${SYSTEM_MODE:-all}" != "limine" && -n "${SYSTEM_DNS_PROVIDER:-}" ]]; then
+      sys_flags+=("--provider" "$SYSTEM_DNS_PROVIDER")
+    fi
     info "Siguiente paso recomendado (Capa del Sistema):"
-    info "  sudo $SYSTEM_PATH/install.sh $sys_flag --install"
+    info "  sudo $SYSTEM_PATH/install.sh ${sys_flags[*]} --install"
   fi
 }
 
@@ -2262,9 +2270,10 @@ EOF
       "$walls_dest" || true
   fi
 
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 4: Capa del Sistema (Ly & Limine en dotfiles-system)" "$C_RESET"
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 4: Capa del Sistema (Ly, Limine & DNS-over-TLS en dotfiles-system)" "$C_RESET"
   local SYSTEM_INSTALL=0
   local SYSTEM_MODE="all"
+  local SYSTEM_DNS_PROVIDER="quad9"
   local SYSTEM_PATH=""
   local system_selected="No"
   local existing_system=""
@@ -2292,6 +2301,7 @@ EOF
         SYSTEM_INSTALL=1
         SYSTEM_PATH="$system_dest"
       else
+        warn "No se pudo clonar dotfiles-system. Omitiendo capa del sistema."
         system_selected="No (falló la clonación)"
       fi
     else
@@ -2302,15 +2312,38 @@ EOF
   if (( SYSTEM_INSTALL == 1 )); then
     local sys_comp_choice=0
     prompt_choice sys_comp_choice "Selecciona los componentes del sistema a configurar" \
-      "Completo: Bootloader Limine + Display Manager Ly [Recomendado]" \
+      "Completo: Bootloader Limine + Display Manager Ly + DNS-over-TLS [Recomendado]" \
+      "Escritorio y Red: Display Manager Ly + DNS-over-TLS" \
+      "Solo DNS-over-TLS (Quad9 / Cloudflare cifrado)" \
       "Solo Display Manager Ly" \
       "Solo Bootloader Limine"
     case "$sys_comp_choice" in
       0) SYSTEM_MODE="all" ;;
-      1) SYSTEM_MODE="ly" ;;
-      2) SYSTEM_MODE="limine" ;;
+      1) SYSTEM_MODE="ly-dns" ;;
+      2) SYSTEM_MODE="dns" ;;
+      3) SYSTEM_MODE="ly" ;;
+      4) SYSTEM_MODE="limine" ;;
     esac
-    system_selected="Sí ($SYSTEM_MODE en $(prettify_path "$SYSTEM_PATH"))"
+
+    if [[ "$SYSTEM_MODE" == "all" || "$SYSTEM_MODE" == "ly-dns" || "$SYSTEM_MODE" == "dns" ]]; then
+      local dns_choice=0
+      prompt_choice dns_choice "Selecciona el proveedor para DNS cifrado (DNS-over-TLS)" \
+        "Quad9 (9.9.9.9) - Privacidad suiza y bloqueo de malware [Recomendado]" \
+        "Cloudflare Security (1.1.1.2) - Protección contra phishing y malware" \
+        "Cloudflare Standard (1.1.1.1) - Ultrarrápido, propósito general" \
+        "AdGuard DNS - Bloqueo de publicidad y rastreadores" \
+        "Mullvad DNS - Cero registros y máxima privacidad"
+      case "$dns_choice" in
+        0) SYSTEM_DNS_PROVIDER="quad9" ;;
+        1) SYSTEM_DNS_PROVIDER="cloudflare-security" ;;
+        2) SYSTEM_DNS_PROVIDER="cloudflare" ;;
+        3) SYSTEM_DNS_PROVIDER="adguard" ;;
+        4) SYSTEM_DNS_PROVIDER="mullvad" ;;
+      esac
+      system_selected="Sí ($SYSTEM_MODE, dns: $SYSTEM_DNS_PROVIDER)"
+    else
+      system_selected="Sí ($SYSTEM_MODE)"
+    fi
   fi
 
   PRIVATE=0
@@ -2432,12 +2465,20 @@ EOF
   bootstrap_with_optional_components
 
   if (( APPLY == 1 )) && (( SYSTEM_INSTALL == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
-    local flag="--all"
-    [[ "${SYSTEM_MODE:-all}" == "ly" ]] && flag="--ly"
-    [[ "${SYSTEM_MODE:-all}" == "limine" ]] && flag="--limine"
+    local -a sys_flags=()
+    case "${SYSTEM_MODE:-all}" in
+      ly)      sys_flags=("--ly") ;;
+      limine)  sys_flags=("--limine") ;;
+      dns)     sys_flags=("--dns") ;;
+      ly-dns)  sys_flags=("--ly" "--dns") ;;
+      *)       sys_flags=("--all") ;;
+    esac
+    if [[ "${SYSTEM_MODE:-all}" != "ly" && "${SYSTEM_MODE:-all}" != "limine" && -n "${SYSTEM_DNS_PROVIDER:-}" ]]; then
+      sys_flags+=("--provider" "$SYSTEM_DNS_PROVIDER")
+    fi
     printf '\n'
-    if prompt_yes_no "¿Deseas ejecutar ahora la configuración del sistema (sudo $SYSTEM_PATH/install.sh $flag --install)?" Y; then
-      sudo "$SYSTEM_PATH/install.sh" "$flag" --install || warn "La instalación del sistema retornó un código de salida no cero."
+    if prompt_yes_no "¿Deseas ejecutar ahora la configuración del sistema (sudo $SYSTEM_PATH/install.sh ${sys_flags[*]} --install)?" Y; then
+      sudo "$SYSTEM_PATH/install.sh" "${sys_flags[@]}" --install || warn "La instalación del sistema retornó un código de salida no cero."
     fi
   fi
 }
