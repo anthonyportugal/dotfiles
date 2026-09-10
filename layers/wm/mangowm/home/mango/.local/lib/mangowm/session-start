@@ -69,4 +69,9 @@ if [[ -x "$HOME/.local/lib/mangowm/night-light" ]]; then
   "$HOME/.local/lib/mangowm/night-light" restore
 fi
 
+if [[ -x "$HOME/.local/lib/mangowm/monitors" ]]; then
+  "$HOME/.local/lib/mangowm/monitors" apply >/dev/null 2>&1 || true
+  start_unit mangowm-monitors "$HOME/.local/lib/mangowm/monitors" watch
+fi
+
 printf '%s\n' "$$" > "$runtime_dir/session-start.pid"
