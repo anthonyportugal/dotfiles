@@ -1,4 +1,5 @@
 bat
+lazygit
 micro
 starship
 ttf-nerd-fonts-symbols-mono
