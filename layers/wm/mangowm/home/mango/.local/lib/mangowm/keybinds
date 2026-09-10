@@ -39,6 +39,7 @@ keybindings=(
   "🖱️   Super + Clic Derecho          Redimensionar Ventana Flotante"
   "🔆  Teclas Fn / Super+Shift+↑↓    Subir / Bajar Brillo de Pantalla"
   "🔊  Teclas Multimedia             Subir / Bajar / Mutear Volumen"
+  "🔊  Super + V / Clic Der. Volumen  Menú de Dispositivos de Audio (Salidas / Micrófonos)"
   "❓  Super + ?                     Ver esta Guía de Atajos de Teclado"
 )
 

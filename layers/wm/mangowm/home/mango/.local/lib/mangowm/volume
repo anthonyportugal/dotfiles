@@ -5,6 +5,165 @@ set -Eeuo pipefail
 source "$HOME/.local/lib/mangowm/common"
 
 mangowm_require wpctl
+
+get_audio_devices() {
+  local filter_mode=${1:-all}
+  python3 -c '
+import json, subprocess, sys
+
+filter_mode = sys.argv[1] if len(sys.argv) > 1 else "all"
+
+try:
+    cards = json.loads(subprocess.check_output(["pactl", "-f", "json", "list", "cards"]))
+    sinks = json.loads(subprocess.check_output(["pactl", "-f", "json", "list", "sinks"]))
+    sources = json.loads(subprocess.check_output(["pactl", "-f", "json", "list", "sources"]))
+    def_sink = subprocess.check_output(["pactl", "get-default-sink"], text=True).strip()
+    def_source = subprocess.check_output(["pactl", "get-default-source"], text=True).strip()
+except Exception:
+    sys.exit(0)
+
+items = []
+
+if filter_mode in ("all", "sinks", "sink", "output"):
+    hdmi_cards = set()
+    for card in cards:
+        card_name = card.get("name", "")
+        card_desc = card.get("properties", {}).get("device.description", card_name)
+        has_hdmi = False
+        for port_name, port_info in card.get("ports", {}).items():
+            if port_name.startswith("hdmi-") and port_info.get("availability") in ("yes", "available"):
+                has_hdmi = True
+                prod = port_info.get("properties", {}).get("device.product.name")
+                desc = port_info.get("description", port_name)
+                target_profile = port_info.get("profiles", [None])[0]
+                profile_suffix = target_profile.replace("output:", "") if target_profile else ""
+                prefix_card = card_name.replace("alsa_card.", "alsa_output.")
+                sink_name = f"{prefix_card}.{profile_suffix}"
+                is_active = (def_sink == sink_name)
+
+                if prod and desc:
+                    display_label = f"{prod} ({desc})"
+                elif prod:
+                    display_label = prod
+                elif desc:
+                    display_label = f"{card_desc} ({desc})"
+                else:
+                    display_label = port_name
+
+                items.append({
+                    "type": "sink",
+                    "label": display_label,
+                    "target": sink_name,
+                    "card": card_name,
+                    "profile": target_profile or "",
+                    "is_active": is_active
+                })
+        if has_hdmi:
+            hdmi_cards.add(card_name)
+
+    for sink in sinks:
+        card_name = sink.get("properties", {}).get("device.name", "")
+        if card_name in hdmi_cards:
+            continue
+        sink_name = sink.get("name", "")
+        desc = sink.get("description") or sink_name
+        is_active = (def_sink == sink_name)
+        items.append({
+            "type": "sink",
+            "label": desc,
+            "target": sink_name,
+            "card": "",
+            "profile": "",
+            "is_active": is_active
+        })
+
+if filter_mode in ("all", "sources", "source", "input"):
+    for src in sources:
+        if src.get("name", "").endswith(".monitor"):
+            continue
+        src_name = src.get("name", "")
+        desc = src.get("description", src_name)
+        is_active = (def_source == src_name)
+        items.append({
+            "type": "source",
+            "label": desc,
+            "target": src_name,
+            "card": "",
+            "profile": "",
+            "is_active": is_active
+        })
+
+for it in items:
+    item_type = it["type"]
+    item_target = it["target"]
+    item_card = it["card"]
+    item_profile = it["profile"]
+    item_label = it["label"]
+    prefix = "󰓃  [Salida] " if item_type == "sink" else "󰍬  [Entrada]"
+    tag = "  [✓ Activo]" if it["is_active"] else ""
+    full_label = f"{prefix} {item_label}{tag}"
+    print(f"{full_label}\t{item_type}\t{item_target}\t{item_card}\t{item_profile}\t{item_label}")
+' "$filter_mode"
+}
+
+select_audio_device() {
+  mangowm_require fuzzel
+  local filter_type=${1:-all}
+  local theme_dir
+  theme_dir=$(mangowm_theme_dir)
+
+  declare -A label_to_type=()
+  declare -A label_to_target=()
+  declare -A label_to_card=()
+  declare -A label_to_profile=()
+  declare -A label_to_clean=()
+  local -a options=()
+
+  while IFS=$'\t' read -r full_label dev_type dev_target dev_card dev_profile clean_label; do
+    [[ -n "$full_label" ]] || continue
+    options+=("$full_label")
+    label_to_type["$full_label"]="$dev_type"
+    label_to_target["$full_label"]="$dev_target"
+    label_to_card["$full_label"]="$dev_card"
+    label_to_profile["$full_label"]="$dev_profile"
+    label_to_clean["$full_label"]="$clean_label"
+  done < <(get_audio_devices "$filter_type")
+
+  (( ${#options[@]} > 0 )) || {
+    mangowm_notify normal "Dispositivos de Audio" "No se detectaron dispositivos de audio disponibles"
+    return 0
+  }
+
+  local lines=${#options[@]}
+  (( lines > 12 )) && lines=12
+
+  local selected
+  selected=$(printf '%s\n' "${options[@]}" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="Dispositivo de Audio ❯ " --lines="$lines" --width=56 || true)
+
+  [[ -n "$selected" ]] || return 0
+
+  local chosen_type="${label_to_type[$selected]-}"
+  local chosen_target="${label_to_target[$selected]-}"
+  local chosen_card="${label_to_card[$selected]-}"
+  local chosen_profile="${label_to_profile[$selected]-}"
+  local chosen_label="${label_to_clean[$selected]-}"
+
+  [[ -n "$chosen_target" ]] || return 0
+
+  if [[ "$chosen_type" == "sink" ]]; then
+    if [[ -n "$chosen_card" && -n "$chosen_profile" ]]; then
+      pactl set-card-profile "$chosen_card" "$chosen_profile"
+    fi
+    pactl set-default-sink "$chosen_target"
+    mangowm_notify normal "Salida de Audio Cambiada" "$chosen_label"
+  else
+    pactl set-default-source "$chosen_target"
+    mangowm_notify normal "Entrada de Audio Cambiada" "$chosen_label"
+  fi
+}
+
 case "${1-}" in
   up)
     exec wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
@@ -18,8 +177,17 @@ case "${1-}" in
   mic-mute)
     exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
     ;;
+  menu|select)
+    select_audio_device "${2:-all}"
+    ;;
+  select-sink|output-menu)
+    select_audio_device "sinks"
+    ;;
+  select-source|input-menu)
+    select_audio_device "sources"
+    ;;
   *)
-    printf 'Uso: %s up|down|mute|mic-mute\n' "${0##*/}" >&2
+    printf 'Uso: %s up|down|mute|mic-mute|menu [all|sink|source]|select\n' "${0##*/}" >&2
     exit 2
     ;;
 esac

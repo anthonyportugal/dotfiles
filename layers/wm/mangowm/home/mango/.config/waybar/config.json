@@ -85,6 +85,7 @@
     "format-muted": "󰝟 {volume}%",
     "format-icons": ["󰕿", "󰖀", "󰕾"],
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-click-right": "$HOME/.local/lib/mangowm/volume menu",
     "scroll-step": 5
   },
   "backlight": {
