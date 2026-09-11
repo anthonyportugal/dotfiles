@@ -1,4 +1,4 @@
-# System Configurations (Ly & Limine)
+# System Configurations
 
 <p align="center">
   <a href="https://github.com/anthonyportugal/dotfiles-system/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-system/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
@@ -21,7 +21,7 @@ Modular, reproducible, and non-destructive system-level configurations and themi
 
 > [!TIP]
 > 🧩 **Modular Dotfiles Ecosystem:**  
-> [Base & CLI](https://github.com/anthonyportugal/dotfiles) • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • **System Layer [Current]**
+> [Base & CLI](https://github.com/anthonyportugal/dotfiles) • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • **System [Current]**
 > 
 > While userland configurations live in `$HOME` and are deployed without privileges via GNU Stow, system-level components requiring root privileges (`/etc`, `/boot`) are cleanly isolated in this repository for maximum stability and security.
 
