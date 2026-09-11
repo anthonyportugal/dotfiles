@@ -12,6 +12,7 @@ alias la='ls --color=auto -A'
 alias ll='ls --color=auto -lah'
 alias ld='ls --color=auto -l --group-directories-first'
 alias lg='lazygit'
+alias ldo='lazydocker'
 alias e='$EDITOR'
 alias y='yazi'
 
