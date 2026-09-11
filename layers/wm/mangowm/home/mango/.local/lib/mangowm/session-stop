@@ -7,6 +7,7 @@ declare -a session_units=(
   mangowm-waybar.service
   mangowm-swaybg.service
   mangowm-swayidle.service
+  mangowm-idle-inhibit.service
   mangowm-mako.service
   mangowm-polkit.service
   mangowm-monitors.service

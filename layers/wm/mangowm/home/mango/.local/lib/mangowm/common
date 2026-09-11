@@ -46,3 +46,13 @@ mangowm_require() {
     return 127
   }
 }
+
+mangowm_is_media_active() {
+  if command -v playerctl >/dev/null 2>&1 && [[ "$(playerctl status 2>/dev/null || true)" == "Playing" ]]; then
+    return 0
+  fi
+  if command -v pactl >/dev/null 2>&1 && pactl list sink-inputs 2>/dev/null | grep -q 'State: RUNNING'; then
+    return 0
+  fi
+  return 1
+}

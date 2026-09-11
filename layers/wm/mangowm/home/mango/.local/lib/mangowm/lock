@@ -4,6 +4,10 @@ set -Eeuo pipefail
 # shellcheck source=/dev/null
 source "$HOME/.local/lib/mangowm/common"
 
+if [[ "${1-}" == "--idle" ]] && mangowm_is_media_active; then
+  exit 0
+fi
+
 mangowm_require flock
 mangowm_require swaylock
 

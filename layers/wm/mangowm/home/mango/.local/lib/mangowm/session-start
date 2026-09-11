@@ -18,7 +18,10 @@ start_unit() {
     return 0
   fi
   systemctl --user reset-failed "$name.service" >/dev/null 2>&1 || true
-  systemd-run --user --quiet --collect --unit="$name" -- "$@"
+  systemd-run --user --quiet --collect --unit="$name" \
+    --property=Restart=on-failure \
+    --property=RestartSec=1s \
+    -- "$@"
 }
 
 if command -v dbus-update-activation-environment >/dev/null 2>&1; then
@@ -44,6 +47,9 @@ fi
 
 start_unit mangowm-mako mako --config "$theme_dir/mako.conf"
 start_unit mangowm-swayidle swayidle -w -C "$XDG_CONFIG_HOME/swayidle/config"
+if command -v wayland-pipewire-idle-inhibit >/dev/null 2>&1; then
+  start_unit mangowm-idle-inhibit wayland-pipewire-idle-inhibit
+fi
 
 if [[ -x "$HOME/.local/lib/mangowm/wallpaper" ]]; then
   "$HOME/.local/lib/mangowm/wallpaper" restore

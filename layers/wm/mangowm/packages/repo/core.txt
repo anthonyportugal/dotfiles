@@ -8,6 +8,7 @@ stow
 swaybg
 swayidle
 util-linux
+wayland-pipewire-idle-inhibit
 wireplumber
 wl-clipboard
 wlopm
