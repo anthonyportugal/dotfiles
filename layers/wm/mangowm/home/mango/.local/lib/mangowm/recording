@@ -7,7 +7,7 @@ source "$HOME/.local/lib/mangowm/common"
 UNIT=mangowm-recording.service
 
 is_active() {
-  systemctl --user --quiet is-active "$UNIT"
+  systemctl --user --quiet is-active "$UNIT" 2>/dev/null || pgrep -u "$UID" -x wf-recorder >/dev/null 2>&1
 }
 
 notify_waybar() {
@@ -26,6 +26,27 @@ recordings_dir() {
   printf '%s\n' "$videos_dir/Recordings"
 }
 
+get_active_output() {
+  local output=""
+  if command -v mmsg >/dev/null 2>&1; then
+    output=$(python3 -c '
+import json, subprocess
+try:
+    raw = subprocess.check_output(["mmsg", "get", "all-monitors"], text=True)
+    monitors = json.loads(raw).get("monitors", [])
+    active = next((m for m in monitors if m.get("active")), monitors[0] if monitors else None)
+    if active and active.get("name"):
+        print(active["name"])
+except Exception:
+    pass
+' 2>/dev/null || true)
+  fi
+  if [[ -z "$output" ]] && command -v wf-recorder >/dev/null 2>&1; then
+    output=$(wf-recorder -L 2>/dev/null | awk '/^[0-9]+\. Name: / { print $3; exit }' || true)
+  fi
+  printf '%s\n' "$output"
+}
+
 cleanup_audio() {
   local modules_file
   modules_file="$(mangowm_runtime_dir)/recording.audio_modules"
@@ -42,7 +63,7 @@ cleanup_audio() {
 start_recording() {
   local mode=${1:-fullscreen}
   local audio=${2:-none}
-  local destination_dir destination geometry destination_file
+  local destination_dir destination geometry destination_file mode_file
   local -a recorder=(wf-recorder)
 
   is_active && {
@@ -57,6 +78,12 @@ start_recording() {
     fi
     [[ -n "$geometry" ]] || return 0
     recorder+=(-g "$geometry")
+  else
+    local active_output
+    active_output=$(get_active_output)
+    if [[ -n "$active_output" ]]; then
+      recorder+=(-o "$active_output")
+    fi
   fi
 
   cleanup_audio
@@ -112,6 +139,8 @@ start_recording() {
 
   destination_file="$(mangowm_runtime_dir)/recording.destination"
   printf '%s\n' "$destination" > "$destination_file"
+  mode_file="$(mangowm_runtime_dir)/recording.mode"
+  printf '%s\n' "$mode" > "$mode_file"
 
   systemctl --user reset-failed "$UNIT" >/dev/null 2>&1 || true
   systemd-run --user --quiet --collect --unit=mangowm-recording \
@@ -128,18 +157,32 @@ start_recording() {
 }
 
 stop_recording() {
-  local destination_file
+  local destination_file mode_file
   destination_file="$(mangowm_runtime_dir)/recording.destination"
+  mode_file="$(mangowm_runtime_dir)/recording.mode"
 
   cleanup_audio
 
   if ! is_active; then
-    rm -f -- "$destination_file"
+    rm -f -- "$destination_file" "$mode_file"
     notify_waybar
     mangowm_notify low 'Grabación inactiva'
     return 0
   fi
-  systemctl --user stop "$UNIT"
+
+  if systemctl --user --quiet is-active "$UNIT" 2>/dev/null; then
+    systemctl --user stop "$UNIT" 2>/dev/null || true
+  fi
+
+  if pgrep -u "$UID" -x wf-recorder >/dev/null 2>&1; then
+    pkill -u "$UID" -INT -x wf-recorder 2>/dev/null || true
+    for _ in {1..20}; do
+      pgrep -u "$UID" -x wf-recorder >/dev/null 2>&1 || break
+      sleep 0.05
+    done
+    pkill -u "$UID" -KILL -x wf-recorder 2>/dev/null || true
+  fi
+
   notify_waybar
 
   local saved_msg='wf-recorder finalizó correctamente.'
@@ -147,6 +190,7 @@ stop_recording() {
     saved_msg="Guardado en: $(<"$destination_file")"
     rm -f -- "$destination_file"
   fi
+  rm -f -- "$mode_file"
   mangowm_notify low 'Grabación guardada' "$saved_msg"
 }
 
@@ -161,7 +205,6 @@ waybar_status() {
 menu() {
   if is_active; then
     stop_recording
-    return 0
   fi
   mangowm_require fuzzel
   local theme_dir
@@ -218,10 +261,24 @@ case "${1:-toggle}" in
     stop_recording
     ;;
   toggle)
-    if is_active; then stop_recording; else start_recording fullscreen "${2:-none}"; fi
+    if is_active; then
+      stop_recording
+    else
+      start_recording fullscreen "${2:-none}"
+    fi
     ;;
   toggle-region)
-    if is_active; then stop_recording; else start_recording region "${2:-none}"; fi
+    if is_active; then
+      local mode_file="$(mangowm_runtime_dir)/recording.mode"
+      local prev_mode=""
+      [[ -r "$mode_file" ]] && prev_mode=$(<"$mode_file")
+      stop_recording
+      if [[ "$prev_mode" != region ]]; then
+        start_recording region "${2:-none}"
+      fi
+    else
+      start_recording region "${2:-none}"
+    fi
     ;;
   status)
     if is_active; then printf 'recording\n'; else printf 'stopped\n'; fi
