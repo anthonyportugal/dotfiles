@@ -62,8 +62,63 @@ set_or_check_pref "color-scheme" "'prefer-dark'" "prefer-dark"
 set_or_check_pref "gtk-theme" "'adw-gtk3-dark'" "adw-gtk3-dark"
 set_or_check_pref "icon-theme" "'Papirus-Dark'" "Papirus-Dark"
 
+ensure_theme_fallback() {
+  local state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+  local current_theme="$state_home/dotfiles/theme/current"
+  local fallback_dir="$state_home/dotfiles/theme/fallback"
+
+  if [[ ! -e "$current_theme/gtk.css" ]]; then
+    mkdir -p "$fallback_dir"
+    cat > "$fallback_dir/gtk.css" << 'EOF'
+/* Fallback Catppuccin Mocha Pink theme definitions */
+@define-color accent_color #f5c2e7;
+@define-color accent_bg_color #f5c2e7;
+@define-color accent_fg_color #11111b;
+EOF
+    mkdir -p "${current_theme%/*}"
+    ln -sfn "fallback" "$current_theme"
+  fi
+
+  if [[ ! -e "$fallback_dir/yazi/flavor.toml" ]]; then
+    mkdir -p "$fallback_dir/yazi"
+    cat > "$fallback_dir/yazi/flavor.toml" << 'EOF'
+[mgr]
+cwd = { fg = "#94e2d5" }
+find_position = { fg = "#f5c2e7", bg = "reset", italic = true }
+marker_selected = { fg = "#f5c2e7", bg = "#f5c2e7" }
+count_selected = { fg = "#1e1e2e", bg = "#f5c2e7" }
+
+[mode]
+normal_main = { fg = "#1e1e2e", bg = "#f5c2e7", bold = true }
+normal_alt  = { fg = "#f5c2e7", bg = "#313244" }
+
+[indicator]
+current = { fg = "#1e1e2e", bg = "#f5c2e7" }
+
+[input]
+border = { fg = "#f5c2e7" }
+
+[icon]
+dirs = [
+	{ name = ".config", text = "", fg = "#f5c2e7" },
+	{ name = "Downloads", text = "", fg = "#f5c2e7" },
+]
+conds = [
+	{ if = "dir", text = "", fg = "#f5c2e7" },
+]
+EOF
+  fi
+
+  local yazi_config="${XDG_CONFIG_HOME:-$HOME/.config}/yazi"
+  if [[ -d "$yazi_config" ]]; then
+    mkdir -p "$yazi_config/flavors"
+    ln -sfn "$current_theme/yazi" "$yazi_config/flavors/theme.yazi"
+  fi
+}
+
 if [[ "$operation" == check ]]; then
   printf 'prefer-dark\n'
 else
+  ensure_theme_fallback
   printf 'preferencias de sesión aplicadas\n'
 fi

@@ -1,7 +1,5 @@
-/* Catppuccin Mocha - Pink theme definitions for GTK 4 / Libadwaita */
-@define-color accent_color #f5c2e7;
-@define-color accent_bg_color #f5c2e7;
-@define-color accent_fg_color #11111b;
+/* Catppuccin Mocha theme definitions for GTK 4 / Libadwaita */
+@import url("../../.local/state/dotfiles/theme/current/gtk.css");
 
 @define-color destructive_color #f38ba8;
 @define-color destructive_bg_color #f38ba8;
