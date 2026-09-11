@@ -128,13 +128,19 @@ grep -q "shell de login.*'/bin/bash'" "$TEST_ROOT/zsh-activation.out" ||
 grep -q 'chsh -s /bin/zsh' "$TEST_ROOT/zsh-activation.out" ||
   fail "doctor no eligió una ruta Zsh registrada"
 
-for alias_name in l la ll lg; do
+for alias_name in l la ll ld; do
   alias_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
     dotfiles-alias-check \
     "$REPO_ROOT/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "$alias_name")
   [[ "$alias_definition" == *'ls --color=auto '* ]] ||
     fail "el alias $alias_name no activa colores sólo para terminal"
 done
+
+lg_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
+  dotfiles-alias-check \
+  "$REPO_ROOT/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "lg")
+[[ "$lg_definition" == *'lazygit'* ]] ||
+  fail "el alias lg no apunta a lazygit"
 
 # La integración de WM consume únicamente un checkout externo y su entrypoint
 # público. Un apply ejecuta primero el dry-run del WM y propaga después las
