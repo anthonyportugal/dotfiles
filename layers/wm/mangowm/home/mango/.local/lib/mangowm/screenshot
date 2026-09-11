@@ -6,16 +6,16 @@ source "$HOME/.local/lib/mangowm/common"
 
 mode=${1:-region}
 case "$mode" in
-  region|fullscreen|clipboard|annotate)
+  region|fullscreen|output|all|clipboard|annotate)
     ;;
   *)
-    printf 'Uso: %s region|fullscreen|clipboard|annotate\n' "${0##*/}" >&2
+    printf 'Uso: %s region|fullscreen|output|all|clipboard|annotate\n' "${0##*/}" >&2
     exit 2
     ;;
 esac
 
 mangowm_require grim
-if [[ "$mode" != fullscreen ]]; then
+if [[ "$mode" != fullscreen && "$mode" != output && "$mode" != all ]]; then
   mangowm_require slurp
   if ! geometry=$(slurp); then
     exit 0
@@ -40,12 +40,37 @@ destination_dir="$pictures_dir/Screenshots"
 mkdir -p -- "$destination_dir"
 destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S_%N').png"
 
-if [[ "$mode" == fullscreen ]]; then
+if [[ "$mode" == fullscreen || "$mode" == output ]]; then
+  output_args=()
+  active_output=""
+  if command -v mmsg >/dev/null 2>&1; then
+    active_output=$(mmsg get cursorpos 2>/dev/null | jq -r '.monitor // empty' 2>/dev/null || true)
+    if [[ -z "$active_output" ]]; then
+      active_output=$(mmsg get focusing-client 2>/dev/null | jq -r '.monitor // empty' 2>/dev/null || true)
+    fi
+  fi
+  if [[ -n "$active_output" ]]; then
+    output_args=(-o "$active_output")
+  fi
+
+  grim "${output_args[@]}" -t png "$destination"
+  if command -v wl-copy >/dev/null 2>&1; then
+    wl-copy --type image/png < "$destination"
+  fi
+  if [[ -n "$active_output" ]]; then
+    mangowm_notify low 'Captura guardada' "Monitor ($active_output) guardado en ${destination##*/} y copiado al portapapeles."
+  else
+    mangowm_notify low 'Captura guardada' "Pantalla completa guardada en ${destination##*/} y copiada al portapapeles."
+  fi
+  exit 0
+fi
+
+if [[ "$mode" == all ]]; then
   grim -t png "$destination"
   if command -v wl-copy >/dev/null 2>&1; then
     wl-copy --type image/png < "$destination"
   fi
-  mangowm_notify low 'Captura guardada' "Pantalla completa guardada en ${destination##*/} y copiada al portapapeles."
+  mangowm_notify low 'Captura guardada' "Todas las pantallas guardadas en ${destination##*/} y copiadas al portapapeles."
   exit 0
 fi
 
