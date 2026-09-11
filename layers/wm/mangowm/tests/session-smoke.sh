@@ -83,11 +83,11 @@ jq empty "$TARGET/.config/waybar/config.json" || \
   "$TARGET/.config/wlogout/layout") == '{' ]] || \
   fail 'wlogout recibió un array en lugar de un stream de objetos JSON'
 jq -s -e '
-  length == 5 and
+  length == 4 and
   all(.[];
     type == "object" and
     (.label as $label |
-      ["lock", "logout", "suspend", "reboot", "shutdown"] | index($label)) != null and
+      ["lock", "shutdown", "logout", "reboot"] | index($label)) != null and
     (.action | type == "string" and length > 0) and
     (.text | type == "string" and length > 0) and
     (.keybind | type == "string" and length == 1)

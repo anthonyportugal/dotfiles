@@ -10,8 +10,71 @@ fi
 
 mangowm_require wlogout
 theme_dir=$(mangowm_theme_dir)
+
+# Default fallback geometry
+mon_w=1920
+mon_h=1080
+mon_idx=0
+
+# Detect active focused monitor geometry and matching GDK monitor index
+if command -v mmsg >/dev/null 2>&1; then
+  read -r mon_w mon_h mon_idx < <(
+    python3 -c '
+import sys, json, subprocess
+try:
+    raw = subprocess.check_output(["mmsg", "get", "all-monitors"], text=True)
+    monitors = json.loads(raw).get("monitors", [])
+    if not monitors:
+        sys.exit(1)
+    active_idx, active = 0, monitors[0]
+    for idx, m in enumerate(monitors):
+        if m.get("active"):
+            active_idx, active = idx, m
+            break
+    aw = active.get("width", 1920)
+    ah = active.get("height", 1080)
+    ax = active.get("x", 0)
+    ay = active.get("y", 0)
+    gdk_idx = active_idx
+
+    try:
+        import gi
+        gi.require_version("Gdk", "3.0")
+        from gi.repository import Gdk
+        display = Gdk.Display.get_default()
+        if display:
+            for i in range(display.get_n_monitors()):
+                geom = display.get_monitor(i).get_geometry()
+                if geom.x == ax and geom.y == ay:
+                    gdk_idx = i
+                    break
+    except Exception:
+        pass
+
+    print(f"{aw} {ah} {gdk_idx}")
+except Exception:
+    print("1920 1080 0")
+' 2>/dev/null || echo "1920 1080 0"
+  )
+fi
+
+# Fixed 2x2 cluster dimensions (approx 190x190 px per button)
+target_w=380
+target_h=380
+
+margin_x=$(( (mon_w - target_w) / 2 ))
+margin_y=$(( (mon_h - target_h) / 2 ))
+
+(( margin_x > 0 )) || margin_x=10
+(( margin_y > 0 )) || margin_y=10
+
 exec wlogout --protocol layer-shell \
-  -b 5 \
-  -T 360 -B 360 -L 200 -R 200 \
+  -b 2 \
+  -c 0 -r 0 \
+  -m 0 \
+  -L "$margin_x" -R "$margin_x" \
+  -T "$margin_y" -B "$margin_y" \
+  --no-span \
+  -P "$mon_idx" \
   --layout "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/layout" \
   --css "$theme_dir/wlogout.css" "$@"

@@ -5,26 +5,20 @@
   "keybind": "l"
 }
 {
+  "label": "shutdown",
+  "action": "systemctl poweroff",
+  "text": "Shutdown",
+  "keybind": "s"
+}
+{
   "label": "logout",
   "action": "$HOME/.local/lib/mangowm/logout",
   "text": "Logout",
   "keybind": "e"
 }
 {
-  "label": "suspend",
-  "action": "$HOME/.local/lib/mangowm/lock && systemctl suspend",
-  "text": "Suspend",
-  "keybind": "s"
-}
-{
   "label": "reboot",
   "action": "systemctl reboot",
   "text": "Reboot",
   "keybind": "r"
-}
-{
-  "label": "shutdown",
-  "action": "systemctl poweroff",
-  "text": "Shutdown",
-  "keybind": "p"
 }
