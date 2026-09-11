@@ -10,7 +10,8 @@ alias -- -='cd -'
 alias l='ls --color=auto -lh'
 alias la='ls --color=auto -A'
 alias ll='ls --color=auto -lah'
-alias lg='ls --color=auto -l --group-directories-first'
+alias ld='ls --color=auto -l --group-directories-first'
+alias lg='lazygit'
 alias e='$EDITOR'
 alias y='yazi'
 
@@ -73,3 +74,29 @@ alias gshd='git stash drop'
 alias gundo='git reset --soft HEAD~1'
 alias gunstage='git restore --staged'
 alias gdiscard='git restore'
+
+# --- Búsqueda y Previsualización rápida ---
+fp() {
+  local target
+  target=$(fzf --preview '
+    case "{}" in
+      *.md|*.MD|*.markdown|*.mdown)
+        if command -v glow >/dev/null 2>&1; then
+          glow -s dark -w "${FZF_PREVIEW_COLUMNS:-80}" "{}"
+        elif command -v bat >/dev/null 2>&1; then
+          bat --color=always --style=numbers,changes --line-range :300 "{}" 2>/dev/null || head -n 200 "{}"
+        else
+          head -n 200 "{}"
+        fi
+        ;;
+      *)
+        if command -v bat >/dev/null 2>&1; then
+          bat --color=always --style=numbers,changes --line-range :300 "{}" 2>/dev/null || head -n 200 "{}"
+        else
+          head -n 200 "{}"
+        fi
+        ;;
+    esac
+  ') || return 0
+  [[ -n "$target" ]] && ${EDITOR:-micro} "$target"
+}

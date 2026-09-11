@@ -1539,6 +1539,13 @@ apply_session_preferences() {
   info "Preferencia GTK validada: prefer-dark"
 }
 
+apply_bat_cache() {
+  command_exists bat || return 0
+  (( STOW_ENABLED == 1 )) || return 0
+  target_is_current_home || return 0
+  bat cache --build >/dev/null 2>&1 || true
+}
+
 validate_session_preferences() {
   local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
 
@@ -1760,6 +1767,7 @@ bootstrap() {
     validate_links_installed || die "falló la validación posterior de enlaces"
     prune_dangling_dotfiles_links 1
     apply_session_preferences
+    apply_bat_cache
     link_cli_command
   fi
 

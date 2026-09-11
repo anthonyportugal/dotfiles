@@ -28,4 +28,12 @@ if [[ -r "$dotfiles_zsh_history_search" ]]; then
   fi
 fi
 
+if [[ -r /usr/share/fzf/key-bindings.zsh ]]; then
+  source /usr/share/fzf/key-bindings.zsh
+fi
+
+if [[ -r /usr/share/fzf/completion.zsh ]]; then
+  source /usr/share/fzf/completion.zsh
+fi
+
 unset dotfiles_zsh_history_search dotfiles_zsh_plugins_dir
