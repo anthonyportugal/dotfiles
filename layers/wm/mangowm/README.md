@@ -7,13 +7,13 @@
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://wayland.freedesktop.org"><img src="https://img.shields.io/badge/Display-Wayland-00599C?style=flat-square&logo=wayland&logoColor=white" alt="Wayland"></a>
   <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
-  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha_Pink-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
 *Read this in other languages:* [Español](README.es.md)
 
-Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** and **CachyOS** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, styled with the Catppuccin Mocha palette with Pink accents. It functions completely standalone or composed with the primary modular dotfiles ecosystem.
+Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, styled with the Catppuccin Mocha palette. It functions completely standalone or composed with the primary modular dotfiles ecosystem.
 
 <p align="center">
   <img src="assets/screenshot.webp" alt="MangoWM Desktop Preview" width="100%">
@@ -94,23 +94,32 @@ The MangoWM configuration is organized into cumulative profiles managed with [GN
 
 ## 🚀 Installation & Profiles
 
-The included `./bin/mango` CLI handles package installation and GNU Stow symlinking with built-in dry-run safety.
+The included `./bin/mango` CLI handles package installation, configuration symlinking, and dynamic theming with built-in dry-run safety.
 
-### 1. Full Desktop Experience (Recommended)
+### 1. Interactive Setup Wizard (Recommended)
 
-Installs all desktop packages and links the unified `mango` configuration:
-
-```bash
-./bin/mango bootstrap --profile desktop --apply
-```
-
-### 2. Minimal Core Session (Window Manager Only)
-
-Installs only the compositor, terminal, launcher, and screen locker without status bars or desktop daemons:
+Run the interactive setup wizard to configure your profile, installation scope, and choose from all 14 Catppuccin Mocha accent colors:
 
 ```bash
-./bin/mango bootstrap --profile core --apply
+# Launch interactive wizard (default: English)
+./bin/mango setup
+
+# Or launch directly in Spanish
+./bin/mango setup --lang es
 ```
+
+### 2. Manual Command-Line Bootstrap
+
+If you prefer scripted or non-interactive deployment, use `bootstrap`:
+
+- **Full Desktop Experience:**
+  ```bash
+  ./bin/mango bootstrap --profile desktop --apply
+  ```
+- **Minimal Core Session (Window Manager Only):**
+  ```bash
+  ./bin/mango bootstrap --profile core --apply
+  ```
 
 ### Helpful Bootstrap Flags
 
