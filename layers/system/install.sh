@@ -8,13 +8,29 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC2034
 BOLD='\033[1m'
+# shellcheck disable=SC2034
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 RESET='\033[0m'
+C_MAUVE='\033[38;2;203;166;247m'
+C_BLUE='\033[38;2;137;180;250m'
+
+DOTFILES_LANG="${DOTFILES_LANG:-en}"
+
+_t() {
+    local en_text=$1
+    local es_text=${2:-$1}
+    if [[ "${DOTFILES_LANG}" == "es" ]]; then
+        printf '%b' "$es_text"
+    else
+        printf '%b' "$en_text"
+    fi
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LY_SETUP="${SCRIPT_DIR}/ly/setup.sh"
@@ -54,6 +70,7 @@ Configuration Options:
   -i, --install           Automatically install Ly package if not present (shelly/paru/yay/pacman)
   -n, --dry-run           Simulate installations without writing to disk
   -c, --check             Audit current state of Ly, Limine, and DNS-over-TLS
+  --lang <en|es>          Language for interactive menu (default: en)
   -h, --help              Show this help message
 
 Interactive Mode:
@@ -103,6 +120,14 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --lang)
+            DOTFILES_LANG="$2"
+            shift 2
+            ;;
+        --lang=*)
+            DOTFILES_LANG="${1#*=}"
+            shift
+            ;;
         -c|--check)
             CHECK_ONLY=true
             shift
@@ -119,17 +144,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-printf '%b' "\n${CYAN}${BOLD}"
+printf '%b' "\n${C_MAUVE}"
 cat <<'BANNER'
-    __      __  _____ __                                
-   / /_  __/ /_/ __(_) /__  _____     _______  _______ _____
-  / / / / / __/ /_/ / / _ \/ ___/____/ ___/ / / / ___// ___/
- / / /_/ / /_/ __/ / /  __(__  )/___(__  ) /_/ (__  ) /_    
-/_/\__, /\__/_/ /_/_/\___/____/    /____/\__, /____/_/      
-  /____/                                /____/              
+╭─────────────────────────────────────────────────────────────╮
+│                      ANTHONY PORTUGAL                       │
+│               dotfiles-system • Setup Wizard                │
+│             Ly, Limine Bootloader & DNS-over-TLS            │
+╰─────────────────────────────────────────────────────────────╯
 BANNER
 printf '%b\n' "${RESET}"
-printf '%b\n\n' "${BOLD}Catppuccin Mocha • Ly, Limine & DNS-over-TLS${RESET}"
 
 # Run check mode if requested
 if [[ "${CHECK_ONLY}" == true ]]; then
@@ -144,15 +167,15 @@ fi
 
 # Interactive menu if no components were specified
 if [[ "${INSTALL_LY}" == false && "${INSTALL_LIMINE}" == false && "${INSTALL_DNS}" == false ]]; then
-    printf '%b\n' "${BOLD}Select components to configure:${RESET}"
-    echo "  1) All components (Ly + Limine + DNS)"
-    echo "  2) Ly display manager only"
-    echo "  3) Limine bootloader only"
-    echo "  4) DNS-over-TLS only"
-    echo "  5) Custom selection (choose interactively)"
-    echo "  6) Audit system status (--check)"
-    echo "  7) Exit"
-    printf "\nEnter choice [1-7]: "
+    printf '%b%s%b\n' "${BOLD}${C_MAUVE}" "$(_t "Select components to configure:" "Selecciona los componentes a configurar:")" "${RESET}"
+    echo "  1) $(_t "All components (Ly + Limine + DNS) [Recommended]" "Todos los componentes (Ly + Limine + DNS) [Recomendado]")"
+    echo "  2) $(_t "Ly display manager only" "Solo Display Manager Ly")"
+    echo "  3) $(_t "Limine bootloader only" "Solo bootloader Limine")"
+    echo "  4) $(_t "DNS-over-TLS only" "Solo DNS-over-TLS")"
+    echo "  5) $(_t "Custom selection (choose interactively)" "Selección personalizada interactiva")"
+    echo "  6) $(_t "Audit system status (--check)" "Auditar estado del sistema (--check)")"
+    echo "  7) $(_t "Exit" "Salir")"
+    printf "\n%b%s [1-7]: %b" "${C_BLUE}" "$(_t "Enter choice" "Ingresa una opción")" "${RESET}"
     read -r choice
     case "${choice}" in
         1)
@@ -170,15 +193,15 @@ if [[ "${INSTALL_LY}" == false && "${INSTALL_LIMINE}" == false && "${INSTALL_DNS
             INSTALL_DNS=true
             ;;
         5)
-            printf "\n%bConfigure Ly display manager?%b [y/N]: " "${BOLD}" "${RESET}"
+            printf "\n%b%s%b [%s]: " "${BOLD}" "$(_t "Configure Ly display manager?" "¿Configurar gestor de pantalla Ly?")" "${RESET}" "$(_t "y/N" "s/N")"
             read -r ans_ly
             [[ "${ans_ly}" =~ ^[yYsS]$ ]] && INSTALL_LY=true
 
-            printf "%bConfigure Limine bootloader theme?%b [y/N]: " "${BOLD}" "${RESET}"
+            printf "%b%s%b [%s]: " "${BOLD}" "$(_t "Configure Limine bootloader theme?" "¿Configurar tema de Limine?")" "${RESET}" "$(_t "y/N" "s/N")"
             read -r ans_limine
             [[ "${ans_limine}" =~ ^[yYsS]$ ]] && INSTALL_LIMINE=true
 
-            printf "%bConfigure DNS-over-TLS?%b [y/N]: " "${BOLD}" "${RESET}"
+            printf "%b%s%b [%s]: " "${BOLD}" "$(_t "Configure DNS-over-TLS?" "¿Configurar DNS-over-TLS?")" "${RESET}" "$(_t "y/N" "s/N")"
             read -r ans_dns
             [[ "${ans_dns}" =~ ^[yYsS]$ ]] && INSTALL_DNS=true
             ;;
@@ -191,11 +214,11 @@ if [[ "${INSTALL_LY}" == false && "${INSTALL_LIMINE}" == false && "${INSTALL_DNS
             exit 0
             ;;
         7|q|Q)
-            echo "Operation cancelled."
+            _t "Operation cancelled.\n" "Operación cancelada.\n"
             exit 0
             ;;
         *)
-            log_error "Invalid selection."
+            log_error "$(_t "Invalid selection." "Selección inválida.")"
             exit 1
             ;;
     esac
