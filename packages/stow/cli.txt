@@ -1,4 +1,7 @@
 bat
+btop
+fastfetch
+lazygit
 micro
 starship
 yazi

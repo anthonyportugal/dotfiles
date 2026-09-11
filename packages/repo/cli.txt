@@ -1,6 +1,12 @@
 bat
+btop
+fastfetch
+fzf
+git-delta
+glow
 lazygit
 micro
+sad
 starship
 ttf-nerd-fonts-symbols-mono
 yazi
