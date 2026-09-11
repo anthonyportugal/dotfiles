@@ -12,7 +12,7 @@
 
 *Read this in other languages:* [Español](README.es.md)
 
-Public, modular, and portable base configuration optimized for **Arch Linux** and **CachyOS** environments. It establishes a consistent shell experience, essential CLI tools, common cross-session applications, and system preferences completely independent of the chosen Window Manager or compositor.
+Public, modular, and portable base configuration optimized for **Arch Linux** environments. It establishes a consistent shell experience, essential CLI tools, common cross-session applications, and system preferences completely independent of the chosen Window Manager or compositor.
 
 > [!TIP]
 > 🧩 **Modular Dotfiles Ecosystem:**  
@@ -108,15 +108,22 @@ The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone mi
 
 ### 2. If You Already Cloned the Repository
 
-If you already have `~/.dotfiles/base` locally, run the wizard directly:
+If you already have `~/.dotfiles/base` locally, run the interactive orchestrator launcher directly:
 
 ```bash
-# Option A: Via the bootstrap installer
-./install.sh
+# Option A: Launch the interactive menu (defaults to English, or prompts for language)
+./bin/dotfiles setup
 
-# Option B: Directly via the CLI (automatically opens the wizard if run with no args in a TTY)
-./bin/dotfiles
+# Option B: Launch in Spanish explicitly
+./bin/dotfiles setup --lang es
+
+# Option C: Via the bootstrap installer
+./install.sh
 ```
+
+The setup menu allows you to choose between:
+- **Guided Full Setup:** Step-by-step onboarding for the base system and delegates automatically to sub-module wizards (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`, `dotfiles-private setup`).
+- **Individual Module Configuration:** Directly launch any component's standalone setup wizard or perform environment lifecycle maintenance (`sync`, `update`, `doctor`, `unlink`).
 
 ### 3. Manual Command-Line Orchestration
 
@@ -168,6 +175,7 @@ You can also orchestrate components directly using explicit flags:
 | **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Modern Wayland dynamic tiling session (Waybar + Fuzzel + Swaylock + Satty) | Wayland |
 | **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Standalone classic tiling session (Polybar + Rofi + Picom + Dunst) | X11 |
 | **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection and management CLI | Multi-display |
+| **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | System-level configurations (Ly display manager, Limine bootloader, DNS-over-TLS) | Linux System |
 | **`dotfiles-private`** | Private layer for identities, signing keys, and work profiles | Local / Secure |
 
 ---

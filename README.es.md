@@ -12,7 +12,7 @@
 
 *Read this in other languages:* [English](README.md)
 
-Configuración base pública, modular y portable optimizada para entornos **Arch Linux** y **CachyOS**. Establece una experiencia de terminal unificada, herramientas CLI esenciales, aplicaciones compartidas y preferencias de sistema con total independencia del gestor de ventanas o compositor seleccionado.
+Configuración base pública, modular y portable optimizada para entornos **Arch Linux**. Establece una experiencia de terminal unificada, herramientas CLI esenciales, aplicaciones compartidas y preferencias de sistema con total independencia del gestor de ventanas o compositor seleccionado.
 
 > [!TIP]
 > 🧩 **Ecosistema Modular de Dotfiles:**  
@@ -108,15 +108,22 @@ El asistente detectará automáticamente los repositorios existentes en `$HOME/.
 
 ### 2. Si ya Clonaste el Repositorio
 
-Si ya dispones de `~/.dotfiles/base` localmente, ejecuta el asistente:
+Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el menú orquestador interactivo:
 
 ```bash
-# Opción A: A través del script bootstrap
-./install.sh
+# Opción A: Abrir el menú interactivo (por defecto en inglés o pregunta interactiva de idioma)
+./bin/dotfiles setup
 
-# Opción B: Directamente mediante la CLI (abre el asistente interactivo si se ejecuta sin argumentos en una TTY)
-./bin/dotfiles
+# Opción B: Ejecutar directamente en español
+./bin/dotfiles setup --lang es
+
+# Opción C: A través del script bootstrap
+./install.sh
 ```
+
+El menú principal te permite elegir entre:
+- **Asistente de Configuración Guiada:** Onboarding paso a paso para el sistema base y delegación automática a los asistentes de cada módulo (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`, `dotfiles-private setup`).
+- **Configuración Modular Individual:** Lanzar directamente el asistente guiado de cualquier componente por separado o realizar tareas de mantenimiento del entorno (`sync`, `update`, `doctor`, `unlink`).
 
 ### 3. Orquestación Manual por Línea de Comandos
 
@@ -168,6 +175,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
 | **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Sesión Wayland con mosaico dinámico (Waybar + Fuzzel + Swaylock + Satty) | Wayland |
 | **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Sesión X11 en mosaico (Polybar + Rofi + Picom + Dunst) | X11 |
 | **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP y CLI de gestión | Multi-monitor |
+| **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | Configuraciones a nivel de sistema (gestor de pantalla Ly, bootloader Limine, DNS-over-TLS) | Sistema Linux |
 | **`dotfiles-private`** | Capa privada opcional para identidades, firmas y perfiles de trabajo | Local / Seguro |
 
 ---
