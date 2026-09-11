@@ -95,9 +95,10 @@ fi
   fail "falta el renderer de tema"
 [[ -f "$REPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
+[[ -f "$REPO_ROOT/themes/templates/yazi-flavor.toml" ]] || \
+  fail "falta el template de tema para yazi"
 
 declare -A expected_keys=()
-declare -A seen_keys=()
 
 for key in \
   schema id family flavour accent_name \
@@ -109,41 +110,67 @@ for key in \
   expected_keys[$key]=1
 done
 
-while IFS='=' read -r key value; do
-  [[ -n "$key" && -n "$value" ]] || fail "línea inválida en $PALETTE"
-  [[ -v "expected_keys[$key]" ]] || fail "clave de paleta desconocida: $key"
-  [[ ! -v "seen_keys[$key]" ]] || fail "clave de paleta duplicada: $key"
-  seen_keys[$key]=1
+check_palette() {
+  local palette=$1
+  local expected_id
+  expected_id=$(basename -- "$(dirname -- "$palette")")
+  local expected_accent="${expected_id#catppuccin-mocha-}"
 
-  case "$key" in
-    schema)
-      [[ "$value" == 1 ]] || fail "schema de paleta no soportado"
-      ;;
-    id)
-      [[ "$value" == catppuccin-mocha-pink ]] || fail "id de paleta inesperado"
-      ;;
-    family)
-      [[ "$value" == catppuccin ]] || fail "familia de paleta inesperada"
-      ;;
-    flavour)
-      [[ "$value" == mocha ]] || fail "flavour de paleta inesperado"
-      ;;
-    accent_name)
-      [[ "$value" == pink ]] || fail "acento de paleta inesperado"
-      ;;
-    *)
-      [[ "$value" =~ ^#[0-9a-f]{6}$ ]] || \
-        fail "color inválido para $key"
-      ;;
-  esac
-done < "$PALETTE"
+  declare -A seen_keys=()
+  declare -A palette_values=()
 
-for key in "${!expected_keys[@]}"; do
-  [[ -v "seen_keys[$key]" ]] || fail "falta la clave de paleta $key"
+  while IFS='=' read -r key value; do
+    [[ -n "$key" && -n "$value" ]] || fail "línea inválida en $palette"
+    [[ -v "expected_keys[$key]" ]] || fail "clave de paleta desconocida: $key en $palette"
+    [[ ! -v "seen_keys[$key]" ]] || fail "clave de paleta duplicada: $key en $palette"
+    seen_keys[$key]=1
+    palette_values[$key]="$value"
+
+    case "$key" in
+      schema)
+        [[ "$value" == 1 ]] || fail "schema de paleta no soportado en $palette"
+        ;;
+      id)
+        [[ "$value" == "$expected_id" ]] || fail "id de paleta inesperado en $palette"
+        ;;
+      family)
+        [[ "$value" == catppuccin ]] || fail "familia de paleta inesperada en $palette"
+        ;;
+      flavour)
+        [[ "$value" == mocha ]] || fail "flavour de paleta inesperado en $palette"
+        ;;
+      accent_name)
+        [[ "$value" == "$expected_accent" ]] || fail "acento de paleta inesperado en $palette"
+        ;;
+      *)
+        [[ "$value" =~ ^#[0-9a-f]{6}$ ]] || \
+          fail "color inválido para $key en $palette"
+        ;;
+    esac
+  done < "$palette"
+
+  for key in "${!expected_keys[@]}"; do
+    [[ -v "seen_keys[$key]" ]] || fail "falta la clave de paleta $key en $palette"
+  done
+
+  local expected_color="${palette_values[$expected_accent]}"
+  [[ "${palette_values[accent]}" == "$expected_color" ]] || \
+    fail "el acento semántico en $palette no coincide con el color de $expected_accent"
+}
+
+found_palettes=0
+for palette_file in "$REPO_ROOT"/themes/*/palette.conf; do
+  [[ -f "$palette_file" ]] || continue
+  check_palette "$palette_file"
+  ((found_palettes++)) || true
 done
+[[ "$found_palettes" -ge 14 ]] || fail "se esperaban al menos 14 paletas Catppuccin Mocha, encontradas: $found_palettes"
 
-grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
-grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
+grep -Fxq 'pink=#f5c2e7' "$REPO_ROOT/themes/catppuccin-mocha-pink/palette.conf" || fail "Pink no coincide con Catppuccin Mocha"
+grep -Fxq 'accent=#f5c2e7' "$REPO_ROOT/themes/catppuccin-mocha-pink/palette.conf" || fail "Pink no es el acento semántico"
+grep -Fqx "bind=SUPER+ALT,T,spawn,\$HOME/.local/bin/mango-theme menu" \
+  "$REPO_ROOT/home/mango/.config/mango/conf.d/50-desktop.conf" || \
+  fail "falta el atajo Super+Alt+T para mango-theme menu en 50-desktop.conf"
 
 grep -Fq 'MangoWM' "$REPO_ROOT/README.md" || \
   fail "README.md no describe MangoWM"
