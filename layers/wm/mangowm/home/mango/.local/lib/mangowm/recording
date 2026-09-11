@@ -250,6 +250,21 @@ menu() {
   esac
 }
 
+toggle_region() {
+  local mode=${1:-none}
+  if is_active; then
+    local mode_file prev_mode=""
+    mode_file="$(mangowm_runtime_dir)/recording.mode"
+    [[ -r "$mode_file" ]] && prev_mode=$(<"$mode_file")
+    stop_recording
+    if [[ "$prev_mode" != region ]]; then
+      start_recording region "$mode"
+    fi
+  else
+    start_recording region "$mode"
+  fi
+}
+
 case "${1:-toggle}" in
   start)
     start_recording fullscreen "${2:-none}"
@@ -268,17 +283,7 @@ case "${1:-toggle}" in
     fi
     ;;
   toggle-region)
-    if is_active; then
-      local mode_file="$(mangowm_runtime_dir)/recording.mode"
-      local prev_mode=""
-      [[ -r "$mode_file" ]] && prev_mode=$(<"$mode_file")
-      stop_recording
-      if [[ "$prev_mode" != region ]]; then
-        start_recording region "${2:-none}"
-      fi
-    else
-      start_recording region "${2:-none}"
-    fi
+    toggle_region "${2:-none}"
     ;;
   status)
     if is_active; then printf 'recording\n'; else printf 'stopped\n'; fi

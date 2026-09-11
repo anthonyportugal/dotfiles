@@ -166,8 +166,8 @@ for palette_file in "$REPO_ROOT"/themes/*/palette.conf; do
 done
 [[ "$found_palettes" -ge 14 ]] || fail "se esperaban al menos 14 paletas Catppuccin Mocha, encontradas: $found_palettes"
 
-grep -Fxq 'pink=#f5c2e7' "$REPO_ROOT/themes/catppuccin-mocha-pink/palette.conf" || fail "Pink no coincide con Catppuccin Mocha"
-grep -Fxq 'accent=#f5c2e7' "$REPO_ROOT/themes/catppuccin-mocha-pink/palette.conf" || fail "Pink no es el acento semántico"
+grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
+grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 grep -Fqx "bind=SUPER+ALT,T,spawn,\$HOME/.local/bin/mango-theme menu" \
   "$REPO_ROOT/home/mango/.config/mango/conf.d/50-desktop.conf" || \
   fail "falta el atajo Super+Alt+T para mango-theme menu en 50-desktop.conf"

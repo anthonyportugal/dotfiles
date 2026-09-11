@@ -35,11 +35,6 @@ usage() {
 }
 
 resolve_theme_id() {
-  local requested=${1-}
-  if [[ -n "$requested" ]]; then
-    printf '%s\n' "$requested"
-    return 0
-  fi
   if [[ -n "${MANGOWM_THEME-}" ]]; then
     printf '%s\n' "$MANGOWM_THEME"
     return 0
