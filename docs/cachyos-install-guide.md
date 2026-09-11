@@ -1,239 +1,175 @@
-# 🐧 Guía de Instalación Limpia de CachyOS (Laptop Edition)
+# 🐧 Clean CachyOS Installation Guide for Dotfiles
 
-Esta guía documenta la selección mínima y optimizada para instalar **CachyOS** en una **laptop**, maximizando la **duración de la batería**, eliminando bloatware y asegurando **cero conflictos** con el ecosistema de dotfiles modulares.
+*Read this in other languages:* [Español](cachyos-install-guide.es.md)
+
+This guide documents the recommended package selection for installing **CachyOS** in a clean mode (**CLI / No Desktop**), applicable to both desktop workstations (**Desktop**) and portable computers (**Laptop**).
+
+The goal is to establish an ultra-lightweight, optimized base free of redundant or conflicting packages, preparing the system to seamlessly deploy the modular dotfiles ecosystem (`dotfiles`, `dotfiles-mangowm`, `dotfiles-bspwm`, `dotfiles-system`).
 
 ---
 
-## ⚙️ 1. Opciones Iniciales del Sistema
+## ⚙️ 1. Initial System Configuration
 
-Al iniciar el instalador (Calamares GUI o `cachyos-cli-installer`):
+When starting the CachyOS installer (Calamares GUI or `cachyos-cli-installer`):
 
-| Opción | Selección Recomendada | Motivo |
+| Option | Recommended Selection | Rationale |
 | :--- | :--- | :--- |
-| **Bootloader** | **Limine** (o `systemd-boot`) | Soporte oficial, ultra ligero, rápido y sin capas pesadas. |
-| **Filesystem** | **Btrfs** | Subvolúmenes optimizados y compresión transparente ZSTD. |
-| **Kernel** | **`linux-cachyos`** (Default) | Rendimiento óptimo, planificador BORE y optimizaciones de CPU. |
-| **Desktop Environment** | **`No Desktop` / `None` / `CLI`** | Base limpia sin entornos pesados (KDE/GNOME/SDDM) que colisionen. |
+| **Bootloader** | **Limine** (or `systemd-boot`) | Minimalist, blazing fast, and free of heavy bloat layers. |
+| **Filesystem** | **Btrfs** (or Ext4) | Optimized subvolumes and transparent ZSTD compression. |
+| **Kernel** | **`linux-cachyos`** (Default) | Optimal performance with CPU optimizations and the BORE scheduler. |
+| **Desktop Environment** | **`No Desktop` / `None` / `CLI`** | Pure CLI base without preinstalled graphical environments or display managers that could collide with dotfiles. |
 
 ---
 
-## 📦 2. Lista de Paquetes Adicionales (Checklist)
+## 📦 2. Additional Packages Selection (Installation Checklist)
 
-En la pantalla de **"Additional Packages"** tras elegir *No Desktop*, configura las casillas exactamente como se detalla a continuación:
+On the **"Additional Packages"** selection screen after choosing *No Desktop*, configure the checkboxes according to the following lists.
 
-### 🚫 CachyOS Packages
-> **Evitar:** Estos paquetes configuran ajustes por defecto o scripts que reemplazan o ensucian la configuración de los dotfiles.
+### 🚫 CachyOS Packages & Overrides (Critical: Uncheck All)
+> [!WARNING]
+> Unchecking these packages is essential. They inject global configurations into `/etc` or templates into `$HOME` that collide with GNU Stow modular package management.
+
+- [ ] `cachyos-settings` *(Critical to uncheck: injects global default configs into `/etc`)*
+- [ ] `cachyos-zsh-config` *(Critical to uncheck: collides with the dotfiles Zsh suite)*
+- [ ] `cachyos-fish-config`
+- [ ] `cachyos-micro-settings` *(Critical to uncheck: overrides `micro` editor configs)*
 - [ ] `cachyos-hello`
 - [ ] `cachyos-packageinstaller`
-- [ ] `cachyos-settings` *(Crítico desactivar: mete configuraciones globales en `/etc`)*
-- [ ] `cachyos-micro-settings` *(Crítico desactivar: colisiona con `base/home/micro`)*
 - [ ] `cachyos-wallpapers`
 
-### 🚫 CachyOS Shell Configuration
-> **Evitar:** Nuestros dotfiles (`base/home/zsh`) gestionan Zsh modularmente con GNU Stow.
-- [ ] `cachyos-fish-config`
-- [ ] `cachyos-zsh-config` *(Crítico desactivar: colisiona con `.zshrc` y plugins)*
-
 ---
 
-### 🌐 Base-devel / Network
-- [ ] `dnsmasq` *(Innecesario salvo que crees un servidor DNS local)*
-- [x] `dnsutils` *(Herramientas útiles como `dig` y `nslookup`)*
-- [x] `ethtool` *(Diagnóstico de red cableada)*
-- [ ] `iwd` *(Desactivar: puede causar conflictos con el backend de NetworkManager)*
-- [ ] `modemmanager` *(Innecesario salvo módems 4G/5G USB)*
-- [x] `networkmanager` *(Esencial para gestión de Wi-Fi y Ethernet)*
-- [ ] `networkmanager-openvpn` *(Opcional si usas OpenVPN; si no, desmarcar)*
-- [ ] `nss-mdns` *(Resolución mDNS de nombres `.local`, innecesario en laptops estándar)*
-- [ ] `usb_modeswitch` *(Módems USB 3G/4G)*
-- [x] `wpa_supplicant` *(Backend estándar de Wi-Fi para NetworkManager)*
-- [x] `wireless-regdb` *(Regulaciones de frecuencias Wi-Fi de tu región)*
-- [ ] `zl2tpd` *(Protocolo VPN L2TP legacy)*
+### 🌐 Network & Connectivity
+- [x] `networkmanager` *(Essential: unified network management for Ethernet and Wi-Fi)*
+- [x] `dnsutils` *(DNS diagnostics utilities such as `dig` and `nslookup`)*
+- [x] `ethtool` *(Wired network interface diagnostics)*
+- [x] `wpa_supplicant` *(Wi-Fi backend. **Keep checked** if the machine has Wi-Fi or is a Laptop; optional on wired-only Desktops)*
+- [x] `wireless-regdb` *(Regional Wi-Fi regulatory frequency database. **Keep checked** if using Wi-Fi)*
+- [ ] `modemmanager` *(**Uncheck** unless your machine has an integrated WWAN/LTE SIM slot or USB cellular modem)*
+- [ ] `usb_modeswitch` *(**Uncheck** unless using USB mobile broadband modems)*
+- [ ] `iwd` *(**Uncheck**: can cause conflicts with the default NetworkManager backend)*
+- [ ] `dnsmasq` *(**Uncheck**: unnecessary unless running a dedicated local DNS server)*
+- [ ] `nss-mdns` *(Local `.local` domain resolution, unnecessary for most setups)*
+- [ ] `networkmanager-openvpn` *(Optional if you manage OpenVPN connections directly through NetworkManager)*
+- [ ] `zl2tpd` *(Legacy L2TP VPN protocol)*
 
-### 🛡️ Firewall
-- [x] `ufw` *(Firewall sencillo y recomendado para protegerte en redes Wi-Fi públicas)*
-- [ ] `ufw-extras`
+---
 
 ### 📶 Bluetooth
-- [x] `bluez` *(Stack Bluetooth esencial para auriculares, ratón, etc.)*
-- [x] `bluez-hid2hci` *(Soporte para cambiar dongles de modo HID a HCI)*
-- [x] `bluez-libs`
-- [x] `bluez-utils` *(Utilidades CLI como `bluetoothctl`)*
-- [ ] `bluez-obex` *(Transferencia de archivos por Bluetooth, innecesario y consume servicio)*
+> [!NOTE]
+> If your machine is a desktop without an internal Bluetooth card or USB Bluetooth dongle, you can safely uncheck all packages in this group.
 
-### 📦 Package Management
-- [x] `pacman-contrib` *(Incluye herramientas como `paccache` para limpiar caché)*
-- [x] `pkgfile` *(Busca a qué paquete pertenece un comando no instalado)*
-- [x] `rebuild-detector` *(Avisa si paquetes de AUR necesitan reconstrucción)*
-- [x] `reflector` *(Optimiza y ordena mirrors rápidos)*
-- [x] `shelly` *(CLI package manager rápido oficial de CachyOS)*
+- [x] `bluez` *(Bluetooth protocol stack for headphones, keyboards, mice, and game controllers)*
+- [x] `bluez-utils` *(CLI tools including `bluetoothctl`)*
+- [x] `bluez-libs`
+- [x] `bluez-hid2hci` *(Mode switching support for USB Bluetooth adapters/dongles)*
+- [ ] `bluez-obex` *(Bluetooth file transfer daemon, generally unnecessary)*
+
+---
+
+### 🔋 Power Management
+- [x] `power-profiles-daemon` *(Recommended: standard Performance / Balanced / Power-saver profile manager, integrated with Waybar and Polybar)*
+- [x] `upower` *(Essential on **Laptops**: exports battery percentage and charge state to status bars. Optional on Desktops)*
+- [ ] `cpupower` *(**Uncheck**: can conflict with `power-profiles-daemon`)*
+
+---
+
+### 🔊 Audio & Multimedia
+- [x] `pipewire-pulse` *(PulseAudio emulation layer over PipeWire)*
+- [x] `wireplumber` *(Native PipeWire session manager)*
+- [x] `pipewire-alsa` *(ALSA routing to PipeWire)*
+- [x] `alsa-utils` *(Basic console audio tools such as `alsamixer`)*
+- [x] `alsa-firmware` *(Firmware for traditional sound cards and chipsets)*
+- [x] `sof-firmware` *(Sound Open Firmware: **critical** for modern Intel/AMD laptops and recent motherboards for audio/microphone support)*
+- [x] `pavucontrol` *(Fast, lightweight graphical audio mixer)*
+- [x] `realtime-privileges` *(Real-time priority group for low-latency audio)*
+
+---
+
+### 🛡️ Security & Firewall
+- [x] `ufw` *(Simple, straightforward firewall to protect the machine)*
+- [ ] `ufw-extras`
+
+---
+
+### 📦 Package Management & Maintenance
+- [x] `shelly` *(Official high-speed CachyOS package manager CLI with repository and AUR support)*
+- [x] `pacman-contrib` *(Includes utilities like `paccache` for automated cache cleanup)*
+- [x] `pkgfile` *(Locates which package owns an uninstalled command)*
+- [x] `rebuild-detector` *(Detects packages that need rebuilding after shared library updates)*
+- [x] `reflector` *(Retrieves and sorts the fastest Pacman mirrors)*
+
+---
+
+### 🔤 System Fonts
+- [x] `ttf-meslo-nerd` *(Default Nerd Font used across terminal emulators, Starship prompt, and icons)*
+- [x] `noto-fonts` *(Universal fallback font for character coverage)*
+- [x] `noto-fonts-emoji` *(Official emoji font support)*
+- [x] `noto-fonts-cjk` *(Asian character coverage for web browsing and documents)*
+- [x] `ttf-dejavu` *(Standard universal mono and sans fallback fonts)*
+- [x] `ttf-liberation` *(Metric-compatible replacements for common document fonts)*
+- [ ] `awesome-terminal-fonts` *(Redundant with Nerd Fonts)*
+- [ ] `cantarell-fonts` *(GNOME-specific font)*
+- [ ] `ttf-bitstream-vera`, `ttf-opensans`
+
+---
+
+### 🔌 Hardware Diagnostics & Firmware
+- [x] `linux-firmware` *(Official hardware firmware for processors, GPUs, and wireless chipsets)*
+- [x] `hwdetect` *(Native CachyOS hardware detection tool)*
+- [x] `dmidecode` *(Tool for inspecting hardware specifications and BIOS/SMBIOS data)*
+- [x] `mesa-utils` *(OpenGL and Vulkan graphics diagnostics such as `glxinfo`)*
+- [x] `mtools` *(FAT32 compatibility tools for USB drives and EFI partitions)*
+- [x] `smartmontools` *(Health monitoring for SSD and NVMe drives)*
+- [ ] `hdparm` *(Unnecessary on modern SSD/NVMe drives; only relevant for mechanical HDDs)*
+- [ ] `dmraid` *(Legacy hardware RAID controllers)*
+- [ ] `lsscsi`, `sg3_utils`
+
+---
 
 ### 🖼️ Desktop Integration & Codecs
-- [ ] `accountservice` *(Innecesario sin GNOME/GDM)*
-- [x] `bash-completion` *(Autocompletado en Bash fallback)*
-- [x] `ffmpegthumbnailer` *(Genera miniaturas de video para Yazi y Thunar)*
-- [x] `gst-libav` *(Códecs GStreamer)*
-- [x] `gst-plugin-pipewire` *(Integración multimedia con PipeWire)*
-- [x] `gst-plugins-bad` *(Códecs adicionales)*
-- [x] `gst-plugins-ugly` *(Códecs adicionales)*
-- [ ] `libdvdcss` *(Desencriptado de DVDs físicos, innecesario)*
-- [x] `libgsf` *(Miniaturas de documentos para el gestor de archivos)*
-- [x] `libopenraw` *(Miniaturas de fotos RAW para Yazi/Thunar)*
-- [x] `plocate` *(Búsqueda ultrarrápida de archivos por terminal)*
-- [x] `poppler-glib` *(Miniaturas y procesamiento de PDFs para Yazi/Thunar)*
-- [ ] `vlc-plugins-all` *(Innecesario: usamos `mpv`)*
-- [x] `xdg-user-dirs` *(Genera carpetas estándar `~/Downloads`, `~/Documents`, etc.)*
-- [x] `xdg-utils` *(Comandos estándar como `xdg-open`)*
-
-### 💾 Filesystem
-- [x] `efitools` *(Herramientas para diagnósticos de particiones EFI)*
-- [ ] `nfs-utils` *(Carpetas compartidas de red NFS)*
-- [ ] `nilfs-utils` *(Sistemas de archivos continuos NILFS)*
-- [x] `smartmontools` *(Monitoreo del estado de salud del disco SSD/NVMe)*
-- [x] `unrar` *(Extractor de archivos RAR)*
-- [x] `unzip` *(Extractor de archivos ZIP)*
-
-### 🔤 Fonts
-- [ ] `awesome-terminal-fonts` *(Redundante con Nerd Fonts)*
-- [x] `noto-fonts-emoji` *(Soporte oficial de emojis)*
-- [ ] `cantarell-fonts` *(Fuente específica de GNOME)*
-- [x] `noto-fonts` *(Fuentes universales para cualquier idioma)*
-- [ ] `ttf-bitstream-vera`
-- [x] `ttf-dejavu` *(Fuente mono y sans-serif de respaldo universal)*
-- [x] `ttf-liberation` *(Compatibilidad métrica con fuentes de Microsoft)*
-- [ ] `ttf-opensans`
-- [x] `ttf-meslo-nerd` *(Nerd font esencial para terminal, iconos y Starship)*
-- [x] `noto-fonts-cjk` *(Soporte para caracteres asiáticos en navegadores)*
-
-### 🔊 Audio
-- [x] `alsa-firmware` *(Firmware para tarjetas de sonido)*
-- [x] `alsa-utils` *(Control de volumen por consola `alsamixer`)*
-- [x] `pavucontrol` *(Controlador de volumen gráfico para PipeWire)*
-- [x] `pipewire-pulse` *(Emulación PulseAudio para aplicaciones modernas)*
-- [x] `wireplumber` *(Gestor de sesiones nativo de PipeWire)*
-- [x] `pipewire-alsa` *(Enrutador de ALSA hacia PipeWire)*
-- [x] `realtime-privileges` *(Prioridad en tiempo real para baja latencia de audio)*
-
-### 🔌 Hardware & Firmware
-- [x] `dmidecode` *(Información de hardware DMI/SMBIOS)*
-- [ ] `dmraid` *(Controladoras RAID por hardware antiguas)*
-- [ ] `hdparm` *(Control de discos duros mecánicos HDD)*
-- [x] `hwdetect` *(Detección de hardware de CachyOS)*
-- [x] `linux-firmware` *(Firmware universal para CPU, Wi-Fi y GPU)*
-- [ ] `lsscsi` *(Innecesario en laptops modernas)*
-- [x] `mesa-utils` *(Utilidades de gráficos OpenGL/Vulkan como `glxinfo`)*
-- [x] `mtools` *(Herramientas de compatibilidad FAT32 para particiones EFI/USB)*
-- [ ] `sg3_utils`
-- [x] `sof-firmware` *(Sound Open Firmware: crítico para el audio de laptops modernas Intel/AMD)*
-
-### 🔋 Power Management (Batería y Rendimiento)
-- [ ] `cpupower` *(Desactivar: puede entrar en conflicto con `power-profiles-daemon`)*
-- [x] `power-profiles-daemon` *(Recomendado: gestor estándar de perfiles de energía compatible con Wayland y kernels CachyOS)*
-- [x] `upower` *(Esencial: provee información del nivel de batería a Waybar y scripts de sistema)*
-
-### 💻 Applications Selection
-- [ ] `alacritty` *(Desmarcar: en MangoWM/Wayland usamos la terminal nativa `foot`)*
-- [x] `btop` *(Monitor de recursos del sistema moderno y estético)*
-- [ ] `duf` *(Innecesario: `df -h` o btop cubren esto)*
-- [ ] `fsarchiver`
-- [x] `git` *(Control de versiones esencial)*
-- [ ] `glances`
-- [ ] `hwinfo`
-- [ ] `meld` *(Visualizador gráfico de diffs, opcional)*
-- [ ] `nano-syntax-highlighting`
-- [x] `fastfetch` *(Información del sistema estética para terminal)*
-- [x] `pv` *(Pipe Viewer: barra de progreso para pipes en terminal ej. `cat file | pv > dest`, opcional pero ligero)*
-- [ ] `python-defusedxml`
-- [ ] `python-packaging`
-- [x] `rsync` *(Herramienta de sincronización de archivos)*
-- [x] `wget` *(Descarga de archivos por CLI)*
-- [x] `ripgrep` *(Búsqueda ultrarrápida de texto en archivos)*
-- [x] `micro` *(Editor de texto de terminal predeterminado)*
-- [ ] `nano`
-- [ ] `vim`
-- [x] `openssh` *(Herramientas SSH y `ssh-keygen` para claves)*
+- [x] `bash-completion` *(Standard programmable completion for Bash)*
+- [x] `xdg-user-dirs` *(Standard user directories generation: `~/Downloads`, `~/Documents`, etc.)*
+- [x] `xdg-utils` *(Standard desktop integration utilities such as `xdg-open`)*
+- [x] `ffmpegthumbnailer` *(Video thumbnail generation for Yazi and graphical file managers)*
+- [x] `poppler-glib` *(PDF rendering and preview generation)*
+- [x] `libgsf`, `libopenraw` *(Thumbnails for documents and RAW image files)*
+- [x] `gst-libav`, `gst-plugin-pipewire`, `gst-plugins-bad`, `gst-plugins-ugly` *(Multimedia codecs)*
+- [x] `plocate` *(Blazing fast indexed file search CLI)*
+- [x] `unzip`, `unrar` *(Archive extraction utilities)*
+- [ ] `accountservice` *(Unnecessary without GNOME/GDM display managers)*
+- [ ] `libdvdcss`, `vlc-plugins-all`
 
 ---
 
-## 🎮 3. Gráficos Híbridos (Intel Iris Xe + NVIDIA RTX 2050)
-
-En laptops con gráficos híbridos (Intel + NVIDIA):
-1. **Escritorio en Intel (Máxima Batería):** MangoWM y todo el entorno de escritorio corren automáticamente sobre la GPU Intel integrada, consumiendo el mínimo de energía. La RTX 2050 entra en modo de reposo profundo (*D3cold*, 0W de consumo).
-2. **Ejecución bajo demanda en NVIDIA (PRIME Offloading):**
-   * Cuando quieras ejecutar una app pesada o juego en la RTX 2050:
-     ```bash
-     prime-run <comando>   # Ej: prime-run blender, prime-run steam
-     ```
-3. **Controladores:** CachyOS detecta la RTX 2050 e instala los módulos NVIDIA propietarios optimizados para tu kernel automáticamente mediante `chwd`.
-
----
-
-## 🚀 4. Guía Post-Instalación (Recomendaciones Oficiales de la Wiki)
-
-Una vez que reinicies el equipo, retires el USB y desbloquees el disco con tu contraseña LUKS, inicia sesión en la terminal TTY y ejecuta:
-
-### A. Actualización del Sistema
-```bash
-sudo pacman -Syu
-```
-
-### B. Habilitar TRIM en Disco Cifrado (LUKS)
-> ℹ️ *CachyOS ya tiene `fstrim.timer` activo por defecto, pero la capa de cifrado LUKS bloquea las órdenes TRIM salvo que habilites el paso directo (discard passthrough):*
-
-```bash
-# 1. Identificar el nombre del mapper LUKS (busca la línea de tipo 'crypt'):
-lsblk
-
-# 2. Habilitar discard passthrough persistente (sustituye <mapper_name> por el nombre encontrado ej. luks-xxxx):
-sudo cryptsetup --allow-discards --persistent refresh <mapper_name>
-
-# 3. Reiniciar el sistema para aplicar:
-sudo reboot
-```
-*Tras reiniciar, puedes verificar con `lsblk -D` y `sudo fstrim -v /`.*
-
-### C. Activar Firewall (UFW)
-```bash
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw enable
-sudo systemctl enable --now ufw
-```
-
-### D. Activar Servicios de Energía y Bluetooth
-```bash
-sudo systemctl enable --now power-profiles-daemon
-sudo systemctl enable --now bluetooth
-```
+### 💻 Terminal Utilities & Core Tools
+- [x] `git` *(Essential version control for cloning and updating dotfiles)*
+- [x] `openssh` *(SSH utilities and key generation tools)*
+- [x] `micro` *(Default lightweight terminal text editor)*
+- [x] `ripgrep` *(High-performance text search tool)*
+- [x] `btop` *(Modern system resource monitor for CPU, memory, disks, and network)*
+- [x] `fastfetch` *(Clean system information display for terminal sessions)*
+- [x] `wget`, `rsync` *(File download and synchronization CLI tools)*
+- [x] `pv` *(Pipe Viewer: terminal data throughput monitor)*
+- [ ] `alacritty` *(**Uncheck**: the dotfiles installer deploys and configures the optimal terminal for your session: `foot` for MangoWM or `alacritty` for BSPWM)*
+- [ ] `nano`, `vim` *(Optional: default editors configured in dotfiles are `micro` or `nvim`)*
+- [ ] `duf`, `glances`, `hwinfo`, `meld`
 
 ---
 
-## 🥭 5. Desplegar los Dotfiles y Entornos de Ventana
+## 🚀 3. Next Step: Deploying Dotfiles
 
-### Opción A: Asistente Interactivo Automatizado (Recomendado)
+Once the CachyOS installation is complete, reboot the computer, remove the installation medium, and log in to the console (TTY) with your user account:
+
 ```bash
-# 1. Instalar utilidades esenciales
+# 1. Ensure basic connectivity and tools are present
 sudo pacman -S --needed git bash
 
-# 2. Ejecutar el instalador guiado
+# 2. Launch the interactive dotfiles installer
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
-*El asistente interactivo te guiará paso a paso para seleccionar el perfil Desktop, activar MangoWM (o BSPWM), habilitar la feature de laptop, integrar wallpapers y configurar la capa privada o identidad Git.*
 
-### Opción B: Despliegue Manual por Línea de Comandos
-```bash
-# 1. Instalar paquete esencial de compilación
-sudo pacman -S --needed base-devel git
-
-# 2. Clonar repositorios
-mkdir -p ~/.dotfiles/{base,wm}
-git clone https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles/base
-git clone https://github.com/anthonyportugal/dotfiles-mangowm.git ~/.dotfiles/wm/mangowm
-
-# 3. Bootstrap completo para laptop
-cd ~/.dotfiles/base
-./bin/dotfiles bootstrap --profile=desktop --wm=mangowm --wm-feature=laptop --apply
-
-# 4. Iniciar sesión en MangoWM
-mangowm-session
-```
+The interactive installer will guide you through:
+1. Detecting whether the hardware is a Desktop or Laptop (automatically configuring battery and backlight modules).
+2. Selecting your preferred compositor or window manager (**MangoWM** on Wayland or **BSPWM** on X11).
+3. Configuring wallpapers, color themes, and system components.
