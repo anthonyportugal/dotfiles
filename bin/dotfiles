@@ -104,6 +104,7 @@ Comandos:
 
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
+  --lang en|es                    Idioma/Language para el asistente (default: en).
   --feature yazi-extras           Feature opt-in; se puede repetir.
   --backend auto|shelly|paru|yay|pacman
                                     Backend de paquetes (default: auto).
@@ -174,6 +175,18 @@ parse_args() {
 
   while (( $# > 0 )); do
     case "$1" in
+      --lang)
+        require_option_value "$1" "${2-}"
+        DOTFILES_LANG=$2
+        export DOTFILES_LANG
+        shift 2
+        ;;
+      --lang=*)
+        DOTFILES_LANG=${1#*=}
+        require_option_value "--lang" "$DOTFILES_LANG"
+        export DOTFILES_LANG
+        shift
+        ;;
       --profile)
         require_option_value "$1" "${2-}"
         PROFILE=$2
@@ -2002,6 +2015,18 @@ update_from_remote() {
   sync_environment
 }
 
+DOTFILES_LANG="${DOTFILES_LANG:-}"
+
+_t() {
+  local en_text=$1
+  local es_text=${2:-$1}
+  if [[ "${DOTFILES_LANG:-en}" == "es" ]]; then
+    printf '%b' "$es_text"
+  else
+    printf '%b' "$en_text"
+  fi
+}
+
 wizard_colors() {
   if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && (( $(tput colors 2>/dev/null || echo 0) >= 8 )); then
     C_RESET='\033[0m'
@@ -2034,13 +2059,13 @@ prompt_choice() {
   done
 
   while true; do
-    printf '%bSelecciona una opción (1-%d): %b' "$C_BLUE" "${#options[@]}" "$C_RESET"
+    printf '%b%s (1-%d): %b' "$C_BLUE" "$(_t "Select an option" "Selecciona una opción")" "${#options[@]}" "$C_RESET"
     read -r choice || return 1
     if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
       printf -v "$var_name" '%d' "$(( choice - 1 ))"
       return 0
     fi
-    printf '%bOpción inválida. Intenta nuevamente.%b\n' "$C_RED" "$C_RESET"
+    printf '%b%s%b\n' "$C_RED" "$(_t "Invalid option. Please try again." "Opción inválida. Intenta nuevamente.")" "$C_RESET"
   done
 }
 
@@ -2048,8 +2073,12 @@ prompt_yes_no() {
   local question=$1
   local default_val=${2:-Y}
   local response=""
-  local prompt_suffix="[S/n]"
-  [[ "$default_val" =~ ^[Nn]$ ]] && prompt_suffix="[s/N]"
+  local prompt_suffix="[Y/n]"
+  [[ "$default_val" =~ ^[Nn]$ ]] && prompt_suffix="[y/N]"
+  if [[ "${DOTFILES_LANG:-en}" == "es" ]]; then
+    prompt_suffix="[S/n]"
+    [[ "$default_val" =~ ^[Nn]$ ]] && prompt_suffix="[s/N]"
+  fi
 
   while true; do
     printf '%b%s %b%s%b ' "${C_BOLD}" "$question" "${C_SUBTEXT}" "$prompt_suffix" "$C_RESET"
@@ -2058,14 +2087,14 @@ prompt_yes_no() {
       response=$default_val
     fi
     case "$response" in
-      [sS]|[yY]|[sS][iI]|[yY][eE][sS])
+      [yY]|[yY][eE][sS]|[sS]|[sS][iI])
         return 0
         ;;
       [nN]|[nN][oO])
         return 1
         ;;
       *)
-        printf '%bPor favor responde S o N.%b\n' "$C_RED" "$C_RESET"
+        printf '%b%s%b\n' "$C_RED" "$(_t "Please answer Y or N." "Por favor responde S o N.")" "$C_RESET"
         ;;
     esac
   done
@@ -2137,88 +2166,241 @@ prettify_path() {
 run_interactive_wizard() {
   wizard_colors
 
+  if [[ -z "${DOTFILES_LANG:-}" ]]; then
+    clear 2>/dev/null || true
+    local lang_choice=0
+    prompt_choice lang_choice "Select language / Selecciona el idioma" \
+      "English [Default]" \
+      "Español"
+    if (( lang_choice == 1 )); then
+      DOTFILES_LANG="es"
+    else
+      DOTFILES_LANG="en"
+    fi
+    export DOTFILES_LANG
+  fi
+
   clear 2>/dev/null || true
   printf '%b' "$C_MAUVE"
   cat <<'EOF'
 ╭─────────────────────────────────────────────────────────────╮
-│             ANTHONY PORTUGAL — DOTFILES WIZARD              │
-│       Instalación Modular y Guiada por Capas (Catppuccin)   │
+│                      ANTHONY PORTUGAL                       │
+│                 dotfiles-base • Setup Wizard                │
+│           Modular Arch Linux Configuration System           │
 ╰─────────────────────────────────────────────────────────────╯
 EOF
   printf '%b\n' "$C_RESET"
 
-  printf '%bEstado actual detectado:%b\n' "${C_BOLD}" "$C_RESET"
-  printf '  • Base:     %b[✓ Presente]%b (%s)\n' "$C_GREEN" "$C_RESET" "$(prettify_path "$REPO_ROOT")"
+  printf '%b%s%b\n' "${C_BOLD}" "$(_t "Detected environment:" "Estado actual detectado:")" "$C_RESET"
+  printf '  • Base:     %b[✓ %s]%b (%s)\n' "$C_GREEN" "$(_t "Present" "Presente")" "$C_RESET" "$(prettify_path "$REPO_ROOT")"
 
-  local mango_status="${C_SUBTEXT}[No presente]${C_RESET}"
-  if [[ -d "$REPO_ROOT/../wm/mangowm" || -d "$TARGET_DIR/.dotfiles/wm/mangowm" ]]; then
-    mango_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  local mango_dir=""
+  if [[ -d "$REPO_ROOT/../wm/mangowm" ]]; then
+    mango_dir="$REPO_ROOT/../wm/mangowm"
+  elif [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" ]]; then
+    mango_dir="$TARGET_DIR/.dotfiles/wm/mangowm"
   fi
+  local mango_status
+  mango_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
+  [[ -n "$mango_dir" ]] && mango_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • MangoWM:  %b\n' "$mango_status"
 
-  local bspwm_status="${C_SUBTEXT}[No presente]${C_RESET}"
-  if [[ -d "$REPO_ROOT/../wm/bspwm" || -d "$TARGET_DIR/.dotfiles/wm/bspwm" ]]; then
-    bspwm_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  local bspwm_dir=""
+  if [[ -d "$REPO_ROOT/../wm/bspwm" ]]; then
+    bspwm_dir="$REPO_ROOT/../wm/bspwm"
+  elif [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" ]]; then
+    bspwm_dir="$TARGET_DIR/.dotfiles/wm/bspwm"
   fi
+  local bspwm_status
+  bspwm_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
+  [[ -n "$bspwm_dir" ]] && bspwm_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • BSPWM:    %b\n' "$bspwm_status"
 
-  local walls_status="${C_SUBTEXT}[No presente]${C_RESET}"
-  if [[ -d "$REPO_ROOT/../walls" || -d "$TARGET_DIR/.dotfiles/walls" ]]; then
-    walls_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  local walls_dir=""
+  if [[ -d "$REPO_ROOT/../walls" ]]; then
+    walls_dir="$REPO_ROOT/../walls"
+  elif [[ -d "$TARGET_DIR/.dotfiles/walls" ]]; then
+    walls_dir="$TARGET_DIR/.dotfiles/walls"
   fi
+  local walls_status
+  walls_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
+  [[ -n "$walls_dir" ]] && walls_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • Walls:    %b\n' "$walls_status"
 
-  local system_status="${C_SUBTEXT}[No presente]${C_RESET}"
-  if [[ -d "$REPO_ROOT/../system" || -d "$TARGET_DIR/.dotfiles/system" ]]; then
-    system_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  local system_dir=""
+  if [[ -d "$REPO_ROOT/../system" ]]; then
+    system_dir="$REPO_ROOT/../system"
+  elif [[ -d "$TARGET_DIR/.dotfiles/system" ]]; then
+    system_dir="$TARGET_DIR/.dotfiles/system"
   fi
+  local system_status
+  system_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
+  [[ -n "$system_dir" ]] && system_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • System:   %b\n' "$system_status"
 
-  local private_status="${C_SUBTEXT}[No presente]${C_RESET}"
-  if [[ -d "$REPO_ROOT/../private" || -d "$TARGET_DIR/.dotfiles/private" ]]; then
-    private_status="${C_GREEN}[✓ Presente]${C_RESET}"
+  local private_dir=""
+  if [[ -d "$REPO_ROOT/../private" ]]; then
+    private_dir="$REPO_ROOT/../private"
+  elif [[ -d "$TARGET_DIR/.dotfiles/private" ]]; then
+    private_dir="$TARGET_DIR/.dotfiles/private"
   fi
+  local private_status
+  private_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
+  [[ -n "$private_dir" ]] && private_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • Private:  %b\n' "$private_status"
 
   local action_choice=0
-  prompt_choice action_choice "¿Qué deseas hacer?" \
-    "Asistente de Configuración (Setup Wizard por Capas)" \
-    "Re-sincronizar Entorno Local (Sync enlaces y paquetes sin tocar Git)" \
-    "Actualizar desde GitHub (Remote Update + Sync)" \
-    "Diagnóstico de Salud (Doctor)" \
-    "Retirar Enlaces (Unlink)" \
-    "Salir"
+  prompt_choice action_choice "$(_t "What would you like to do?" "¿Qué deseas hacer?")" \
+    "$(_t "Guided Full Setup (Step-by-step onboarding for Base + Modules)" "Asistente de Configuración Guiada (Instalación por capas)")" \
+    "$(_t "Configure Base System Profile Only" "Configurar solo Perfil Base del Sistema")" \
+    "$(_t "Configure MangoWM (Wayland Environment)" "Configurar MangoWM (Entorno Wayland)")" \
+    "$(_t "Configure BSPWM (X11 Environment)" "Configurar BSPWM (Entorno X11)")" \
+    "$(_t "Configure System Layer (Ly, Limine, DNS-over-TLS)" "Configurar Capa del Sistema (Ly, Limine, DNS)")" \
+    "$(_t "Configure Private Layer (Identity, SSH, Work)" "Configurar Capa Privada (Identidad, SSH, Laboral)")" \
+    "$(_t "Configure Wallpapers (walls)" "Configurar Fondos de Pantalla (walls)")" \
+    "$(_t "Re-sync Local Environment (Sync links and packages)" "Re-sincronizar Entorno Local (Sync enlaces y paquetes)")" \
+    "$(_t "Update from GitHub (Remote Update + Sync)" "Actualizar desde GitHub (Remote Update + Sync)")" \
+    "$(_t "Health Diagnostics (Doctor)" "Diagnóstico de Salud (Doctor)")" \
+    "$(_t "Unlink Dotfiles" "Retirar Enlaces (Unlink)")" \
+    "$(_t "Exit" "Salir")"
 
   case "$action_choice" in
-    1)
+    1) # Configure Base Profile Only
+      local b_profile=2
+      prompt_choice b_profile "$(_t "Select Base System Profile" "Selecciona el Perfil Base del Sistema")" \
+        "$(_t "Core (Zsh, Git, essential CLI tools)" "Core (Zsh, Git, herramientas esenciales de terminal)")" \
+        "$(_t "CLI (Core + Micro, Yazi, Neovim/modern CLI tools)" "CLI (Core + Micro, Yazi, Neovim/herramientas modernas)")" \
+        "$(_t "Desktop [Recommended] (CLI + Catppuccin GTK theme, fonts, audio, portals)" "Desktop [Recomendado] (CLI + Tema GTK Catppuccin, fuentes, audio, portales)")"
+      case "$b_profile" in
+        0) PROFILE="core" ;;
+        1) PROFILE="cli" ;;
+        2) PROFILE="desktop" ;;
+      esac
+      local b_mode=0
+      prompt_choice b_mode "$(_t "Select Installation Scope" "Selecciona el Alcance de la Instalación")" \
+        "$(_t "Complete: Install packages (repo/AUR) + Deploy Stow symlinks [Recommended]" "Completo: Instalar paquetes (repo/AUR) + Enlaces Stow [Recomendado]")" \
+        "$(_t "Symlinks only: Deploy Stow symlinks only (No package install / No sudo)" "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)")"
+      if (( b_mode == 1 )); then
+        MODE_SELECTION="stow"
+        SYSTEM_ENABLED=0
+        STOW_ENABLED=1
+      else
+        MODE_SELECTION="both"
+        SYSTEM_ENABLED=1
+        STOW_ENABLED=1
+      fi
+      local b_act=0
+      prompt_choice b_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
+        "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
+        "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
+        "$(_t "Cancel and exit" "Cancelar y salir")"
+      case "$b_act" in
+        0) APPLY=1 ;;
+        1) APPLY=0 ;;
+        2) return 0 ;;
+      esac
+      COMMAND="bootstrap"
+      bootstrap
+      return 0
+      ;;
+    2) # MangoWM setup
+      local m_path="${mango_dir:-$TARGET_DIR/.dotfiles/wm/mangowm}"
+      if [[ ! -d "$m_path" ]]; then
+        wizard_clone_if_missing "dotfiles-mangowm" \
+          "https://github.com/anthonyportugal/dotfiles-mangowm.git" \
+          "git@github.com:anthonyportugal/dotfiles-mangowm.git" \
+          "$m_path" || return 1
+      fi
+      if [[ -x "$m_path/bin/mango" ]]; then
+        "$m_path/bin/mango" setup --lang "$DOTFILES_LANG"
+      else
+        error "$(_t "MangoWM executable not found in $m_path" "Ejecutable MangoWM no encontrado en $m_path")"
+      fi
+      return 0
+      ;;
+    3) # BSPWM setup
+      local b_path="${bspwm_dir:-$TARGET_DIR/.dotfiles/wm/bspwm}"
+      if [[ ! -d "$b_path" ]]; then
+        wizard_clone_if_missing "dotfiles-bspwm" \
+          "https://github.com/anthonyportugal/dotfiles-bspwm.git" \
+          "git@github.com:anthonyportugal/dotfiles-bspwm.git" \
+          "$b_path" || return 1
+      fi
+      if [[ -x "$b_path/bin/bspwm" ]]; then
+        "$b_path/bin/bspwm" setup --lang "$DOTFILES_LANG"
+      else
+        error "$(_t "BSPWM executable not found in $b_path" "Ejecutable BSPWM no encontrado en $b_path")"
+      fi
+      return 0
+      ;;
+    4) # System setup
+      local s_path="${system_dir:-$TARGET_DIR/.dotfiles/system}"
+      if [[ ! -d "$s_path" ]]; then
+        wizard_clone_if_missing "dotfiles-system" \
+          "https://github.com/anthonyportugal/dotfiles-system.git" \
+          "git@github.com:anthonyportugal/dotfiles-system.git" \
+          "$s_path" || return 1
+      fi
+      if [[ -f "$s_path/install.sh" ]]; then
+        sudo "$s_path/install.sh" --lang "$DOTFILES_LANG"
+      else
+        error "$(_t "System installer not found in $s_path" "Instalador del sistema no encontrado en $s_path")"
+      fi
+      return 0
+      ;;
+    5) # Private setup
+      local p_path="${private_dir:-$TARGET_DIR/.dotfiles/private}"
+      if [[ -x "$p_path/bin/dotfiles-private" ]]; then
+        "$p_path/bin/dotfiles-private" setup --lang "$DOTFILES_LANG"
+      else
+        warn "$(_t "Private repository not found in $p_path" "Repositorio privado no encontrado en $p_path")"
+      fi
+      return 0
+      ;;
+    6) # Wallpapers setup
+      local w_path="${walls_dir:-$TARGET_DIR/.dotfiles/walls}"
+      if [[ ! -d "$w_path" ]]; then
+        wizard_clone_if_missing "walls" \
+          "https://github.com/anthonyportugal/walls.git" \
+          "git@github.com:anthonyportugal/walls.git" \
+          "$w_path" || return 1
+      fi
+      if [[ -x "$w_path/bin/walls" ]]; then
+        "$w_path/bin/walls" setup --lang "$DOTFILES_LANG"
+      else
+        error "$(_t "Walls executable not found in $w_path" "Ejecutable walls no encontrado en $w_path")"
+      fi
+      return 0
+      ;;
+    7)
       sync_environment || true
       return 0
       ;;
-    2)
+    8)
       update_from_remote || true
       return 0
       ;;
-    3)
+    9)
       doctor_with_optional_components || true
       return 0
       ;;
-    4)
+    10)
       unlink_with_optional_components || true
       return 0
       ;;
-    5)
-      info "Hasta luego."
+    11)
+      info "$(_t "Goodbye!" "¡Hasta luego!")"
       return 0
       ;;
   esac
 
-  printf '\n%b=== ASISTENTE DE CONFIGURACIÓN POR CAPAS ===%b\n' "${C_BOLD}${C_PINK}" "$C_RESET"
+  printf '\n%b=== %s ===%b\n' "${C_BOLD}${C_PINK}" "$(_t "GUIDED MODULAR SETUP" "ASISTENTE DE CONFIGURACIÓN POR CAPAS")" "$C_RESET"
 
   local profile_choice=2
-  prompt_choice profile_choice "Paso 1: Selecciona el Perfil Base del Sistema" \
-    "Core (Zsh, Git, herramientas esenciales de terminal)" \
-    "CLI (Core + Micro, Yazi, Neovim/herramientas modernas)" \
-    "Desktop [Recomendado] (CLI + Tema GTK Catppuccin, fuentes, audio, portales XDG)"
+  prompt_choice profile_choice "$(_t "Step 1: Select Base System Profile" "Paso 1: Selecciona el Perfil Base del Sistema")" \
+    "$(_t "Core (Zsh, Git, essential CLI tools)" "Core (Zsh, Git, herramientas esenciales de terminal)")" \
+    "$(_t "CLI (Core + Micro, Yazi, Neovim/modern CLI tools)" "CLI (Core + Micro, Yazi, Neovim/herramientas modernas)")" \
+    "$(_t "Desktop [Recommended] (CLI + Catppuccin GTK theme, fonts, audio, portals)" "Desktop [Recomendado] (CLI + Tema GTK Catppuccin, fuentes, audio, portales)")"
   case "$profile_choice" in
     0) PROFILE="core" ;;
     1) PROFILE="cli" ;;
@@ -2227,25 +2409,17 @@ EOF
 
   WMS=()
   local wm_choice=0
-  prompt_choice wm_choice "Paso 2: Selecciona los Entornos de Ventana a configurar" \
-    "MangoWM (Wayland moderno + Waybar + Fuzzel + Mako)" \
-    "BSPWM (X11 clásico + Polybar + Rofi + Dunst + Picom)" \
-    "Ambos (MangoWM y BSPWM)" \
-    "Ninguno (Solo terminal / Ya poseo mi propio gestor)"
+  prompt_choice wm_choice "$(_t "Step 2: Select Window Managers to configure" "Paso 2: Selecciona los Entornos de Ventana a configurar")" \
+    "MangoWM (Wayland + Waybar + Fuzzel + Mako)" \
+    "BSPWM (X11 + Polybar + Rofi + Dunst + Picom)" \
+    "$(_t "Both (MangoWM and BSPWM)" "Ambos (MangoWM y BSPWM)")" \
+    "$(_t "None (Terminal only / Bring your own WM)" "Ninguno (Solo terminal / Ya poseo mi propio gestor)")"
 
   case "$wm_choice" in
-    0)
-      append_unique WMS "mangowm"
-      ;;
-    1)
-      append_unique WMS "bspwm"
-      ;;
-    2)
-      append_unique WMS "mangowm"
-      append_unique WMS "bspwm"
-      ;;
-    3)
-      ;;
+    0) append_unique WMS "mangowm" ;;
+    1) append_unique WMS "bspwm" ;;
+    2) append_unique WMS "mangowm"; append_unique WMS "bspwm" ;;
+    3) ;;
   esac
 
   local wm
@@ -2257,33 +2431,43 @@ EOF
           "https://github.com/anthonyportugal/dotfiles-mangowm.git" \
           "git@github.com:anthonyportugal/dotfiles-mangowm.git" \
           "$wm_target_path" || true
+        if [[ -x "$wm_target_path/bin/mango" ]]; then
+          if prompt_yes_no "$(_t "Run MangoWM setup wizard now?" "¿Ejecutar el asistente interactivo de MangoWM ahora?")" Y; then
+            "$wm_target_path/bin/mango" setup --lang "$DOTFILES_LANG" || true
+          fi
+        fi
         ;;
       bspwm)
         wizard_clone_if_missing "dotfiles-bspwm" \
           "https://github.com/anthonyportugal/dotfiles-bspwm.git" \
           "git@github.com:anthonyportugal/dotfiles-bspwm.git" \
           "$wm_target_path" || true
+        if [[ -x "$wm_target_path/bin/bspwm" ]]; then
+          if prompt_yes_no "$(_t "Run BSPWM setup wizard now?" "¿Ejecutar el asistente interactivo de BSPWM ahora?")" Y; then
+            "$wm_target_path/bin/bspwm" setup --lang "$DOTFILES_LANG" || true
+          fi
+        fi
         ;;
     esac
   done
 
   WALLPAPERS=0
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 3: Colección de Fondos de Pantalla (walls)" "$C_RESET"
-  if prompt_yes_no "¿Deseas integrar la colección de wallpapers (anthonyportugal/walls)?" Y; then
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 3: Wallpaper Collection (walls)" "Paso 3: Colección de Fondos de Pantalla (walls)")" "$C_RESET"
+  if prompt_yes_no "$(_t "Integrate wallpaper collection (anthonyportugal/walls)?" "¿Deseas integrar la colección de wallpapers (anthonyportugal/walls)?")" Y; then
     WALLPAPERS=1
     local walls_dest="$TARGET_DIR/.dotfiles/walls"
     wizard_clone_if_missing "walls" \
       "https://github.com/anthonyportugal/walls.git" \
       "git@github.com:anthonyportugal/walls.git" \
       "$walls_dest" || true
+    if [[ -x "$walls_dest/bin/walls" ]]; then
+      if prompt_yes_no "$(_t "Run Wallpapers setup wizard now?" "¿Ejecutar el asistente de wallpapers ahora?")" Y; then
+        "$walls_dest/bin/walls" setup --lang "$DOTFILES_LANG" || true
+      fi
+    fi
   fi
 
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 4: Capa del Sistema (Ly, Limine & DNS-over-TLS en dotfiles-system)" "$C_RESET"
-  local SYSTEM_INSTALL=0
-  local SYSTEM_MODE="all"
-  local SYSTEM_DNS_PROVIDER="quad9"
-  local SYSTEM_PATH=""
-  local system_selected="No"
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 4: System Layer (Ly, Limine & DNS-over-TLS in dotfiles-system)" "Paso 4: Capa del Sistema (Ly, Limine & DNS-over-TLS en dotfiles-system)")" "$C_RESET"
   local existing_system=""
   if [[ -d "$REPO_ROOT/../system" ]]; then
     existing_system="$REPO_ROOT/../system"
@@ -2292,70 +2476,23 @@ EOF
   fi
 
   if [[ -n "$existing_system" ]]; then
-    if prompt_yes_no "Capa del sistema detectada en $(prettify_path "$existing_system"). ¿Deseas instalarla/integrarla?" Y; then
-      SYSTEM_INSTALL=1
-      SYSTEM_PATH="$existing_system"
-    else
-      system_selected="No (omitida por el usuario)"
+    if prompt_yes_no "$(_t "System layer detected at $(prettify_path "$existing_system"). Run its installer wizard now? (sudo)" "Capa del sistema detectada en $(prettify_path "$existing_system"). ¿Ejecutar su asistente ahora? (sudo)")" Y; then
+      sudo "$existing_system/install.sh" --lang "$DOTFILES_LANG" || true
     fi
   else
-    printf '%bNo se detectó la capa del sistema en ~/.dotfiles/system.%b\n' "$C_SUBTEXT" "$C_RESET"
-    if prompt_yes_no "¿Deseas clonar e instalar la capa del sistema (anthonyportugal/dotfiles-system)?" Y; then
+    if prompt_yes_no "$(_t "Clone and run system installer (anthonyportugal/dotfiles-system)?" "¿Clonar y ejecutar instalador del sistema (anthonyportugal/dotfiles-system)?")" Y; then
       local system_dest="$TARGET_DIR/.dotfiles/system"
       if wizard_clone_if_missing "dotfiles-system" \
         "https://github.com/anthonyportugal/dotfiles-system.git" \
         "git@github.com:anthonyportugal/dotfiles-system.git" \
         "$system_dest"; then
-        SYSTEM_INSTALL=1
-        SYSTEM_PATH="$system_dest"
-      else
-        warn "No se pudo clonar dotfiles-system. Omitiendo capa del sistema."
-        system_selected="No (falló la clonación)"
+        sudo "$system_dest/install.sh" --lang "$DOTFILES_LANG" || true
       fi
-    else
-      system_selected="No (omitida por el usuario)"
-    fi
-  fi
-
-  if (( SYSTEM_INSTALL == 1 )); then
-    local sys_comp_choice=0
-    prompt_choice sys_comp_choice "Selecciona los componentes del sistema a configurar" \
-      "Completo: Bootloader Limine + Display Manager Ly + DNS-over-TLS [Recomendado]" \
-      "Escritorio y Red: Display Manager Ly + DNS-over-TLS" \
-      "Solo DNS-over-TLS (Quad9 / Cloudflare cifrado)" \
-      "Solo Display Manager Ly" \
-      "Solo Bootloader Limine"
-    case "$sys_comp_choice" in
-      0) SYSTEM_MODE="all" ;;
-      1) SYSTEM_MODE="ly-dns" ;;
-      2) SYSTEM_MODE="dns" ;;
-      3) SYSTEM_MODE="ly" ;;
-      4) SYSTEM_MODE="limine" ;;
-    esac
-
-    if [[ "$SYSTEM_MODE" == "all" || "$SYSTEM_MODE" == "ly-dns" || "$SYSTEM_MODE" == "dns" ]]; then
-      local dns_choice=0
-      prompt_choice dns_choice "Selecciona el proveedor para DNS cifrado (DNS-over-TLS)" \
-        "Quad9 (9.9.9.9) - Privacidad suiza y bloqueo de malware [Recomendado]" \
-        "Cloudflare Security (1.1.1.2) - Protección contra phishing y malware" \
-        "Cloudflare Standard (1.1.1.1) - Ultrarrápido, propósito general" \
-        "AdGuard DNS - Bloqueo de publicidad y rastreadores" \
-        "Mullvad DNS - Cero registros y máxima privacidad"
-      case "$dns_choice" in
-        0) SYSTEM_DNS_PROVIDER="quad9" ;;
-        1) SYSTEM_DNS_PROVIDER="cloudflare-security" ;;
-        2) SYSTEM_DNS_PROVIDER="cloudflare" ;;
-        3) SYSTEM_DNS_PROVIDER="adguard" ;;
-        4) SYSTEM_DNS_PROVIDER="mullvad" ;;
-      esac
-      system_selected="Sí ($SYSTEM_MODE, dns: $SYSTEM_DNS_PROVIDER)"
-    else
-      system_selected="Sí ($SYSTEM_MODE)"
     fi
   fi
 
   PRIVATE=0
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "Paso 5: Capa Privada de Configuración (dotfiles-private)" "$C_RESET"
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 5: Private Configuration Layer (dotfiles-private)" "Paso 5: Capa Privada de Configuración (dotfiles-private)")" "$C_RESET"
   local existing_private=""
   if [[ -d "$REPO_ROOT/../private" ]]; then
     existing_private="$REPO_ROOT/../private"
@@ -2364,22 +2501,15 @@ EOF
   fi
 
   if [[ -n "$existing_private" ]]; then
-    if prompt_yes_no "Capa privada detectada en $(prettify_path "$existing_private"). ¿Deseas integrarla?" Y; then
+    if prompt_yes_no "$(_t "Private layer detected at $(prettify_path "$existing_private"). Run its setup wizard now?" "Capa privada detectada en $(prettify_path "$existing_private"). ¿Ejecutar su asistente ahora?")" Y; then
       PRIVATE=1
       PRIVATE_PATH="$existing_private"
-      if prompt_yes_no "  ¿Habilitar perfil de desarrollo 'development' (PNPM, dev paths, AI codex)?" Y; then
-        PRIVATE_PROFILE="development"
-      else
-        PRIVATE_PROFILE="core"
-      fi
-      if prompt_yes_no "  ¿Habilitar componente laboral (csti)?" N; then
-        PRIVATE_WORK+=("csti")
-      fi
+      "$existing_private/bin/dotfiles-private" setup --lang "$DOTFILES_LANG" || true
     fi
   else
-    printf '%bNo se detectó capa privada en ~/.dotfiles/private.%b\n' "$C_SUBTEXT" "$C_RESET"
+    printf '%b%s%b\n' "$C_SUBTEXT" "$(_t "No private layer detected at ~/.dotfiles/private." "No se detectó capa privada en ~/.dotfiles/private.")" "$C_RESET"
     local custom_private_url=""
-    prompt_input "Ingresa la URL del repo privado a clonar (o ENTER para omitir)" "" custom_private_url
+    prompt_input "$(_t "Enter private repository Git URL to clone (or press ENTER to skip)" "Ingresa la URL del repo privado a clonar (o ENTER para omitir)")" "" custom_private_url
     if [[ -n "$custom_private_url" ]]; then
       local private_dest="$TARGET_DIR/.dotfiles/private"
       info "Clonando repositorio privado en $private_dest..."
@@ -2387,29 +2517,32 @@ EOF
       if git clone "$custom_private_url" "$private_dest"; then
         PRIVATE=1
         PRIVATE_PATH="$private_dest"
-        info "Repositorio privado clonado exitosamente."
+        info "$(_t "Private repository cloned successfully." "Repositorio privado clonado exitosamente.")"
+        if [[ -x "$private_dest/bin/dotfiles-private" ]]; then
+          "$private_dest/bin/dotfiles-private" setup --lang "$DOTFILES_LANG" || true
+        fi
       else
-        warn "No se pudo clonar el repositorio privado. Continuando sin capa privada."
+        warn "$(_t "Could not clone private repository. Continuing without private layer." "No se pudo clonar el repositorio privado. Continuando sin capa privada.")"
       fi
     else
-      if prompt_yes_no "¿Deseas configurar tu identidad Git local (user.name y user.email)?" Y; then
+      if prompt_yes_no "$(_t "Configure local Git identity (user.name and user.email)?" "¿Deseas configurar tu identidad Git local (user.name y user.email)?")" Y; then
         local git_name="" git_email=""
-        prompt_input "Nombre para Git" "Anthony Portugal" git_name
-        prompt_input "Email para Git" "" git_email
+        prompt_input "$(_t "Git Name" "Nombre para Git")" "Anthony Portugal" git_name
+        prompt_input "$(_t "Git Email" "Email para Git")" "" git_email
         if [[ -n "$git_name" && -n "$git_email" ]]; then
           mkdir -p "$TARGET_DIR/.config/git"
           git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.name "$git_name"
           git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.email "$git_email"
-          info "Identidad Git guardada en ~/.config/git/local.gitconfig"
+          info "$(_t "Git identity saved to ~/.config/git/local.gitconfig" "Identidad Git guardada en ~/.config/git/local.gitconfig")"
         fi
       fi
     fi
   fi
 
   local mode_choice=0
-  prompt_choice mode_choice "Paso 6: Selecciona el Alcance de la Instalación" \
-    "Completo: Instalar paquetes del sistema (repo/AUR) + Enlaces Stow [Recomendado]" \
-    "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)"
+  prompt_choice mode_choice "$(_t "Step 6: Select Base System Installation Scope" "Paso 6: Selecciona el Alcance de la Instalación Base")" \
+    "$(_t "Complete: Install base packages (repo/AUR) + Deploy Stow symlinks [Recommended]" "Completo: Instalar paquetes del sistema (repo/AUR) + Enlaces Stow [Recomendado]")" \
+    "$(_t "Symlinks only: Deploy Stow dotfiles symlinks only (No package install / No sudo)" "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)")"
   if (( mode_choice == 1 )); then
     MODE_SELECTION="stow"
     SYSTEM_ENABLED=0
@@ -2423,45 +2556,36 @@ EOF
   printf '\n%b' "$C_BLUE"
   cat <<EOF
 ╭─────────────────────────────────────────────────────────────╮
-│              RESUMEN DEL PLAN DE INSTALACIÓN                │
+│               BASE REPO INSTALLATION SUMMARY                │
 ├─────────────────────────────────────────────────────────────┤
 EOF
-  printf '│  • Perfil Base:       %-38s│\n' "$PROFILE"
-  local wms_str="${WMS[*]:-(ninguno)}"
-  printf '│  • Window Managers:   %-38s│\n' "$wms_str"
+  printf '│  • %-20s %-33s│\n' "$(_t "Base Profile:" "Perfil Base:")" "$PROFILE"
+  local wms_str="${WMS[*]:-(none)}"
+  printf '│  • %-20s %-33s│\n' "$(_t "Window Managers:" "Window Managers:")" "$wms_str"
   local walls_str="No"
-  if (( WALLPAPERS == 1 )); then
-    walls_str="Sí ($(prettify_path "${WALLPAPERS_PATH:-$TARGET_DIR/.dotfiles/walls}"))"
-  fi
-  printf '│  • Wallpapers:        %-38s│\n' "$walls_str"
-  printf '│  • Capa del Sistema:  %-38s│\n' "$system_selected"
+  (( WALLPAPERS == 1 )) && walls_str="$(_t "Yes" "Sí")"
+  printf '│  • %-20s %-33s│\n' "$(_t "Wallpapers:" "Wallpapers:")" "$walls_str"
   local priv_str="No"
-  if (( PRIVATE == 1 )); then
-    priv_str="Sí ($(prettify_path "${PRIVATE_PATH:-$TARGET_DIR/.dotfiles/private}"))"
-  fi
-  printf '│  • Capa Privada:      %-38s│\n' "$priv_str"
-  printf '│  • Modo de Operación: %-38s│\n' "$MODE_SELECTION"
-  printf '│  • Directorio Target: %-38s│\n' "$(prettify_path "$TARGET_DIR")"
+  (( PRIVATE == 1 )) && priv_str="$(_t "Yes" "Sí")"
+  printf '│  • %-20s %-33s│\n' "$(_t "Private Layer:" "Capa Privada:")" "$priv_str"
+  printf '│  • %-20s %-33s│\n' "$(_t "Operation Mode:" "Modo de Operación:")" "$MODE_SELECTION"
+  printf '│  • %-20s %-33s│\n' "$(_t "Target Home:" "Directorio Target:")" "$(prettify_path "$TARGET_DIR")"
   cat <<'EOF'
 ╰─────────────────────────────────────────────────────────────╯
 EOF
   printf '%b\n' "$C_RESET"
 
   local final_choice=0
-  prompt_choice final_choice "Paso 7: ¿Cómo deseas proceder?" \
-    "Aplicar los cambios ahora mismo (--apply)" \
-    "Simulación previa (Dry-Run: ver qué enlaces y paquetes se tocarían sin modificar nada)" \
-    "Cancelar y salir"
+  prompt_choice final_choice "$(_t "Step 7: How would you like to proceed with Base?" "Paso 7: ¿Cómo deseas proceder con la Base?")" \
+    "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
+    "$(_t "Dry-run simulation (Check actions without modifying)" "Simulación previa (Dry-Run: ver qué se tocaría sin modificar)")" \
+    "$(_t "Cancel and exit" "Cancelar y salir")"
 
   case "$final_choice" in
-    0)
-      APPLY=1
-      ;;
-    1)
-      APPLY=0
-      ;;
+    0) APPLY=1 ;;
+    1) APPLY=0 ;;
     2)
-      info "Operación cancelada por el usuario."
+      info "$(_t "Operation cancelled by user." "Operación cancelada por el usuario.")"
       return 0
       ;;
   esac
@@ -2471,24 +2595,6 @@ EOF
   validate_wallpapers_checkout
   validate_private_checkout
   bootstrap_with_optional_components
-
-  if (( APPLY == 1 )) && (( SYSTEM_INSTALL == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
-    local -a sys_flags=()
-    case "${SYSTEM_MODE:-all}" in
-      ly)      sys_flags=("--ly") ;;
-      limine)  sys_flags=("--limine") ;;
-      dns)     sys_flags=("--dns") ;;
-      ly-dns)  sys_flags=("--ly" "--dns") ;;
-      *)       sys_flags=("--all") ;;
-    esac
-    if [[ "${SYSTEM_MODE:-all}" != "ly" && "${SYSTEM_MODE:-all}" != "limine" && -n "${SYSTEM_DNS_PROVIDER:-}" ]]; then
-      sys_flags+=("--provider" "$SYSTEM_DNS_PROVIDER")
-    fi
-    printf '\n'
-    if prompt_yes_no "¿Deseas ejecutar ahora la configuración del sistema (sudo $SYSTEM_PATH/install.sh ${sys_flags[*]} --install)?" Y; then
-      sudo "$SYSTEM_PATH/install.sh" "${sys_flags[@]}" --install || warn "La instalación del sistema retornó un código de salida no cero."
-    fi
-  fi
 }
 
 cmd_completion() {
