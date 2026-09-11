@@ -13,7 +13,7 @@
 
 *Read this in other languages:* [Español](README.es.md)
 
-Modular, reproducible, and non-destructive system-level configurations and theming for **Arch Linux** and **CachyOS**. Manages display manager ([Ly](https://codeberg.org/fairyglade/ly)) and bootloader ([Limine](https://limine-bootloader.org/)) styling using the unified **Catppuccin Mocha** palette, backed by fail-safe automatic backups and idempotent deployment scripts.
+Modular, reproducible, and non-destructive system-level configurations and theming for **Arch Linux**. Manages display manager ([Ly](https://codeberg.org/fairyglade/ly)) and bootloader ([Limine](https://limine-bootloader.org/)) styling using the unified **Catppuccin Mocha** palette, backed by fail-safe automatic backups and idempotent deployment scripts.
 
 <p align="center">
   <img src="assets/ly-preview.webp" alt="Ly Display Manager Catppuccin Mocha Preview" width="100%">
@@ -106,8 +106,11 @@ sudo ./install.sh --dry-run
 #### Option A: Unified Master Installer (Recommended)
 
 ```bash
-# Interactive selection menu
+# Interactive selection menu (default: English)
 sudo ./install.sh
+
+# Or interactive menu in Spanish
+sudo ./install.sh --lang es
 
 # Or non-interactive installation of all components
 sudo ./install.sh --all

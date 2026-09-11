@@ -13,7 +13,7 @@
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Configuraciones modulares, reproducibles y no destructivas a nivel de sistema para **Arch Linux** y **CachyOS**. Administra la personalización del display manager ([Ly](https://codeberg.org/fairyglade/ly)) y del gestor de arranque ([Limine](https://limine-bootloader.org/)) bajo la paleta unificada **Catppuccin Mocha**, con respaldos automáticos por marca de tiempo y scripts de despliegue idempotentes.
+Configuraciones modulares, reproducibles y no destructivas a nivel de sistema para **Arch Linux**. Administra la personalización del display manager ([Ly](https://codeberg.org/fairyglade/ly)) y del gestor de arranque ([Limine](https://limine-bootloader.org/)) bajo la paleta unificada **Catppuccin Mocha**, con respaldos automáticos por marca de tiempo y scripts de despliegue idempotentes.
 
 <p align="center">
   <img src="assets/ly-preview.webp" alt="Vista Previa de Ly Display Manager con Catppuccin Mocha" width="100%">
@@ -106,8 +106,11 @@ sudo ./install.sh --dry-run
 #### Opción A: Instalador Maestro Unificado (Recomendado)
 
 ```bash
-# Menú interactivo de selección
+# Menú interactivo de selección (por defecto: en)
 sudo ./install.sh
+
+# O menú interactivo explícitamente en español
+sudo ./install.sh --lang es
 
 # O instalación desatendida de todos los componentes
 sudo ./install.sh --all
