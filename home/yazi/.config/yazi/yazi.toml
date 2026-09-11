@@ -33,3 +33,9 @@ prepend_rules = [
   { url = "*.yml", use = [ "edit", "open" ] },
   { url = "*.md", use = [ "edit", "open" ] },
 ]
+
+[plugin]
+prepend_previewers = [
+  { url = "*.md", run = "glow" },
+]
+

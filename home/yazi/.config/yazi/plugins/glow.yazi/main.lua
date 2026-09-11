@@ -1,0 +1,70 @@
+local M = {}
+
+function M:peek(job)
+	local preview_width = job.area.w > 0 and job.area.w or 60
+
+	local child = Command("glow")
+		:arg({
+			"-s",
+			"dark",
+			"-w",
+			tostring(preview_width),
+			tostring(job.file.url),
+		})
+		:env("CLICOLOR_FORCE", "1")
+		:stdout(Command.PIPED)
+		:stderr(Command.PIPED)
+		:spawn()
+
+	if not child then
+		return require("code"):peek(job)
+	end
+
+	local opt = {
+		ansi = true,
+		tab_size = rt.preview.tab_size,
+		wrap = rt.preview.wrap,
+		width = job.area.w,
+	}
+	local limit = job.area.h
+	local i, lines = 0, {}
+	repeat
+		local next, event = child:read_line()
+		if event == 1 then
+			return require("code"):peek(job)
+		elseif event ~= 0 then
+			break
+		end
+
+		local wrapped = ui.lines(next, opt)
+		local from = math.max(1, job.skip - i + 1)
+		local to = math.min(#wrapped, job.skip + limit - i)
+
+		i = i + #wrapped
+		for j = from, to do
+			lines[#lines + 1] = M.normalize_bg(wrapped[j])
+		end
+	until i >= job.skip + limit
+
+	child:start_kill()
+	if job.skip > 0 and i < job.skip + limit then
+		ya.emit("peek", { math.max(0, i - limit), only_if = job.file.url, upper_bound = true })
+	else
+		ya.preview_widget(job, ui.Text(lines):area(job.area))
+	end
+end
+
+function M:seek(job)
+	require("code"):seek(job)
+end
+
+function M.normalize_bg(line)
+	local bg = th.app.overall:bg()
+	if bg then
+		return line:map(function(span) return span:bg(bg) end)
+	else
+		return line
+	end
+end
+
+return M
