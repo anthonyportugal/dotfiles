@@ -7,7 +7,7 @@
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://codeberg.org/fairyglade/ly"><img src="https://img.shields.io/badge/DM-Ly_1.4+-ff69b4?style=flat-square" alt="Ly"></a>
   <a href="https://limine-bootloader.org/"><img src="https://img.shields.io/badge/Bootloader-Limine-blue?style=flat-square" alt="Limine"></a>
-  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
@@ -214,6 +214,12 @@ ls -la /boot/limine*.bak_* /boot/limine/*.bak_* 2>/dev/null
 # Restore desired backup
 sudo cp /boot/limine.conf.bak_<TIMESTAMP> /boot/limine.conf
 ```
+
+---
+
+## 👤 Author
+
+Architected and maintained by [Anthony Portugal](https://anthonyportugal.github.io).
 
 ---
 
