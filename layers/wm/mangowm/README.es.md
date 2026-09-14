@@ -7,13 +7,14 @@
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://wayland.freedesktop.org"><img src="https://img.shields.io/badge/Display-Wayland-00599C?style=flat-square&logo=wayland&logoColor=white" alt="Wayland"></a>
   <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
-  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <a href="https://mangowm.github.io/showcase/"><img src="https://img.shields.io/badge/Showcase-MangoWM-orange?style=flat-square&logo=github" alt="Showcase de MangoWM"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Tema-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Tema"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-blue.svg?style=flat-square" alt="Licencia"></a>
 </p>
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor dinámico principal, estilizado con la paleta Catppuccin Mocha. Funciona de manera totalmente independiente o compuesta dentro del ecosistema modular de dotfiles.
+Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor dinámico principal, destacada oficialmente en el [Showcase de MangoWM](https://mangowm.github.io/showcase/), y estilizada con la paleta **Catppuccin Mocha** (compatible con sus 14 acentos intercambiables). Funciona de manera totalmente independiente o compuesta dentro del ecosistema modular de dotfiles.
 
 <p align="center">
   <img src="assets/screenshot.webp" alt="Vista previa del escritorio MangoWM" width="100%">
@@ -30,7 +31,7 @@ Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux
 ## ✨ Características Principales
 
 - 🚀 **Mosaico Wayland Dinámico:** Compositor moderno de última generación con cambio de disposiciones en caliente (*Dwindle, Tile, Grid, Monocle, Scroller*).
-- 🎨 **Tematización Dinámica Atómica:** Motor integrado `mango-theme` que compila la paleta de colores para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout.
+- 🎨 **Tematización Dinámica Atómica:** Motor integrado `mango-theme` que compila la paleta de colores para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout con 14 acentos Mocha intercambiables.
 - 📊 **Waybar y Notificaciones a Medida:** Barra de estado con controles interactivos, reproducción multimedia en vivo, estado de red, batería y notificaciones con Mako.
 - 💻 **Laptop y Grabación Integradas:** Control de brillo por hardware (`brightnessctl`) y grabación fluida de pantalla (`wf-recorder`) listos para usar sin configuración adicional.
 - 🌙 **Confort Visual y Luz Nocturna:** Integración con Gammastep para ajuste de temperatura de color con estado en vivo y conmutable desde Waybar.
@@ -47,7 +48,7 @@ La configuración de MangoWM está organizada en perfiles acumulativos administr
 │                      MANGO DESKTOP ECOSYSTEM (WAYLAND)                 │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │                   PERFIL DESKTOP (UX y Shell)                    │  │
-│  │  • Barra de Estado: Waybar (Catppuccin Pink, Detección Dinámica) │  │
+│  │  • Barra de Estado: Waybar (Catppuccin Mocha, 14 Acentos)        │  │
 │  │  • Menú de Apps y Apagado: Fuzzel, Wlogout                       │  │
 │  │  • Notificaciones y Bloqueo: Mako, Swaylock-effects, Swayidle    │  │
 │  │  • Fondos y Multimedia: Swaybg, Playerctl, MPV-MPRIS             │  │
@@ -149,11 +150,25 @@ Aunque este repositorio funciona de manera **100% independiente**, se integra li
 ---
 
 ## 🎨 Paleta y Temas
+ 
+El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas de acento oficiales** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*), con **Pink (`#f5c2e7`)** configurado como valor inicial predeterminado.
 
-El entorno utiliza el tema **Catppuccin Mocha** con acentos semánticos en **Pink (`#f5c2e7`)**.
+- **Selector Interactivo de Temas:** Presiona `Super + Alt + T` para cambiar la paleta de colores en tiempo real mediante Fuzzel.
+- **CLI de Tematización Dinámica (`mango-theme`):**
+  ```bash
+  # Abrir el menú interactivo de temas
+  mango-theme menu
 
-- **Configuración de Paleta:** `themes/catppuccin-mocha-pink/palette.conf`
-- **Renderizado Atómico Dinámico:** El script `mango-theme` procesa las variables de color y genera los archivos de configuración en tiempo de ejecución para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout bajo `$XDG_STATE_HOME/mangowm/theme/current/`.
+  # Establecer un acento específico directamente (ej. mauve, blue, teal, peach)
+  mango-theme set catppuccin-mocha-mauve
+
+  # Listar todos los acentos disponibles de Catppuccin Mocha
+  mango-theme list
+
+  # Mostrar el tema activo actual
+  mango-theme current
+  ```
+- **Renderizado Atómico Dinámico:** El script `mango-theme` compila las variables de color y genera los archivos de configuración para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout bajo `$XDG_STATE_HOME/mangowm/theme/current/` mediante enlaces simbólicos atómicos y sin daemons en segundo plano.
 
 ---
 
@@ -183,9 +198,12 @@ El entorno utiliza el tema **Catppuccin Mocha** con acentos semánticos en **Pin
 
 | Atajo | Acción |
 | :--- | :--- |
+| `Super + Alt + T` | Abrir selector interactivo de temas Catppuccin Mocha (Fuzzel) |
 | `Super + L` | Bloquear pantalla de inmediato (Swaylock) |
 | `Super + X` | Abrir menú de apagado/energía (Wlogout) |
 | `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Fuzzel) |
+| `Super + Shift + W` | Abrir selector interactivo de redes Wi-Fi (Fuzzel) |
+| `Super + V` | Abrir menú interactivo de control de volumen (Fuzzel) |
 | `Super + N` | Alternar filtro de luz nocturna (Gammastep con indicador en Waybar) |
 | `Super + W` / `Super + Ctrl + W` | Seleccionar fondo desde la galería vía Fuzzel (Swaybg) |
 | `Print` / `Super + Print` / `Super + Shift + S` | Captura interactiva por región con editor de anotaciones Satty |
@@ -205,6 +223,12 @@ Ejecuta la suite de smoke tests local para verificar enlaces, manifiestos y la s
 ./tests/bootstrap-smoke.sh
 ./tests/session-smoke.sh
 ```
+
+---
+
+## 👤 Autor
+
+Diseñado y mantenido por [Anthony Portugal](https://anthonyportugal.github.io/es/).
 
 ---
 

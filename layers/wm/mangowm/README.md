@@ -7,13 +7,14 @@
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://wayland.freedesktop.org"><img src="https://img.shields.io/badge/Display-Wayland-00599C?style=flat-square&logo=wayland&logoColor=white" alt="Wayland"></a>
   <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
-  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="https://mangowm.github.io/showcase/"><img src="https://img.shields.io/badge/Showcase-MangoWM-orange?style=flat-square&logo=github" alt="MangoWM Showcase"></a>
+  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
 *Read this in other languages:* [Español](README.es.md)
 
-Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, styled with the Catppuccin Mocha palette. It functions completely standalone or composed with the primary modular dotfiles ecosystem.
+Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, officially featured in the [MangoWM Showcase](https://mangowm.github.io/showcase/), and styled with the **Catppuccin Mocha** palette (supporting all 14 hot-swappable accents). It functions completely standalone or composed with the primary modular dotfiles ecosystem.
 
 <p align="center">
   <img src="assets/screenshot.webp" alt="MangoWM Desktop Preview" width="100%">
@@ -30,7 +31,7 @@ Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** us
 ## ✨ Key Highlights
 
 - 🚀 **Dynamic Wayland Tiling:** Next-generation dynamic tiling compositor with runtime layout switching (*Dwindle, Tile, Grid, Monocle, Scroller*).
-- 🎨 **Atomic Dynamic Theming:** Built-in `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout.
+- 🎨 **Atomic Dynamic Theming:** Built-in `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout with 14 hot-swappable Mocha accents.
 - 📊 **Tailored Waybar & Notifications:** Sleek status bar with interactive popups, live media controls, network status, battery monitors, and Mako notifications.
 - 💻 **Integrated Laptop & Recording:** Out-of-the-box hardware brightness control (`brightnessctl`) and Wayland screen recording (`wf-recorder`).
 - 🌙 **Eye Comfort & Night Light:** Integrated Gammastep warm color temperature with real-time toggle and status in Waybar.
@@ -47,7 +48,7 @@ The MangoWM configuration is organized into cumulative profiles managed with [GN
 │                      MANGO DESKTOP ECOSYSTEM (WAYLAND)                 │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │                    DESKTOP PROFILE (UX & Shell)                  │  │
-│  │  • Status Bar: Waybar (Catppuccin Pink, Dynamic Interfaces)      │  │
+│  │  • Status Bar: Waybar (Catppuccin Mocha, 14 Accents)             │  │
 │  │  • App Launcher & Power Menu: Fuzzel, Wlogout                    │  │
 │  │  • Notifications & Lock: Mako, Swaylock-effects, Swayidle        │  │
 │  │  • Wallpaper & Media: Swaybg, Playerctl, MPV-MPRIS               │  │
@@ -148,12 +149,26 @@ While this repository operates **100% standalone**, it seamlessly integrates wit
 
 ---
 
-## 🎨 Theme & Palette
+## 🎨 Theme & Appearance
 
-The desktop is styled with **Catppuccin Mocha** featuring **Pink (`#f5c2e7`)** as the primary semantic accent.
+The desktop is styled with **Catppuccin Mocha**, supporting all **14 official accent palettes** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*) with **Pink (`#f5c2e7`)** configured as the initial default.
 
-- **Palette Configuration:** `themes/catppuccin-mocha-pink/palette.conf`
-- **Dynamic Atomic Rendering:** The `mango-theme` script parses palette tokens and generates runtime configuration files for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout under `$XDG_STATE_HOME/mangowm/theme/current/`.
+- **Interactive Theme Selector:** Press `Super + Alt + T` to switch color palettes in real-time via Fuzzel.
+- **Dynamic Theming CLI (`mango-theme`):**
+  ```bash
+  # Open interactive theme menu
+  mango-theme menu
+
+  # Set a specific accent directly (e.g., mauve, blue, teal, peach)
+  mango-theme set catppuccin-mocha-mauve
+
+  # List all available Catppuccin Mocha flavors
+  mango-theme list
+
+  # Display current active theme
+  mango-theme current
+  ```
+- **Atomic Rendering:** The `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout under `$XDG_STATE_HOME/mangowm/theme/current/` with atomic symlink promotion and zero background daemons.
 
 ---
 
@@ -183,9 +198,12 @@ The desktop is styled with **Catppuccin Mocha** featuring **Pink (`#f5c2e7`)** a
 
 | Shortcut | Action |
 | :--- | :--- |
+| `Super + Alt + T` | Open interactive Catppuccin Mocha theme switcher (Fuzzel) |
 | `Super + L` | Lock screen immediately (Swaylock) |
 | `Super + X` | Open session power menu (Wlogout) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Fuzzel) |
+| `Super + Shift + W` | Open interactive Wi-Fi network selector (Fuzzel) |
+| `Super + V` | Open interactive audio volume control menu (Fuzzel) |
 | `Super + N` | Toggle warm night light (Gammastep with real-time Waybar status) |
 | `Super + W` / `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel (Swaybg) |
 | `Print` / `Super + Print` / `Super + Shift + S` | Interactive region screenshot with Satty annotation editor |
@@ -205,6 +223,12 @@ Run the automated test suite locally to verify links, package manifests, and ses
 ./tests/bootstrap-smoke.sh
 ./tests/session-smoke.sh
 ```
+
+---
+
+## 👤 Author
+
+Architected and maintained by [Anthony Portugal](https://anthonyportugal.github.io).
 
 ---
 
