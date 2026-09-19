@@ -5,6 +5,7 @@ set -Eeuo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 DOTFILES="$REPO_ROOT/bin/dotfiles"
+export DOTFILES_LANG=es
 TEST_ROOT=""
 TEST_TMP_PARENT=${DOTFILES_TEST_TMPDIR:-/tmp}
 

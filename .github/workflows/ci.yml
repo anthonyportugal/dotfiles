@@ -43,7 +43,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq stow zsh
 
-      - name: Run bootstrap smoke test
+      - name: Validate Zsh configuration syntax (zsh -n)
         run: |
-          chmod +x tests/bootstrap-smoke.sh bin/dotfiles install.sh
+          for f in home/zsh/.zshrc home/zsh/.config/zsh/conf.d/*.zsh home/zsh/.config/zsh/init.d/*.zsh; do
+            [[ -f "$f" ]] && zsh -n "$f"
+          done
+
+      - name: Run smoke tests
+        run: |
+          chmod +x tests/*.sh bin/dotfiles install.sh
           ./tests/bootstrap-smoke.sh
+          ./tests/wizard-smoke.sh

@@ -147,23 +147,29 @@ También puedes orquestar los componentes directamente mediante flags explícito
     --apply
   ```
 
-### 4. Gestión del Ciclo de Vida: Sincronización y Actualizaciones
+### 4. Gestión del Ciclo de Vida: Los 5 Comandos Canónicos
 
-- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow, valida paquetes y genera configuraciones locales sin tocar Git ni alterar el historial:
+- **Asistente de Configuración Guiada (`setup`):** Lanza el asistente interactivo con soporte bilingüe:
+  ```bash
+  ./bin/dotfiles setup            # Inglés por defecto
+  ./bin/dotfiles setup --lang es  # Interfaz en español
+  ```
+- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow y valida paquetes sin tocar Git:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios bajo `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`). Aquellos con cambios sin confirmar se omiten de forma segura para proteger el trabajo local; los limpios realizan `git pull --ff-only` seguido de un `sync` automático:
+- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`, `system`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
   ```bash
   ./bin/dotfiles update
+  ./bin/dotfiles update -y
   ```
 - **Diagnóstico del Sistema (`doctor`):** Inspecciona la integridad de enlaces, shells y dependencias:
   ```bash
-  ./bin/dotfiles doctor --profile desktop
+  ./bin/dotfiles doctor
   ```
-- **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos administrados:
+- **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos de GNU Stow del sistema:
   ```bash
-  ./bin/dotfiles unlink --profile desktop --apply
+  ./bin/dotfiles unlink --apply
   ```
 
 ---

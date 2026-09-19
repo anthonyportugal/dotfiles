@@ -147,23 +147,29 @@ You can also orchestrate components directly using explicit flags:
     --apply
   ```
 
-### 4. Lifecycle Management: Local Sync & Remote Updates
+### 4. Lifecycle Management: The 5 Canonical Commands
 
-- **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks, validates packages, and renders local session configurations without touching Git or altering commit history:
+- **Interactive Guided Setup (`setup`):** Launches the interactive wizard with bilingual support:
+  ```bash
+  ./bin/dotfiles setup            # English by default
+  ./bin/dotfiles setup --lang es  # Spanish interface
+  ```
+- **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks and validates packages without touching Git:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Remote Update (`update`):** Safely checks Git status in all managed repositories under `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`). Repositories with uncommitted working tree changes are safely skipped to protect local work, clean repositories perform `git pull --ff-only`, followed by an automatic local `sync`:
+- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`, `system`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
   ```bash
   ./bin/dotfiles update
+  ./bin/dotfiles update -y
   ```
 - **System Diagnostics (`doctor`):** Inspects link integrity, shells, and system dependencies:
   ```bash
-  ./bin/dotfiles doctor --profile desktop
+  ./bin/dotfiles doctor
   ```
-- **Unlink / Clean (`unlink`):** Safely removes managed symlinks:
+- **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks from the system:
   ```bash
-  ./bin/dotfiles unlink --profile desktop --apply
+  ./bin/dotfiles unlink --apply
   ```
 
 ---
