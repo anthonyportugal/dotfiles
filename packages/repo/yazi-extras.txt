@@ -8,4 +8,3 @@ jq
 poppler
 resvg
 ripgrep
-zoxide

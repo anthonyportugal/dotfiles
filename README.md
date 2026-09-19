@@ -24,7 +24,7 @@ Public, modular, and portable base configuration optimized for **Arch Linux** en
 
 ## ✨ Key Highlights
 
-- ⚡ **Instant CLI & Shell:** High-performance Zsh environment with Starship prompt, syntax-highlighting, auto-suggestions, Fzf, and Zoxide.
+- ⚡ **Instant CLI & Shell:** High-performance Zsh environment with Starship prompt, syntax-highlighting, auto-suggestions, and Fzf.
 - 🛡️ **Fail-Closed Privacy:** Strict 3-tier precedence (`base` ──► `private` ──► `local`) ensuring work identities, signing keys, and secrets never leak to public repositories.
 - 🎛️ **Multi-WM Orchestration:** Seamlessly coordinates standalone window managers ([dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm) for Wayland and [dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm) for X11).
 - 🔄 **Safe Lifecycle CLI:** Built-in `sync`, `update` (with working-tree protection against overwriting dirty state), and system `doctor` diagnostics.

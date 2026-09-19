@@ -63,7 +63,7 @@ Profiles are cumulative:
   packages link Alacritty, Foot, and `xdg-defaults`.
 - **`yazi-extras`**: Enables rich file previews, high-performance search, and
   archive support in the Yazi file manager (including `7zip`, `chafa`, `fd`,
-  `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg`, `ripgrep`, and `zoxide`).
+  `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg`, and `ripgrep`).
 
 ## Design & Security Contracts
 

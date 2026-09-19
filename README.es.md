@@ -24,7 +24,7 @@ Configuración base pública, modular y portable optimizada para entornos **Arch
 
 ## ✨ Características Principales
 
-- ⚡ **Terminal y Shell de Alto Rendimiento:** Entorno Zsh veloz con prompt Starship, resaltado de sintaxis, autosugerencias, Fzf y Zoxide.
+- ⚡ **Terminal y Shell de Alto Rendimiento:** Entorno Zsh veloz con prompt Starship, resaltado de sintaxis, autosugerencias y Fzf.
 - 🛡️ **Privacidad Fail-Closed:** Precedencia estricta de 3 niveles (`base` ──► `private` ──► `local`) garantizando que identidades laborales, claves de firma y secretos nunca se filtren a repositorios públicos.
 - 🎛️ **Orquestación Multi-WM:** Coordina de forma fluida gestores de ventanas independientes ([dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm) para Wayland y [dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm) para X11).
 - 🔄 **CLI de Ciclo de Vida Seguro:** Comandos integrados `sync`, `update` (con protección para evitar sobreescribir árboles de trabajo con cambios locales) y diagnósticos `doctor`.

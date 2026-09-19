@@ -64,7 +64,7 @@ Los perfiles son acumulativos:
   paquetes Stow enlazan las configuraciones de Alacritty, Foot y `xdg-defaults`.
 - **`yazi-extras`**: Habilita previsualizaciones enriquecidas, búsqueda veloz y
   soporte de formatos en el gestor de archivos Yazi (incluyendo `7zip`, `chafa`,
-  `fd`, `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg`, `ripgrep` y `zoxide`).
+  `fd`, `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg` y `ripgrep`).
 
 ## Contratos de diseño y seguridad
 
