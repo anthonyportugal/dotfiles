@@ -1,4 +1,4 @@
-# Orden de detección; no es un manifiesto de instalación.
+# Detection order. Shelly is considered only on CachyOS.
 shelly
 paru
 yay

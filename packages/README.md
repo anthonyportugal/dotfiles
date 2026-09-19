@@ -1,103 +1,100 @@
-# Manifiestos de dependencias
+# Dependency Manifests
 
-Estos archivos declaran la intención de instalación del repositorio base. Son
-datos de entrada para `bin/dotfiles`; no son scripts y no deben ejecutarse
-directamente.
+*Read this in other languages:* [Español](README.es.md)
 
-## Formato
+These files declare the installation requirements for the base repository. They
+serve as declarative inputs for `bin/dotfiles`; they are not executable scripts
+and must not be run directly.
 
-- UTF-8, un nombre por línea;
-- líneas vacías y líneas que empiezan con `#` se ignoran;
-- no se permiten comentarios al final de una entrada;
-- las entradas de paquetes y Stow se ordenan alfabéticamente;
-- no se fijan versiones de paquetes de la distribución rolling release.
+## Format
 
-`package-backends.txt` es la única excepción al orden alfabético: su orden es
-semántico y representa la prioridad de detección.
+- UTF-8 encoded, one package name per line;
+- Empty lines and lines starting with `#` are ignored;
+- Trailing comments on package entries are not permitted;
+- Package and GNU Stow entries are sorted alphabetically;
+- No version pinning against rolling-release distribution packages.
 
-`repo/` contiene paquetes binarios resolubles con `pacman`. Se comprobaron
-primero en el portal de paquetes de CachyOS el 2026-08-20 y, para las adiciones
-de Alacritty y Zsh, el 2026-08-22. `alacritty`, `zsh-completions` y
-`zsh-history-substring-search` están publicados directamente en sus
-repositorios; `ttf-jetbrains-mono` se confirmó después en Arch Extra al no
-aparecer como coincidencia exacta en la búsqueda de CachyOS. Todos conservan el
-mismo nombre cuando CachyOS consume repos sincronizados o variantes
-optimizadas.
+`package-backends.txt` is the sole exception to alphabetical ordering: its order
+is semantic and dictates detection precedence.
 
-Las fuentes que no son equivalentes se mantienen separadas:
+## Sources and Provenance
 
-- `cachyos/`: paquetes propios del repositorio CachyOS;
-- `aur/`: fallback explícito, nunca mezclado con paquetes de repositorio;
-- `external/`: fuentes externas a pacman/AUR; actualmente no hay ninguna.
+`repo/` contains binary packages resolvable via `pacman`, sourced from official
+Arch Linux repositories (`core`, `extra`, `multilib`) and optimized CachyOS mirrors.
 
-Para Brave, CachyOS usa `cachyos/desktop.txt`. En Arch genérico, el resolver
-comprueba primero `core`, `extra` y `multilib`, y sólo entonces usa
-`aur/desktop-fallback.txt`. Las dos entradas representan alternativas del mismo
-paquete, no dos instalaciones.
+Distinct package sources are maintained separately:
 
-## Perfiles
+- `cachyos/`: Packages native to the CachyOS repository (e.g., `brave-bin`);
+- `aur/`: Explicit fallback source, never mixed with binary repository packages;
+- `external/`: Sources outside pacman/AUR; none are currently declared in base.
 
-Los perfiles son acumulativos:
+For the Brave browser, CachyOS utilizes `cachyos/desktop.txt` (native optimized
+binary). On generic Arch Linux, the resolver checks `core`, `extra`, and
+`multilib` first, falling back to `aur/desktop-fallback.txt` only when absent.
+Both entries represent alternative sources for the same package, not duplicate
+installations.
 
-| Perfil/feature | Hereda | Paquetes del sistema | Paquetes Stow |
+## Profiles
+
+Profiles are cumulative:
+
+| Profile / Feature | Inherits | System Packages | Stow Packages |
 | --- | --- | --- | --- |
 | `core` | — | `repo/core.txt` | `stow/core.txt` |
 | `cli` | `core` | `repo/cli.txt` | `stow/cli.txt` |
-| `desktop` | `cli` | `repo/desktop.txt` más la fuente elegida para Brave | `stow/desktop.txt` |
-| `yazi-extras` | feature opt-in sobre `cli` o `desktop` | `repo/yazi-extras.txt` | ninguno |
+| `desktop` | `cli` | `repo/desktop.txt` plus selected Brave source | `stow/desktop.txt` |
+| `yazi-extras` | Opt-in feature over `cli` or `desktop` | `repo/yazi-extras.txt` | None |
 
-`yazi-extras` habilita previews, búsqueda y navegación enriquecidas. `poppler`
-aparece sólo por el preview de PDF de Yazi; el lector de escritorio continúa
-siendo Zathura con MuPDF. Los proveedores de clipboard dependientes de sesión
-(`wl-clipboard`, `xclip` o `xsel`) pertenecen al repositorio del WM/compositor,
-no a este feature común.
+### Profile Details
 
-No existe un perfil de desarrollo JavaScript público: Node.js, npm, pnpm, Bun
-y sus integraciones pertenecen a los dotfiles privados.
+- **`core`**: Establishes the minimal shell and version control foundation.
+  Installs Zsh, Git, GNU Stow, and the four official Zsh extensions
+  (`zsh-autosuggestions`, `zsh-completions`, `zsh-syntax-highlighting`, and
+  `zsh-history-substring-search`). Its Stow packages are `git` and `zsh`.
+- **`cli`**: Enriches the interactive terminal experience. Adds the Starship prompt,
+  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad, and
+  Nerd Fonts symbol glyphs. Its Stow packages deploy Catppuccin Mocha configurations
+  for these utilities.
+- **`desktop`**: Delivers session-independent graphical utilities. Includes
+  Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV,
+  Zathura with MuPDF backend), multimedia player (MPV with MPRIS integration), media
+  controller (Playerctl), Thunar file manager with Tumbler thumbnailing, Catppuccin
+  themes (Adw-gtk3-dark and Papirus-Dark), and the JetBrains Mono typeface. Its Stow
+  packages link Alacritty, Foot, and `xdg-defaults`.
+- **`yazi-extras`**: Enables rich file previews, high-performance search, and
+  archive support in the Yazi file manager (including `7zip`, `chafa`, `fd`,
+  `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg`, `ripgrep`, and `zoxide`).
 
-El paquete Stow `git` pertenece a `core`. Sólo configura defaults portables y
-los includes opcionales `~/.config/git/private.gitconfig` y
-`~/.config/git/local.gitconfig`; no contiene nombre, email, signing key, hosts
-ni rutas laborales. Los archivos ausentes se ignoran de forma nativa por Git.
-También activa `user.useConfigOnly = true`, y el preflight rechaza un
-`~/.gitconfig` legacy cuya precedencia posterior pudiera debilitar el contrato.
+## Design & Security Contracts
 
-Los cuatro complementos públicos de Zsh pertenecen a `core`.
-`zsh-completions` aporta definiciones bajo el `fpath` estándar del sistema;
-`zsh-history-substring-search` se carga después de syntax-highlighting y enlaza
-las flechas arriba/abajo. Las definiciones para comandos opcionales no instalan
-esas herramientas ni las añaden al entorno. Instalar estos paquetes no cambia
-el shell de login: esa activación permanece como un paso explícito con `chsh`.
+- **Public Git Contract (`core`):** The `git` Stow package only configures
+  generic, portable defaults alongside optional includes for
+  `~/.config/git/private.gitconfig` and `~/.config/git/local.gitconfig`. It contains
+  no personal identities, emails, signing keys, or work paths. It strictly enforces
+  `user.useConfigOnly = true`, and preflight validation rejects any legacy
+  `~/.gitconfig` file in `$HOME`.
+- **Zsh Plugins:** Plugins are sourced directly from standard system paths
+  (`/usr/share/zsh/plugins/`). Login shells are not switched automatically: activation
+  remains an explicit user choice via `chsh`.
+- **JavaScript Ecosystem Exclusion:** No Node.js, npm, pnpm, or Bun runtimes are
+  declared in this public repository. Runtimes, package managers, and AI agent
+  skills belong strictly to the private layer (`dotfiles-private`).
 
-## Backends del bootstrap
+## Bootstrap Backends
 
-`package-backends.txt` registra el orden de detección aprobado. Son comandos
-que el bootstrap puede utilizar, no paquetes que estos perfiles deban instalar.
-La selección automática intenta Shelly sólo en CachyOS, después `paru`, `yay` y
-`pacman`. Un override `--backend` permite escoger uno explícitamente.
+`package-backends.txt` registers the approved detection order: Shelly (CachyOS
+only) → `paru` → `yay` → `pacman`. A specific backend can be enforced via
+`--backend`.
 
-Los adaptadores respetan sus capacidades reales:
+Adapters respect each tool's native capabilities:
+- **Shelly:** Dispatches separate `install standard` and `install aur` operations;
+- **paru / yay:** Executes batched `-S --needed` commands separating repo and AUR packages;
+- **pacman:** Resolves official binary repositories only, failing during preflight
+  if an unmet AUR package is detected.
 
-- Shelly usa operaciones separadas `install standard` e `install aur`;
-- paru y yay usan lotes `-S --needed` con `--repo` o `--aur` según procedencia;
-- pacman sólo resuelve `repo/` y `cachyos/`, y rechaza un AUR faltante antes de
-  modificar el sistema.
+## Contract with Window Manager Repositories
 
-El resolver filtra primero los paquetes ya instalados con la base local de
-pacman. No añade confirmación automática: la revisión y los prompts del helper
-AUR permanecen visibles.
-
-## Contrato con repositorios de WM/compositores
-
-Cada repositorio independiente declarará sus propias dependencias y paquetes
-Stow, incluso cuando repita un paquete del sistema ya solicitado por la base.
-La idempotencia del package manager resuelve esa repetición sin importar
-manifiestos internos de otro repositorio.
-
-La base posee aplicaciones independientes de sesión como Alacritty, mpv,
-Playerctl, Brave, Zathura, Micro, Yazi y Thunar. Su perfil `desktop` instala
-Alacritty y JetBrains Mono y enlaza una única configuración Catppuccin para X11
-y Wayland. bspwm posee sus componentes X11; Mango posee MangoWM, Waybar,
-launcher y utilidades específicas de Wayland. La orquestación de `dotfiles` invoca
-el entrypoint público de cada repositorio y no lee ni modifica sus
-manifiestos internos.
+Each Window Manager or compositor repository (`dotfiles-mangowm`, `dotfiles-bspwm`)
+autonomously declares its own dependencies and Stow packages, even when repeating
+packages requested by base. The package manager's idempotency deduplicates
+installations seamlessly without cross-repository manifest inspections.
