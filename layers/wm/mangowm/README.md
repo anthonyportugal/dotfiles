@@ -122,21 +122,30 @@ If you prefer scripted or non-interactive deployment, use `bootstrap`:
   ./bin/mango bootstrap --profile core --apply
   ```
 
-### Helpful Bootstrap Flags
+### 3. Canonical CLI Commands
 
-- **Dry-run simulation (Safe check):** Omit `--apply` to preview actions without touching the filesystem:
+- **Interactive Guided Setup (`setup`):** Configures profile, scope, and accent theme interactively:
   ```bash
-  ./bin/mango bootstrap --profile desktop
+  ./bin/mango setup            # English by default
+  ./bin/mango setup --lang es  # Spanish interface
   ```
-- **Diagnostics:** Check health, dependencies, and symlink integrity:
+- **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks and package checks without touching Git:
   ```bash
-  ./bin/mango doctor --profile desktop
+  ./bin/mango sync
   ```
-- **Unlink / Clean:** Remove managed symlinks safely:
+- **Remote Update (`update`):** Pulls latest commits from Git via fast-forward; prompts before syncing if changes exist:
   ```bash
-  ./bin/mango unlink --profile desktop --apply
+  ./bin/mango update
+  ./bin/mango update -y
   ```
-- **AUR Backend:** Automatically detected (`shelly`, `paru`, `yay`), or manually specified via `--backend <name>`.
+- **Diagnostics (`doctor`):** Inspects dependencies, configuration validity, and symlinks:
+  ```bash
+  ./bin/mango doctor
+  ```
+- **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks from the system:
+  ```bash
+  ./bin/mango unlink --apply
+  ```
 
 ---
 

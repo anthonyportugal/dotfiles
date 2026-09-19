@@ -122,21 +122,30 @@ Si prefieres la ejecución mediante scripts o comandos no interactivos, utiliza 
   ./bin/mango bootstrap --profile core --apply
   ```
 
-### Flags Útiles del Asistente
+### 3. Comandos Canónicos de la CLI
 
-- **Simulación Dry-run (Modo seguro):** Omite `--apply` para previsualizar acciones sin modificar el sistema de archivos:
+- **Asistente de Configuración Guiada (`setup`):** Configura el perfil, alcance y color de acento de forma interactiva:
   ```bash
-  ./bin/mango bootstrap --profile desktop
+  ./bin/mango setup            # Inglés por defecto
+  ./bin/mango setup --lang es  # Interfaz en español
   ```
-- **Diagnósticos:** Verifica el estado de dependencias y la integridad de enlaces:
+- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow y verifica paquetes sin tocar Git:
   ```bash
-  ./bin/mango doctor --profile desktop
+  ./bin/mango sync
   ```
-- **Desvincular / Limpiar:** Retira los enlaces simbólicos administrados de forma limpia:
+- **Actualización Remota (`update`):** Descarga las últimas actualizaciones de Git vía fast-forward; solicita confirmación antes de sincronizar si hay cambios:
   ```bash
-  ./bin/mango unlink --profile desktop --apply
+  ./bin/mango update
+  ./bin/mango update -y
   ```
-- **Backend AUR:** Detección automática (`shelly`, `paru`, `yay`), o configurable mediante `--backend <nombre>`.
+- **Diagnósticos (`doctor`):** Inspecciona dependencias, validez de configuración y enlaces simbólicos:
+  ```bash
+  ./bin/mango doctor
+  ```
+- **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos de GNU Stow del sistema:
+  ```bash
+  ./bin/mango unlink --apply
+  ```
 
 ---
 
