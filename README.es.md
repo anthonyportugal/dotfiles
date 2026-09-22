@@ -192,6 +192,7 @@ Ejecuta la suite de smoke tests localmente:
 
 ```bash
 ./tests/bootstrap-smoke.sh
+./tests/wizard-smoke.sh
 ```
 
 ---

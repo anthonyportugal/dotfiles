@@ -192,6 +192,7 @@ Run the automated smoke test suite locally:
 
 ```bash
 ./tests/bootstrap-smoke.sh
+./tests/wizard-smoke.sh
 ```
 
 ---
