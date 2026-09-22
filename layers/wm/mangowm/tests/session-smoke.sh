@@ -87,7 +87,7 @@ jq -s -e '
   all(.[];
     type == "object" and
     (.label as $label |
-      ["lock", "shutdown", "logout", "reboot"] | index($label)) != null and
+      ["logout", "suspend", "reboot", "shutdown"] | index($label)) != null and
     (.action | type == "string" and length > 0) and
     (.text | type == "string" and length > 0) and
     (.keybind | type == "string" and length == 1)
