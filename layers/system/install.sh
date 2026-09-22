@@ -48,14 +48,81 @@ DRY_RUN=false
 CHECK_ONLY=false
 AUTO_INSTALL=false
 
-log_info()    { printf "${BLUE}[INFO]${RESET} %s\n" "$*"; }
-log_success() { printf "${GREEN}[OK]${RESET}   %s\n" "$*"; }
-log_warn()    { printf "${YELLOW}[WARN]${RESET} %s\n" "$*"; }
-log_error()   { printf "${RED}[ERROR]${RESET} %s\n" "$*"; }
+setup_colors() {
+  if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && (( $(tput colors 2>/dev/null || echo 0) >= 8 )); then
+    C_RESET='\033[0m'
+    C_BOLD='\033[1m'
+    C_PINK='\033[38;2;245;194;231m'
+    C_MAUVE='\033[38;2;203;166;247m'
+    C_BLUE='\033[38;2;137;180;250m'
+    C_GREEN='\033[38;2;166;227;161m'
+    C_YELLOW='\033[38;2;249;226;175m'
+    C_RED='\033[38;2;243;139;168m'
+    C_SUBTEXT='\033[38;2;166;173;200m'
+  else
+    C_RESET='' C_BOLD='' C_PINK='' C_MAUVE='' C_BLUE=''
+    C_GREEN='' C_YELLOW='' C_RED='' C_SUBTEXT=''
+  fi
+}
+setup_colors
+
+log_info() {
+  printf '%b%b[%s]%b %b==>%b %s\n' "${C_MAUVE}" "${C_BOLD}" "system" "${C_RESET}" "${C_BLUE}" "${C_RESET}" "$*"
+}
+
+log_success() {
+  printf '%b%b[%s]%b %b✓%b %b%s%b\n' "${C_MAUVE}" "${C_BOLD}" "system" "${C_RESET}" "${C_GREEN}" "${C_RESET}" "${C_BOLD}" "$*" "${C_RESET}"
+}
+
+log_warn() {
+  local label
+  label=$(_t "warning:" "aviso:")
+  printf '%b%b[%s]%b %b%b%s%b %s\n' "${C_MAUVE}" "${C_BOLD}" "system" "${C_RESET}" "${C_YELLOW}" "${C_BOLD}" "${label}" "${C_RESET}" "$*" >&2
+}
+
+log_error() {
+  local label
+  label=$(_t "error:" "error:")
+  printf '%b%b[%s]%b %b%b%s%b %s\n' "${C_MAUVE}" "${C_BOLD}" "system" "${C_RESET}" "${C_RED}" "${C_BOLD}" "${label}" "${C_RESET}" "$*" >&2
+}
 
 usage() {
-    cat <<USAGE
-Usage: sudo ./install.sh [OPTIONS]
+    if [[ "${DOTFILES_LANG}" == "es" ]]; then
+        cat <<USAGE
+Uso: sudo ./install.sh [setup|doctor] [OPCIONES]
+
+Comandos:
+  setup                   Asistente interactivo guiado de instalación.
+  doctor, check           Audita el estado actual de Ly, Limine y DNS-over-TLS.
+  help                    Muestra este mensaje de ayuda.
+
+Selección de Componentes (Componible):
+  -a, --all               Instala configuraciones de Ly, Limine y DNS-over-TLS
+  -l, --ly                Instala configuración del display manager Ly
+  -b, --limine            Instala tema del bootloader Limine
+  -d, --dns               Instala configuración de DNS-over-TLS
+
+Opciones de Configuración:
+  -p, --provider <nombre> Proveedor DoT: quad9 (default), cloudflare, cloudflare-security, adguard, mullvad, custom
+  --custom <endpoints>    Endpoints DoT personalizados (ej. "45.90.28.0#your-id.dns.nextdns.io")
+  -t, --theme <nombre>    Acento de tema para Limine: mauve (default), pink, blue
+  -i, --install           Instala automáticamente el paquete Ly si no existe (shelly/paru/yay/pacman)
+  -n, --dry-run           Simula instalaciones sin escribir en disco
+  -c, --check             Audita el estado actual de Ly, Limine y DNS-over-TLS
+  --lang <en|es>          Idioma de la interfaz interactiva (default: en)
+  -h, --help              Muestra esta ayuda
+
+Modo Interactivo:
+  Ejecute sin opciones o con 'setup' para mostrar el menú interactivo.
+USAGE
+    else
+        cat <<USAGE
+Usage: sudo ./install.sh [setup|doctor] [OPTIONS]
+
+Commands:
+  setup                   Interactive guided installation wizard.
+  doctor, check           Audit current state of Ly, Limine, and DNS-over-TLS.
+  help                    Show this help message.
 
 Component Selection (Composable):
   -a, --all               Install Ly, Limine, and DNS-over-TLS configurations
@@ -74,13 +141,25 @@ Configuration Options:
   -h, --help              Show this help message
 
 Interactive Mode:
-  Run without options to display an interactive menu.
+  Run without options or with 'setup' to display an interactive menu.
 USAGE
+    fi
 }
 
 # Parse options
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        setup)
+            shift
+            ;;
+        doctor|check)
+            CHECK_ONLY=true
+            shift
+            ;;
+        help)
+            usage
+            exit 0
+            ;;
         -a|--all)
             INSTALL_LY=true
             INSTALL_LIMINE=true
@@ -137,7 +216,7 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            log_error "Unknown option: $1"
+            log_error "$(_t "Unknown option: $1" "Opción desconocida: $1")"
             usage
             exit 1
             ;;
