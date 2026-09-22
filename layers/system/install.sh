@@ -8,18 +8,6 @@
 
 set -euo pipefail
 
-# shellcheck disable=SC2034
-BOLD='\033[1m'
-# shellcheck disable=SC2034
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-RESET='\033[0m'
-C_MAUVE='\033[38;2;203;166;247m'
-C_BLUE='\033[38;2;137;180;250m'
-
 DOTFILES_LANG="${DOTFILES_LANG:-en}"
 
 _t() {
@@ -48,6 +36,7 @@ DRY_RUN=false
 CHECK_ONLY=false
 AUTO_INSTALL=false
 
+# shellcheck disable=SC2034
 setup_colors() {
   if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && (( $(tput colors 2>/dev/null || echo 0) >= 8 )); then
     C_RESET='\033[0m'
@@ -63,6 +52,9 @@ setup_colors() {
     C_RESET='' C_BOLD='' C_PINK='' C_MAUVE='' C_BLUE=''
     C_GREEN='' C_YELLOW='' C_RED='' C_SUBTEXT=''
   fi
+  RESET="${C_RESET}"
+  BOLD="${C_BOLD}"
+  GREEN="${C_GREEN}"
 }
 setup_colors
 
