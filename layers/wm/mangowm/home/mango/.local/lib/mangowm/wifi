@@ -171,8 +171,7 @@ manage_saved_connections() {
   case "$action" in
     *"Conectar"*)
       mangowm_notify low 'Wi-Fi' "Conectando a $target_name..."
-      local err_msg
-      if err_msg=$(connect_saved_profile "$target_uuid"); then
+      if connect_saved_profile "$target_uuid" >/dev/null 2>&1; then
         mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $target_name"
       else
         mangowm_notify critical 'Wi-Fi' "Fallo al conectar a $target_name"
@@ -269,14 +268,13 @@ connect_wifi_network() {
     local best_uuid
     best_uuid=$(find_best_saved_uuid "$ssid")
 
-    local err_msg=""
     if [[ -n "$best_uuid" ]]; then
-      if err_msg=$(connect_saved_profile "$best_uuid"); then
+      if connect_saved_profile "$best_uuid" >/dev/null 2>&1; then
         mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
         return 0
       fi
     else
-      if err_msg=$(nmcli device wifi connect "$ssid" 2>&1); then
+      if nmcli device wifi connect "$ssid" >/dev/null 2>&1; then
         mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
         return 0
       fi
@@ -302,8 +300,7 @@ connect_wifi_network() {
         [[ -n "$password" ]] || return 0
 
         mangowm_notify low 'Wi-Fi' "Autenticando en $ssid..."
-        local auth_err
-        if auth_err=$(nmcli device wifi connect "$ssid" password "$password" 2>&1); then
+        if nmcli device wifi connect "$ssid" password "$password" >/dev/null 2>&1; then
           mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
         else
           mangowm_notify critical 'Wi-Fi' "Error de autenticación en $ssid"
@@ -324,16 +321,14 @@ connect_wifi_network() {
     [[ -n "$password" ]] || return 0
 
     mangowm_notify low 'Wi-Fi' "Autenticando en $ssid..."
-    local auth_err
-    if auth_err=$(nmcli device wifi connect "$ssid" password "$password" 2>&1); then
+    if nmcli device wifi connect "$ssid" password "$password" >/dev/null 2>&1; then
       mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
     else
       mangowm_notify critical 'Wi-Fi' "Error de autenticación en $ssid"
     fi
   else
     mangowm_notify low 'Wi-Fi' "Conectando a red abierta $ssid..."
-    local conn_err
-    if conn_err=$(nmcli device wifi connect "$ssid" 2>&1); then
+    if nmcli device wifi connect "$ssid" >/dev/null 2>&1; then
       mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
     else
       mangowm_notify critical 'Wi-Fi' "Error al conectar a $ssid"
