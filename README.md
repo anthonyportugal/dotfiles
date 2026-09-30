@@ -191,8 +191,7 @@ You can also orchestrate components directly using explicit flags:
 Run the automated smoke test suite locally:
 
 ```bash
-./tests/bootstrap-smoke.sh
-./tests/wizard-smoke.sh
+./tests/smoke.sh
 ```
 
 ---

@@ -191,8 +191,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
 Ejecuta la suite de smoke tests localmente:
 
 ```bash
-./tests/bootstrap-smoke.sh
-./tests/wizard-smoke.sh
+./tests/smoke.sh
 ```
 
 ---
