@@ -180,7 +180,7 @@ Puedes instalar o actualizar componentes de manera individual:
 El repositorio incluye una suite completa de pruebas no destructivas que se ejecuta en un entorno aislado y sin privilegios de root:
 
 ```bash
-./tests/test_suite.sh
+./tests/smoke.sh
 ```
 
 Las pruebas validan:

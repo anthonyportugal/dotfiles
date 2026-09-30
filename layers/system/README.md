@@ -180,7 +180,7 @@ You can install or update components individually:
 The repository includes a comprehensive, non-destructive test suite that runs in an isolated, unprivileged environment without modifying any system files:
 
 ```bash
-./tests/test_suite.sh
+./tests/smoke.sh
 ```
 
 Tests include:
