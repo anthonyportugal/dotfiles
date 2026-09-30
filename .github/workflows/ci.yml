@@ -25,11 +25,11 @@ jobs:
 
       - name: Validate syntax (bash -n)
         run: |
-          bash -n bin/dotfiles install.sh tests/*.sh .githooks/*
+          bash -n bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/*
 
       - name: Run ShellCheck
         run: |
-          shellcheck install.sh bin/dotfiles tests/*.sh .githooks/*
+          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/*
 
       - name: Scan for secrets
         run: |
