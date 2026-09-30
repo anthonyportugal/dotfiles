@@ -228,9 +228,7 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
 Ejecuta la suite de smoke tests local para verificar enlaces, manifiestos y la sesión:
 
 ```bash
-./tests/scaffold-smoke.sh
-./tests/bootstrap-smoke.sh
-./tests/session-smoke.sh
+./tests/smoke.sh
 ```
 
 ---

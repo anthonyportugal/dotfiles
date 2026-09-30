@@ -228,9 +228,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 Run the automated test suite locally to verify links, package manifests, and session integrity:
 
 ```bash
-./tests/scaffold-smoke.sh
-./tests/bootstrap-smoke.sh
-./tests/session-smoke.sh
+./tests/smoke.sh
 ```
 
 ---

@@ -48,6 +48,4 @@ jobs:
       - name: Run smoke tests
         run: |
           chmod +x bin/mango tests/*.sh
-          ./tests/bootstrap-smoke.sh
-          ./tests/scaffold-smoke.sh
-          ./tests/session-smoke.sh
+          ./tests/smoke.sh
