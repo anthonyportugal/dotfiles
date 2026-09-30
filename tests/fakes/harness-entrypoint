@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+: "${DOTFILES_HARNESS_TEST_LOG:?DOTFILES_HARNESS_TEST_LOG no está definida}"
+
+printf '%q ' "$(basename "$0")" "$@" >> "$DOTFILES_HARNESS_TEST_LOG"
+printf '\n' >> "$DOTFILES_HARNESS_TEST_LOG"

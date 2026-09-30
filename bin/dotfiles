@@ -37,6 +37,10 @@ PRIVATE_PATH=""
 PRIVATE_PROFILE="core"
 PRIVATE_ENTRYPOINT=""
 declare -a PRIVATE_WORK=()
+
+HARNESS=0
+HARNESS_PATH=""
+HARNESS_ENTRYPOINT=""
 COMPLETION_SHELL="zsh"
 
 PLATFORM=""
@@ -146,6 +150,8 @@ Opciones:
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
   --target DIR                     Home objetivo (default: \$HOME).
+  --agent-harness                  Integrar agent-harness (cadena de herramientas para agentes IA).
+  --agent-harness-path DIR         Ruta explícita al repositorio agent-harness.
   -y, --yes                        Confirmación automática en prompts de actualización.
   -h, --help                       Muestra esta ayuda.
 
@@ -181,6 +187,8 @@ Options:
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
   --target DIR                     Target home directory (default: \$HOME).
+  --agent-harness                  Integrate agent-harness (AI coding agents toolchain).
+  --agent-harness-path DIR         Explicit path to agent-harness repository.
   -y, --yes                        Automatic yes to update prompts.
   -h, --help                       Show this help.
 
@@ -461,6 +469,22 @@ parse_args() {
         PRIVATE=1
         shift
         ;;
+      --agent-harness|--harness)
+        HARNESS=1
+        shift
+        ;;
+      --agent-harness-path|--harness-path)
+        require_option_value "$1" "${2-}"
+        HARNESS_PATH=$2
+        HARNESS=1
+        shift 2
+        ;;
+      --agent-harness-path=*|--harness-path=*)
+        HARNESS_PATH=${1#*=}
+        require_option_value "--agent-harness-path" "$HARNESS_PATH"
+        HARNESS=1
+        shift
+        ;;
       --apply)
         APPLY=1
         shift
@@ -549,6 +573,10 @@ parse_args() {
   else
     [[ -z "$PRIVATE_PATH" ]] || usage_error "--private-path requiere --private"
     (( ${#PRIVATE_WORK[@]} == 0 )) || usage_error "--private-work requiere --private"
+  fi
+
+  if (( HARNESS == 0 )); then
+    [[ -z "$HARNESS_PATH" ]] || usage_error "--agent-harness-path requiere --agent-harness"
   fi
 
   if [[ "$COMMAND" == "doctor" && "$APPLY" == 1 ]]; then
@@ -1119,6 +1147,64 @@ run_private_operation() {
   format_command "${private_command[@]}"
   "${private_command[@]}"
 }
+
+validate_harness_checkout() {
+  local base_root harness_root
+
+  (( HARNESS == 1 )) || return 0
+  command_exists realpath || die "falta el comando requerido: realpath"
+
+  if [[ -z "$HARNESS_PATH" ]]; then
+    if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" ]]; then
+      HARNESS_PATH="$TARGET_DIR/.dotfiles/agent-harness"
+    elif [[ -d "$REPO_ROOT/../agent-harness" ]]; then
+      HARNESS_PATH="$REPO_ROOT/../agent-harness"
+    fi
+  fi
+
+  [[ -n "$HARNESS_PATH" ]] || die "--agent-harness requiere un checkout disponible o la opción --agent-harness-path DIR"
+
+  base_root=$(realpath -m -- "$REPO_ROOT")
+  harness_root=$(realpath -m -- "$HARNESS_PATH")
+  [[ -d "$harness_root" ]] || die "el checkout de agent-harness no existe: $harness_root"
+  [[ "$harness_root" != "$base_root" && "$harness_root" != "$base_root/"* ]] || \
+    die "el checkout de agent-harness debe estar fuera del repositorio base: $harness_root"
+
+  HARNESS_ENTRYPOINT="$harness_root/bin/agent-harness"
+  [[ -f "$HARNESS_ENTRYPOINT" && -x "$HARNESS_ENTRYPOINT" ]] || \
+    die "el checkout de agent-harness no expone el entrypoint ejecutable esperado: $HARNESS_ENTRYPOINT"
+  HARNESS_PATH=$harness_root
+}
+
+run_harness_operation() {
+  local operation=$1
+  local apply_mode=$2
+  local -a harness_command=()
+
+  (( HARNESS == 1 )) || return 0
+
+  case "$operation" in
+    doctor)
+      harness_command=("$HARNESS_ENTRYPOINT" doctor)
+      ;;
+    bootstrap)
+      if [[ "$apply_mode" == 1 ]]; then
+        harness_command=("$HARNESS_ENTRYPOINT" setup --target all)
+      else
+        info "$(_t "Simulating agent-harness setup (dry-run)" "Simulando configuración de agent-harness (dry-run)")"
+        harness_command=("$HARNESS_ENTRYPOINT" setup --target all --dry-run)
+      fi
+      ;;
+    unlink)
+      return 0
+      ;;
+  esac
+
+  info "Operando sobre repositorio agent-harness ($HARNESS_PATH)"
+  format_command "${harness_command[@]}"
+  "${harness_command[@]}"
+}
+
 
 
 
@@ -1801,6 +1887,10 @@ print_plan() {
     print_array "Trabajo privado" PRIVATE_WORK
   fi
 
+  if (( HARNESS == 1 )); then
+    printf '  %-24s %s\n' 'Agent Harness:' "$HARNESS_PATH"
+  fi
+
   if (( SYSTEM_ENABLED == 1 )); then
     printf '  %-24s %s\n' 'Plataforma:' "$PLATFORM"
     printf '  %-24s %s\n' 'Backend:' "$BACKEND"
@@ -1959,10 +2049,16 @@ bootstrap_with_optional_components() {
     run_private_operation bootstrap 0 || die "falló el preflight de la capa privada; no se modificó la base"
   fi
 
+  if (( HARNESS == 1 && APPLY == 1 )); then
+    info "Preflight de agent-harness antes de modificar la base"
+    run_harness_operation bootstrap 0 || die "falló el preflight de agent-harness; no se modificó la base"
+  fi
+
   bootstrap
   run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap del repositorio $WM"
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
   run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
+  run_harness_operation bootstrap "$APPLY" || die "falló el bootstrap de agent-harness"
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
     local -a sys_flags=()
@@ -1999,6 +2095,10 @@ doctor_with_optional_components() {
     error "Doctor: falló la validación de la capa privada"
     result=1
   fi
+  if ! run_harness_operation doctor 0; then
+    error "Doctor: falló la validación de agent-harness"
+    result=1
+  fi
   return "$result"
 }
 
@@ -2020,6 +2120,7 @@ unlink_with_optional_components() {
   run_wm_operation unlink "$APPLY" || die "falló el unlink del repositorio $WM"
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
   run_private_operation unlink "$APPLY" || die "falló el unlink de la capa privada"
+  run_harness_operation unlink "$APPLY" || die "falló el unlink de agent-harness"
 }
 
 sync_environment() {
@@ -2056,10 +2157,16 @@ sync_environment() {
       PRIVATE=1
     fi
   fi
+  if (( HARNESS == 0 )); then
+    if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
+      HARNESS=1
+    fi
+  fi
 
   validate_wm_checkout
   validate_wallpapers_checkout
   validate_private_checkout
+  validate_harness_checkout
 
   APPLY=1
   bootstrap_with_optional_components
@@ -2079,7 +2186,8 @@ update_from_remote() {
     "$REPO_ROOT/../wm/bspwm" "$TARGET_DIR/.dotfiles/wm/bspwm" \
     "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
     "$REPO_ROOT/../system" "$TARGET_DIR/.dotfiles/system" \
-    "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private"; do
+    "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private" \
+    "$REPO_ROOT/../agent-harness" "$TARGET_DIR/.dotfiles/agent-harness"; do
     if [[ -d "$candidate/.git" ]]; then
       local real_cand
       real_cand=$(realpath -m "$candidate")
@@ -2352,6 +2460,17 @@ EOF
   [[ -n "$private_dir" ]] && private_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • Private:  %b\n' "$private_status"
 
+  local harness_dir=""
+  if [[ -d "$REPO_ROOT/../agent-harness" ]]; then
+    harness_dir="$REPO_ROOT/../agent-harness"
+  elif [[ -d "$TARGET_DIR/.dotfiles/agent-harness" ]]; then
+    harness_dir="$TARGET_DIR/.dotfiles/agent-harness"
+  fi
+  local harness_status
+  harness_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
+  [[ -n "$harness_dir" ]] && harness_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
+  printf '  • Harness:  %b\n' "$harness_status"
+
   local action_choice=0
   prompt_choice action_choice "$(_t "What would you like to do?" "¿Qué deseas hacer?")" \
     "$(_t "Guided Full Setup (Step-by-step onboarding for Base + Modules)" "Asistente de Configuración Guiada (Instalación por capas)")" \
@@ -2361,6 +2480,7 @@ EOF
     "$(_t "Configure System Layer (Ly, Limine, DNS-over-TLS)" "Configurar Capa del Sistema (Ly, Limine, DNS)")" \
     "$(_t "Configure Private Layer (Identity, SSH, Work)" "Configurar Capa Privada (Identidad, SSH, Laboral)")" \
     "$(_t "Configure Wallpapers (walls)" "Configurar Fondos de Pantalla (walls)")" \
+    "$(_t "Configure Agent Harness (AI Agents, Rules, MCP, Skills)" "Configurar Agent Harness (AI Agents, Rules, MCP, Skills)")" \
     "$(_t "Re-sync Local Environment (Sync links and packages)" "Re-sincronizar Entorno Local (Sync enlaces y paquetes)")" \
     "$(_t "Update from GitHub (Remote Update + Sync)" "Actualizar desde GitHub (Remote Update + Sync)")" \
     "$(_t "Health Diagnostics (Doctor)" "Diagnóstico de Salud (Doctor)")" \
@@ -2475,23 +2595,38 @@ EOF
       fi
       return 0
       ;;
-    7)
-      sync_environment || true
+    7) # Agent Harness setup
+      local h_path="${harness_dir:-$TARGET_DIR/.dotfiles/agent-harness}"
+      if [[ ! -d "$h_path" ]]; then
+        wizard_clone_if_missing "agent-harness" \
+          "https://github.com/anthonyportugal/agent-harness.git" \
+          "git@github.com:anthonyportugal/agent-harness.git" \
+          "$h_path" || return 1
+      fi
+      if [[ -x "$h_path/bin/agent-harness" ]]; then
+        "$h_path/bin/agent-harness" setup
+      else
+        error "$(_t "Agent Harness executable not found in $h_path" "Ejecutable agent-harness no encontrado en $h_path")"
+      fi
       return 0
       ;;
     8)
-      update_from_remote || true
+      sync_environment || true
       return 0
       ;;
     9)
-      doctor_with_optional_components || true
+      update_from_remote || true
       return 0
       ;;
     10)
-      unlink_with_optional_components || true
+      doctor_with_optional_components || true
       return 0
       ;;
     11)
+      unlink_with_optional_components || true
+      return 0
+      ;;
+    12)
       info "$(_t "Goodbye!" "¡Hasta luego!")"
       return 0
       ;;
@@ -2642,8 +2777,41 @@ EOF
     fi
   fi
 
+  HARNESS=0
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 6: Agent Harness (AI Coding Agents, Rules, MCP & Skills)" "Paso 6: Agent Harness (Agentes IA, Reglas, MCP y Skills)")" "$C_RESET"
+  local existing_harness=""
+  if [[ -d "$REPO_ROOT/../agent-harness" ]]; then
+    existing_harness="$REPO_ROOT/../agent-harness"
+  elif [[ -d "$TARGET_DIR/.dotfiles/agent-harness" ]]; then
+    existing_harness="$TARGET_DIR/.dotfiles/agent-harness"
+  fi
+
+  if [[ -n "$existing_harness" ]]; then
+    if prompt_yes_no "$(_t "Agent Harness detected at $(prettify_path "$existing_harness"). Configure runtimes now?" "Agent Harness detectado en $(prettify_path "$existing_harness"). ¿Configurar runtimes ahora?")" Y; then
+      HARNESS=1
+      HARNESS_PATH="$existing_harness"
+      if [[ -x "$existing_harness/bin/agent-harness" ]]; then
+        "$existing_harness/bin/agent-harness" setup || true
+      fi
+    fi
+  else
+    if prompt_yes_no "$(_t "Integrate Agent Harness (anthonyportugal/agent-harness)?" "¿Deseas integrar Agent Harness (anthonyportugal/agent-harness)?")" Y; then
+      local harness_dest="$TARGET_DIR/.dotfiles/agent-harness"
+      if wizard_clone_if_missing "agent-harness" \
+        "https://github.com/anthonyportugal/agent-harness.git" \
+        "git@github.com:anthonyportugal/agent-harness.git" \
+        "$harness_dest"; then
+        HARNESS=1
+        HARNESS_PATH="$harness_dest"
+        if [[ -x "$harness_dest/bin/agent-harness" ]]; then
+          "$harness_dest/bin/agent-harness" setup || true
+        fi
+      fi
+    fi
+  fi
+
   local mode_choice=0
-  prompt_choice mode_choice "$(_t "Step 6: Select Base System Installation Scope" "Paso 6: Selecciona el Alcance de la Instalación Base")" \
+  prompt_choice mode_choice "$(_t "Step 7: Select Base System Installation Scope" "Paso 7: Selecciona el Alcance de la Instalación Base")" \
     "$(_t "Complete: Install base packages (repo/AUR) + Deploy Stow symlinks [Recommended]" "Completo: Instalar paquetes del sistema (repo/AUR) + Enlaces Stow [Recomendado]")" \
     "$(_t "Symlinks only: Deploy Stow dotfiles symlinks only (No package install / No sudo)" "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)")"
   if (( mode_choice == 1 )); then
@@ -2671,6 +2839,9 @@ EOF
   local priv_str="No"
   (( PRIVATE == 1 )) && priv_str="$(_t "Yes" "Sí")"
   printf '│  • %-20s %-33s│\n' "$(_t "Private Layer:" "Capa Privada:")" "$priv_str"
+  local harness_str="No"
+  (( HARNESS == 1 )) && harness_str="$(_t "Yes" "Sí")"
+  printf '│  • %-20s %-33s│\n' "$(_t "Agent Harness:" "Agent Harness:")" "$harness_str"
   printf '│  • %-20s %-33s│\n' "$(_t "Operation Mode:" "Modo de Operación:")" "$MODE_SELECTION"
   printf '│  • %-20s %-33s│\n' "$(_t "Target Home:" "Directorio Target:")" "$(prettify_path "$TARGET_DIR")"
   cat <<'EOF'
@@ -2679,7 +2850,7 @@ EOF
   printf '%b\n' "$C_RESET"
 
   local final_choice=0
-  prompt_choice final_choice "$(_t "Step 7: How would you like to proceed with Base?" "Paso 7: ¿Cómo deseas proceder con la Base?")" \
+  prompt_choice final_choice "$(_t "Step 8: How would you like to proceed with Base?" "Paso 8: ¿Cómo deseas proceder con la Base?")" \
     "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
     "$(_t "Dry-run simulation (Check actions without modifying)" "Simulación previa (Dry-Run: ver qué se tocaría sin modificar)")" \
     "$(_t "Cancel and exit" "Cancelar y salir")"
@@ -2697,6 +2868,7 @@ EOF
   validate_wm_checkout
   validate_wallpapers_checkout
   validate_private_checkout
+  validate_harness_checkout
   bootstrap_with_optional_components
 }
 
@@ -2764,7 +2936,7 @@ _dotfiles_completion() {
   _init_completion || return
 
   local commands="setup sync update bootstrap doctor unlink completion help"
-  local options="--profile --feature --backend --platform --target --packages-only --stow-only --wm --wm-path --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --apply -h --help"
+  local options="--profile --feature --backend --platform --target --packages-only --stow-only --wm --wm-path --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --agent-harness --agent-harness-path --apply -h --help"
 
   if (( cword == 1 )); then
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -2800,7 +2972,7 @@ _dotfiles_completion() {
       COMPREPLY=( $(compgen -W "core dev" -- "$cur") )
       return 0
       ;;
-    --target|--wm-path|--wallpapers-path|--private-path)
+    --target|--wm-path|--wallpapers-path|--private-path|--agent-harness-path)
       COMPREPLY=( $(compgen -d -- "$cur") )
       return 0
       ;;
@@ -2841,18 +3013,21 @@ main() {
       validate_wm_checkout
       validate_wallpapers_checkout
       validate_private_checkout
+      validate_harness_checkout
       bootstrap_with_optional_components
       ;;
     doctor)
       validate_wm_checkout
       validate_wallpapers_checkout
       validate_private_checkout
+      validate_harness_checkout
       doctor_with_optional_components
       ;;
     unlink)
       validate_wm_checkout
       validate_wallpapers_checkout
       validate_private_checkout
+      validate_harness_checkout
       cmd_unlink
       ;;
     completion)

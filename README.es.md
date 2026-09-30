@@ -16,9 +16,9 @@ Configuración base pública, modular y portable optimizada para entornos **Arch
 
 > [!TIP]
 > 🧩 **Ecosistema Modular de Dotfiles:**  
-> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Sistema](https://github.com/anthonyportugal/dotfiles-system)
+> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Sistema](https://github.com/anthonyportugal/dotfiles-system) • [Agent Harness](https://github.com/anthonyportugal/agent-harness)
 > 
-> Este repositorio proporciona la base fundamental para el entorno de usuario y se integra limpiamente con gestores de ventanas independientes, compositores y una capa de configuración privada opcional.
+> Este repositorio proporciona la base fundamental para el entorno de usuario y se integra limpiamente con gestores de ventanas independientes, compositores, herramientas de agentes IA y una capa de configuración privada opcional.
 
 ---
 
@@ -122,7 +122,7 @@ Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el menú o
 ```
 
 El menú principal te permite elegir entre:
-- **Asistente de Configuración Guiada:** Onboarding paso a paso para el sistema base y delegación automática a los asistentes de cada módulo (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`, `dotfiles-private setup`).
+- **Asistente de Configuración Guiada:** Onboarding paso a paso para el sistema base y delegación automática a los asistentes de cada módulo (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`, `dotfiles-private setup`, `agent-harness setup`).
 - **Configuración Modular Individual:** Lanzar directamente el asistente guiado de cualquier componente por separado o realizar tareas de mantenimiento del entorno (`sync`, `update`, `doctor`, `unlink`).
 
 ### 3. Orquestación Manual por Línea de Comandos
@@ -137,13 +137,14 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles bootstrap --profile core --apply
   ```
-- **Composición con WMs, Wallpapers y Capa Privada:**
+- **Composición con WMs, Wallpapers, Capa Privada y Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
     --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
     --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --private --private-path "$HOME/.dotfiles/private" \
+    --agent-harness --agent-harness-path "$HOME/.dotfiles/agent-harness" \
     --apply
   ```
 
@@ -154,11 +155,11 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ./bin/dotfiles setup            # Inglés por defecto
   ./bin/dotfiles setup --lang es  # Interfaz en español
   ```
-- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow y valida paquetes sin tocar Git:
+- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow, configura Agent Harness y valida paquetes sin tocar Git:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`, `system`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
+- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`, `system`, `agent-harness`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y
@@ -176,13 +177,14 @@ También puedes orquestar los componentes directamente mediante flags explícito
 
 ## 🌐 Repositorios Conectados
 
-| Repositorio | Capacidad | Protocolo Gráfico |
+| Repositorio | Capacidad | Protocolo Gráfico / Ámbito |
 | :--- | :--- | :--- |
 | **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Sesión Wayland con mosaico dinámico (incluida en el showcase oficial de MangoWM) | Wayland |
 | **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Sesión X11 en mosaico (Polybar + Rofi + Picom + Dunst) | X11 |
 | **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP y CLI de gestión | Multi-monitor |
 | **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | Configuraciones a nivel de sistema (gestor de pantalla Ly, bootloader Limine, DNS-over-TLS) | Sistema Linux |
 | **`dotfiles-private`** | Capa privada opcional para identidades, firmas y perfiles de trabajo | Local / Seguro |
+| **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | Harness para agentes IA, ensamblado de reglas modular, servidores MCP y skills | AI Engineering |
 
 ---
 
