@@ -9,7 +9,7 @@
     "custom/recording",
     "mpris",
     "custom/nightlight",
-    "idle_inhibitor",
+    "custom/idle",
     "tray"
   ],
   "modules-center": ["ext/workspaces"],
@@ -61,15 +61,13 @@
     "signal": 9,
     "on-click": "$HOME/.local/lib/mangowm/night-light toggle"
   },
-  "idle_inhibitor": {
-    "format": "{icon}",
-    "tooltip": true,
-    "tooltip-format-activated": "Modo presentación: pantalla siempre activa",
-    "tooltip-format-deactivated": "Modo ahorro: reposo automático",
-    "format-icons": {
-      "activated": "󰅶",
-      "deactivated": "󰾪"
-    }
+  "custom/idle": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/idle-inhibit waybar",
+    "signal": 11,
+    "on-click": "$HOME/.local/lib/mangowm/idle-inhibit toggle",
+    "tooltip": true
   },
   "tray": {
     "icon-size": 14,

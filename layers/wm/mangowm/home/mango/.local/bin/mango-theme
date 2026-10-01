@@ -298,7 +298,7 @@ render_waybar() {
     '  background: alpha(@base, 0.96);' \
     '  color: @text;' \
     '}' \
-    '#custom-launcher, #custom-recording, #mpris, #custom-nightlight, #idle_inhibitor, #tray,' \
+    '#custom-launcher, #custom-recording, #mpris, #custom-nightlight, #custom-idle, #idle_inhibitor, #tray,' \
     '#wireplumber, #backlight, #network, #bluetooth, #custom-power-profile, #battery, #clock, #custom-power {' \
     '  padding: 0 8px;' \
     '  margin: 0;' \
@@ -339,17 +339,17 @@ render_waybar() {
     '#custom-nightlight:hover {' \
     '  color: @yellow;' \
     '}' \
-    '#idle_inhibitor {' \
+    '#custom-idle, #idle_inhibitor {' \
     '  color: @overlay0;' \
     '  font-size: 15px;' \
     '}' \
-    '#idle_inhibitor.activated {' \
+    '#custom-idle.activated, #idle_inhibitor.activated {' \
     '  color: @pink;' \
     '}' \
-    '#idle_inhibitor.activated:hover {' \
+    '#custom-idle.activated:hover, #idle_inhibitor.activated:hover {' \
     '  color: @flamingo;' \
     '}' \
-    '#idle_inhibitor:hover {' \
+    '#custom-idle:hover, #idle_inhibitor:hover {' \
     '  color: @text;' \
     '}' \
     '#tray {' \
