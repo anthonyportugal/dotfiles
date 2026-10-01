@@ -7,13 +7,16 @@ source "$HOME/.local/lib/mangowm/common"
 mangowm_require brightnessctl
 case "${1-}" in
   up)
-    exec brightnessctl --class=backlight set +5%
+    brightnessctl --class=backlight set +5%
     ;;
   down)
-    exec brightnessctl --class=backlight set 5%-
+    brightnessctl --class=backlight set 5%-
     ;;
   *)
     printf 'Uso: %s up|down\n' "${0##*/}" >&2
     exit 2
     ;;
 esac
+
+pct=$(brightnessctl -m 2>/dev/null | awk -F, 'NF>=4 {print $4; exit}' || true)
+mangowm_notify normal "Brillo" "󰃠 ${pct}"

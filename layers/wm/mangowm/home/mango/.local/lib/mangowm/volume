@@ -164,30 +164,64 @@ select_audio_device() {
   fi
 }
 
-case "${1-}" in
+action="${1-}"
+
+case "$action" in
   up)
-    exec wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
+    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
     ;;
   down)
-    exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+    wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
     ;;
   mute)
-    exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+    wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
     ;;
   mic-mute)
-    exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+    wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
     ;;
   menu|select)
     select_audio_device "${2:-all}"
+    exit 0
     ;;
   select-sink|output-menu)
     select_audio_device "sinks"
+    exit 0
     ;;
   select-source|input-menu)
     select_audio_device "sources"
+    exit 0
     ;;
   *)
     printf 'Uso: %s up|down|mute|mic-mute|menu [all|sink|source]|select\n' "${0##*/}" >&2
     exit 2
     ;;
 esac
+
+if [[ "$action" == "mic-mute" ]]; then
+  status=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null || true)
+  if grep -q 'MUTED' <<< "$status"; then
+    mangowm_notify normal "Micrófono" "󰍭 Silenciado"
+  else
+    mangowm_notify normal "Micrófono" "󰍬 Activo"
+  fi
+else
+  status=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)
+  if grep -q 'MUTED' <<< "$status"; then
+    mangowm_notify normal "Volumen" "󰝟 Silenciado"
+  else
+    vol=$(awk '{print int(($2 * 100) + 0.5)}' <<< "$status")
+    vol=${vol:-0}
+    if (( vol < 33 )); then
+      icon="󰕿"
+    elif (( vol < 66 )); then
+      icon="󰖀"
+    else
+      icon="󰕾"
+    fi
+    if command -v notify-send >/dev/null 2>&1; then
+      notify-send -h string:x-canonical-private-synchronous:volume -h "int:value:$vol" --urgency=normal --app-name=MangoWM "Volumen: ${vol}%" "$icon"
+    else
+      mangowm_notify normal "Volumen: ${vol}%" "$icon"
+    fi
+  fi
+fi
