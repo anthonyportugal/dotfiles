@@ -59,7 +59,7 @@ DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
   --wm mangowm --wm-path "$WM_MANGO" \
   --wm bspwm --wm-path "$WM_BSPWM" \
   --wallpapers --wallpapers-path "$WALLS_REPO" \
-  --private --private-path "$PRIVATE_REPO" --private-profile development --private-work csti \
+  --private --private-path "$PRIVATE_REPO" --private-profile development --private-work corp \
   --agent-harness --agent-harness-path "$HARNESS_REPO" \
   --apply
 
@@ -67,7 +67,7 @@ DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 grep -q 'mango' "$WM_LOG" || fail "MangoWM no fue ejecutado en multi-WM"
 grep -q 'bspwm' "$WM_LOG" || fail "BSPWM no fue ejecutado en multi-WM"
 grep -q 'link' "$WALLS_LOG" || fail "Walls link no fue invocado"
-grep -q 'csti' "$PRIVATE_LOG" || fail "Private work csti no fue invocado"
+grep -q 'corp' "$PRIVATE_LOG" || fail "Private work corp no fue invocado"
 grep -q 'development' "$PRIVATE_LOG" || fail "Private profile development no fue invocado"
 grep -q 'setup' "$HARNESS_LOG" || fail "Agent Harness setup no fue invocado"
 
@@ -134,6 +134,14 @@ ln -s "$SCRIPT_DIR/fakes/harness-entrypoint" "$CANON_HOME/.dotfiles/agent-harnes
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
 
+mkdir -p "$CANON_HOME/.local/state/dotfiles"
+cat > "$CANON_HOME/.local/state/dotfiles/private.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="private"
+PROFILE="development"
+WORK="corp"
+EOF
+
 DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
@@ -144,6 +152,8 @@ grep -q 'mango' "$WM_LOG" || fail "Sync no detectó MangoWM automáticamente"
 grep -q 'bspwm' "$WM_LOG" || fail "Sync no detectó BSPWM automáticamente"
 grep -q 'walls' "$WALLS_LOG" || fail "Sync no detectó Walls automáticamente"
 grep -q 'private' "$PRIVATE_LOG" || fail "Sync no detectó Private automáticamente"
+grep -q 'development' "$PRIVATE_LOG" || fail "Sync no reutilizó PROFILE=development desde el recibo de private"
+grep -q 'corp' "$PRIVATE_LOG" || fail "Sync no reutilizó WORK=corp desde el recibo de private"
 grep -q 'setup' "$HARNESS_LOG" || fail "Sync no detectó Agent Harness automáticamente"
 
 # 5. Test update command (checks git repositories)

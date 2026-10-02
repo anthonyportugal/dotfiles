@@ -36,8 +36,10 @@ WALLPAPERS_ENTRYPOINT=""
 PRIVATE=0
 PRIVATE_PATH=""
 PRIVATE_PROFILE="core"
+PRIVATE_PROFILE_EXPLICIT=0
 PRIVATE_ENTRYPOINT=""
 declare -a PRIVATE_WORK=()
+PRIVATE_WORK_EXPLICIT=0
 
 HARNESS=0
 HARNESS_PATH=""
@@ -402,18 +404,21 @@ parse_args() {
       --private-profile)
         require_option_value "$1" "${2-}"
         PRIVATE_PROFILE=$2
+        PRIVATE_PROFILE_EXPLICIT=1
         PRIVATE=1
         shift 2
         ;;
       --private-profile=*)
         PRIVATE_PROFILE=${1#*=}
         require_option_value "--private-profile" "$PRIVATE_PROFILE"
+        PRIVATE_PROFILE_EXPLICIT=1
         PRIVATE=1
         shift
         ;;
       --private-work)
         require_option_value "$1" "${2-}"
         PRIVATE_WORK+=("$2")
+        PRIVATE_WORK_EXPLICIT=1
         PRIVATE=1
         shift 2
         ;;
@@ -421,6 +426,7 @@ parse_args() {
         local private_work_val=${1#*=}
         require_option_value "--private-work" "$private_work_val"
         PRIVATE_WORK+=("$private_work_val")
+        PRIVATE_WORK_EXPLICIT=1
         PRIVATE=1
         shift
         ;;
@@ -903,6 +909,17 @@ validate_wm_checkout() {
 
     WM_PATHS["$current_wm"]="$wm_root"
     WM_ENTRYPOINTS["$current_wm"]="$entrypoint"
+
+    if (( WM_PROFILE_SET == 0 )) && [[ -z "${WM_PROFILES[$current_wm]:-}" ]]; then
+      local wm_receipt="${TARGET_DIR}/.local/state/dotfiles/${current_wm}.receipt"
+      if [[ -f "$wm_receipt" ]]; then
+        local saved_wm_profile
+        saved_wm_profile=$(grep -E '^PROFILE=' "$wm_receipt" | head -n 1 | cut -d= -f2- | tr -d "'\"")
+        if [[ "$saved_wm_profile" == "core" || "$saved_wm_profile" == "desktop" ]]; then
+          WM_PROFILES["$current_wm"]="$saved_wm_profile"
+        fi
+      fi
+    fi
   done
 
   WM="${WMS[0]}"
@@ -1029,6 +1046,33 @@ run_wallpapers_operation() {
   "${walls_command[@]}"
 }
 
+load_private_receipt() {
+  local private_receipt="${TARGET_DIR}/.local/state/dotfiles/private.receipt"
+  [[ -f "$private_receipt" ]] || return 0
+
+  local key val
+  while IFS='=' read -r key val || [[ -n "$key" ]]; do
+    key=$(trim_line "$key")
+    val=$(trim_line "$val")
+    val=$(printf '%s' "$val" | tr -d "'\"")
+    case "$key" in
+      PROFILE)
+        if (( PRIVATE_PROFILE_EXPLICIT == 0 )) && [[ "$val" == core || "$val" == development ]]; then
+          PRIVATE_PROFILE="$val"
+        fi
+        ;;
+      WORK)
+        if (( PRIVATE_WORK_EXPLICIT == 0 )) && [[ -n "$val" ]]; then
+          local work_item
+          for work_item in $val; do
+            append_unique PRIVATE_WORK "$work_item"
+          done
+        fi
+        ;;
+    esac
+  done < "$private_receipt"
+}
+
 validate_private_checkout() {
   local base_root private_root
 
@@ -1055,6 +1099,7 @@ validate_private_checkout() {
   [[ -f "$PRIVATE_ENTRYPOINT" && -x "$PRIVATE_ENTRYPOINT" ]] || \
     die "el checkout de la capa privada no expone el entrypoint ejecutable esperado: $PRIVATE_ENTRYPOINT"
   PRIVATE_PATH=$private_root
+  load_private_receipt
 }
 
 build_private_command() {
