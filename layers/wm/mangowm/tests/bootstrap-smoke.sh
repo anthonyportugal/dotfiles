@@ -45,6 +45,8 @@ mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
 "$MANGO" bootstrap --profile desktop --stow-only --target "$TARGET_DIR"
 [[ ! -e "$TARGET_DIR/.config/mango/config.conf" ]] || \
   fail "el dry-run creó un archivo"
+[[ ! -e "$TARGET_DIR/.local/state/dotfiles/mangowm.receipt" ]] || \
+  fail "el dry-run de bootstrap creó el recibo de estado"
 
 "$MANGO" bootstrap --profile desktop --stow-only \
   --target "$TARGET_DIR" --apply
@@ -53,6 +55,46 @@ mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
 [[ "$(realpath -m -- "$TARGET_DIR/.config/mango/config.conf")" == \
    "$(realpath -m -- "$REPO_ROOT/home/mango/.config/mango/config.conf")" ]] || \
   fail "el enlace no apunta al owner correcto"
+
+RECEIPT_FILE="$TARGET_DIR/.local/state/dotfiles/mangowm.receipt"
+[[ -f "$RECEIPT_FILE" ]] || \
+  fail "bootstrap --apply no generó el recibo de estado"
+grep -qx 'RECEIPT_VERSION=1' "$RECEIPT_FILE" || \
+  fail "el recibo no define RECEIPT_VERSION=1"
+grep -qx 'COMPONENT="mangowm"' "$RECEIPT_FILE" || \
+  fail "el recibo no define COMPONENT=mangowm"
+grep -qx 'PROFILE="desktop"' "$RECEIPT_FILE" || \
+  fail "el recibo no guardó PROFILE=desktop"
+
+# Switch to core to test profile reuse and override
+"$MANGO" bootstrap --profile core --stow-only \
+  --target "$TARGET_DIR" --apply
+grep -qx 'PROFILE="core"' "$RECEIPT_FILE" || \
+  fail "el recibo no guardó PROFILE=core tras bootstrap"
+
+# doctor y bootstrap sin --profile deben reutilizar el perfil guardado en el recibo (core)
+"$MANGO" doctor --stow-only --target "$TARGET_DIR" \
+  > "$TEST_ROOT/receipt-doctor.out" 2>&1 || \
+  fail "doctor sin --profile falló al reutilizar el recibo"
+grep -q 'Perfil:[[:space:]]*core' "$TEST_ROOT/receipt-doctor.out" || \
+  fail "doctor no reutilizó PROFILE=core desde el recibo"
+
+"$MANGO" bootstrap --stow-only --target "$TARGET_DIR" \
+  > "$TEST_ROOT/receipt-bootstrap.out" 2>&1 || \
+  fail "bootstrap sin --profile falló al reutilizar el recibo"
+grep -q 'Perfil:[[:space:]]*core' "$TEST_ROOT/receipt-bootstrap.out" || \
+  fail "bootstrap no reutilizó PROFILE=core desde el recibo"
+
+# Switch back to desktop and test that explicit --profile core overrides receipt
+"$MANGO" bootstrap --profile desktop --stow-only --target "$TARGET_DIR" --apply
+grep -qx 'PROFILE="desktop"' "$RECEIPT_FILE" || \
+  fail "el recibo no guardó PROFILE=desktop tras bootstrap"
+
+"$MANGO" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
+  > "$TEST_ROOT/receipt-override-core.out" 2>&1 || \
+  fail "bootstrap con --profile explícito falló"
+grep -q 'Perfil:[[:space:]]*core' "$TEST_ROOT/receipt-override-core.out" || \
+  fail "bootstrap no respetó el override explícito --profile core"
 
 "$MANGO" doctor --profile desktop --stow-only --target "$TARGET_DIR"
 "$MANGO" bootstrap --profile desktop --stow-only \
@@ -112,9 +154,13 @@ fi
 "$MANGO" unlink --profile desktop --target "$TARGET_DIR"
 [[ -L "$TARGET_DIR/.config/mango/config.conf" ]] || \
   fail "el dry-run de unlink retiró el enlace"
+[[ -f "$RECEIPT_FILE" ]] || \
+  fail "el dry-run de unlink eliminó el recibo de estado"
 "$MANGO" unlink --profile desktop --target "$TARGET_DIR" --apply
 [[ ! -e "$TARGET_DIR/.config/mango/config.conf" ]] || \
   fail "unlink dejó el enlace administrado"
+[[ ! -e "$RECEIPT_FILE" ]] || \
+  fail "unlink --apply no eliminó el recibo de estado"
 if "$MANGO" doctor --profile desktop --stow-only --target "$TARGET_DIR" \
     > "$TEST_ROOT/doctor-after-unlink.out" 2>&1; then
   fail "doctor debía detectar el enlace ausente después de unlink"
