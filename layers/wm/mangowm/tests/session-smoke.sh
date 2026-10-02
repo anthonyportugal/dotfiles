@@ -112,8 +112,9 @@ shellcheck "${shell_files[@]}"
 # prueba inspecciona composición sin necesitar Wayland ni tocar el host.
 for command_name in \
   brightnessctl dbus-update-activation-environment fuzzel gammastep grim mako \
-  mango notify-send playerctl satty slurp swaybg swayidle systemctl systemd-run \
-  waybar wf-recorder wl-copy wlogout wpctl xdg-open xdg-user-dir; do
+  mango mmsg notify-send pgrep pkill playerctl powerprofilesctl satty slurp \
+  swaybg swayidle systemctl systemd-run waybar wf-recorder wl-copy wlogout \
+  wpctl xdg-open xdg-user-dir; do
   case "$command_name" in
     systemctl|systemd-run|dbus-update-activation-environment)
       ln -s "$REPO_ROOT/tests/fakes/session-control" "$FAKE_BIN/$command_name"
@@ -174,6 +175,10 @@ grep -Fqx "bind=NONE,XF86MonBrightnessUp,spawn,\$HOME/.local/lib/mangowm/brightn
 
 "$TARGET/.local/lib/mangowm/night-light" on
 "$TARGET/.local/lib/mangowm/night-light" off
+grep -q '^pkill .*gammastep' "$LOG" || \
+  fail 'night-light no invocó pkill para gammastep'
+grep -q '^pkill .*waybar' "$LOG" || \
+  fail 'night-light no refrescó waybar mediante señal'
 "$TARGET/.local/lib/mangowm/brightness" up
 "$TARGET/.local/lib/mangowm/media" play-pause
 "$TARGET/.local/lib/mangowm/volume" mute

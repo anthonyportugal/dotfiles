@@ -8,6 +8,42 @@ printf -v command_line '%q ' "$name" "$@"
 printf '%s\n' "$command_line" >> "$MANGOWM_TEST_LOG"
 
 case "$name" in
+  pgrep)
+    exit 1
+    ;;
+  pkill)
+    exit 0
+    ;;
+  mmsg)
+    case "${1-}" in
+      get)
+        case "${2-}" in
+          keyboardlayout)
+            printf 'us\n'
+            ;;
+          all-monitors)
+            printf '{"monitors":[{"name":"eDP-1","active":true,"width":1920,"height":1080}]}\n'
+            ;;
+          *)
+            ;;
+        esac
+        ;;
+      *)
+        ;;
+    esac
+    ;;
+  powerprofilesctl)
+    case "${1-}" in
+      get)
+        printf 'balanced\n'
+        ;;
+      list)
+        printf '* balanced:\n    CpuDriver: placeholder\n'
+        ;;
+      *)
+        ;;
+    esac
+    ;;
   slurp)
     printf '10,20 300x200\n'
     ;;
