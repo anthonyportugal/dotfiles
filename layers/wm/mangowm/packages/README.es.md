@@ -26,7 +26,7 @@ La prioridad de resolución es CachyOS binario → Arch binario (`repo/`) → AU
 - **`repo/`**: La mayor parte del stack Wayland está disponible como paquetes binarios oficiales.
 - **`aur/`**:
   - `mangowm`: Versión estable empaquetada en AUR;
-  - `swaylock-effects-git`: Reemplaza al `swaylock` estándar para habilitar difuminado de pantalla (blur), anillo de indicadores Catppuccin Mocha y personalización estética;
+  - `swaylock-effects`: Reemplaza al `swaylock` estándar para habilitar difuminado de pantalla (blur), anillo de indicadores Catppuccin Mocha y personalización estética;
   - `wlogout`: Menú de sesión en Wayland provisto vía AUR para distribuciones sin repositorio Archcraft.
 - **`external/`**: No se emplean descargas externas directas; actualmente vacío.
 
@@ -35,7 +35,7 @@ repositorio nunca leerá manifiestos de otro checkout.
 
 ## Decisiones de exclusión
 
-- **No Hyprlock / Hypridle:** Se utiliza `swaylock-effects-git` y `swayidle` para máxima portabilidad y estabilidad sobre wlroots.
+- **No Hyprlock / Hypridle:** Se utiliza `swaylock-effects` y `swayidle` para máxima portabilidad y estabilidad sobre wlroots.
 - **No Rofi / Wofi:** Se emplea Fuzzel por su velocidad nativa en Wayland y diseño minimalista.
 - **No Pulsemixer:** WirePlumber y `wpctl` gestionan el audio nativo de PipeWire sin capas intermedias.
 - **No Wlsunset:** Gammastep cubre el control manual y programado de temperatura de color.
@@ -47,6 +47,6 @@ repositorio nunca leerá manifiestos de otro checkout.
 
 El bootstrap detecta Shelly sólo en CachyOS y continúa con `paru`, `yay` y
 `pacman`. Pacman se limita a paquetes binarios y falla antes de mutar el sistema
-si falta un paquete AUR (`mangowm`, `swaylock-effects-git` o `wlogout`).
+si falta un paquete AUR (`mangowm`, `swaylock-effects` o `wlogout`).
 Shelly, paru y yay conservan los prompts de revisión; no se fuerza confirmación
 automática.

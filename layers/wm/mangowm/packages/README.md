@@ -26,7 +26,7 @@ Resolution priority is CachyOS binary → Arch binary (`repo/`) → AUR (`aur/`)
 - **`repo/`**: Most of the Wayland stack is available as official binary packages.
 - **`aur/`**:
   - `mangowm`: Stable upstream release packaged in AUR;
-  - `swaylock-effects-git`: Replaces standard `swaylock` to provide desktop blur effects, Catppuccin Mocha ring indicators, and aesthetic customization;
+  - `swaylock-effects`: Replaces standard `swaylock` to provide desktop blur effects, Catppuccin Mocha ring indicators, and aesthetic customization;
   - `wlogout`: Wayland logout menu provided via AUR for distributions without the Archcraft repository.
 - **`external/`**: No direct external downloads are currently used; intentionally empty.
 
@@ -35,7 +35,7 @@ This repository never inspects manifests from other checkouts.
 
 ## Exclusion Decisions
 
-- **No Hyprlock / Hypridle:** Uses `swaylock-effects-git` and `swayidle` for broader wlroots portability and stability.
+- **No Hyprlock / Hypridle:** Uses `swaylock-effects` and `swayidle` for broader wlroots portability and stability.
 - **No Rofi / Wofi:** Fuzzel is utilized for its pure Wayland speed and minimal footprint.
 - **No Pulsemixer:** WirePlumber and `wpctl` manage PipeWire natively without extra abstraction layers.
 - **No Wlsunset:** Gammastep reliably handles manual and scheduled color temperature shifts.
@@ -47,6 +47,6 @@ This repository never inspects manifests from other checkouts.
 
 The bootstrap detects Shelly only on CachyOS and continues through `paru`,
 `yay`, and `pacman`. Pacman is strictly limited to binary packages and aborts
-before modifying the system if an AUR package (`mangowm`, `swaylock-effects-git`,
+before modifying the system if an AUR package (`mangowm`, `swaylock-effects`,
 or `wlogout`) is missing. Shelly, paru, and yay preserve interactive review
 prompts without forcing automated confirmations.

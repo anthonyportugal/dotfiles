@@ -189,8 +189,8 @@ PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
   > "$TEST_ROOT/auto-cachyos.out"
 grep -Eq 'Backend:[[:space:]]+shelly' "$TEST_ROOT/auto-cachyos.out" || \
   fail "la detección automática de CachyOS no priorizó Shelly"
-grep -Eq 'Paquetes AUR:[[:space:]].*mangowm.*swaylock-effects-git' \
-  "$TEST_ROOT/auto-cachyos.out" || fail "el perfil core no declaró MangoWM y swaylock-effects-git"
+grep -Eq 'Paquetes AUR:[[:space:]].*mangowm.*swaylock-effects' \
+  "$TEST_ROOT/auto-cachyos.out" || fail "el perfil core no declaró MangoWM y swaylock-effects"
 
 for backend in paru yay; do
   PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
