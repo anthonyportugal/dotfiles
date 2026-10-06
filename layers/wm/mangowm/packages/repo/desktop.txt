@@ -2,6 +2,7 @@ blueman
 brightnessctl
 gammastep
 grim
+imagemagick
 libnotify
 playerctl
 satty

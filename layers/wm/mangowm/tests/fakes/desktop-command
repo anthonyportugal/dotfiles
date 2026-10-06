@@ -45,10 +45,24 @@ case "$name" in
     esac
     ;;
   slurp)
-    printf '10,20 300x200\n'
+    if [[ " $* " == *" -f "* ]]; then
+      printf '100 100\n'
+    elif [[ " $* " == *" -p "* ]]; then
+      printf '100,100 1x1\n'
+    else
+      printf '10,20 300x200\n'
+    fi
     ;;
   grim)
-    printf 'P6\n1 1\n255\n\000\000\000'
+    out_file="${!#}"
+    if [[ "$out_file" != "-" && "$out_file" != grim && -n "$out_file" && "$out_file" != -* ]]; then
+      command touch "$out_file"
+    else
+      printf 'P6\n1 1\n255\n\313\246\367'
+    fi
+    ;;
+  magick)
+    printf 'cba6f7\n'
     ;;
   satty|wl-copy)
     command cat >/dev/null

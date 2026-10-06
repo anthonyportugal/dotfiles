@@ -20,6 +20,7 @@ keybindings=(
   "📶  Super + Shift + W             Menú de Redes Wi-Fi"
   "📸  Super + S / Print             Captura de Pantalla Completa"
   "📸  Super + Shift + S             Captura de Pantalla con Anotación (Satty)"
+  "🎯  Super + P                     Selector de Color de Pantalla"
   "⏺️   Super + R                     Grabar Pantalla Completa (wf-recorder)"
   "⏺️   Super + Shift + R             Grabar Región de Pantalla (wf-recorder)"
   "🎙️   Super + Alt + R               Menú de Grabación (Opciones de Audio)"

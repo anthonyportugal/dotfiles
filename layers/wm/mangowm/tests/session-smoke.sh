@@ -52,6 +52,7 @@ for managed_path in \
   .local/bin/mango-theme \
   .local/bin/mangowm-session \
   .local/lib/mangowm/brightness \
+  .local/lib/mangowm/color-picker \
   .local/lib/mangowm/keyboard \
   .local/lib/mangowm/recording \
   .local/lib/mangowm/wallpaper; do
@@ -111,7 +112,7 @@ shellcheck "${shell_files[@]}"
 # Todos los procesos y herramientas externas se reemplazan por dobles. La
 # prueba inspecciona composición sin necesitar Wayland ni tocar el host.
 for command_name in \
-  brightnessctl dbus-update-activation-environment fuzzel gammastep grim mako \
+  brightnessctl dbus-update-activation-environment fuzzel gammastep grim magick mako \
   mango mmsg notify-send pgrep pkill playerctl powerprofilesctl satty slurp \
   swaybg swayidle systemctl systemd-run waybar wf-recorder wl-copy wlogout \
   wpctl xdg-open xdg-user-dir; do
@@ -171,6 +172,11 @@ grep -Fqx "bind=SUPER,R,spawn,\$HOME/.local/lib/mangowm/recording toggle" \
 grep -Fqx "bind=NONE,XF86MonBrightnessUp,spawn,\$HOME/.local/lib/mangowm/brightness up" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo XF86MonBrightnessUp en 50-desktop.conf'
+grep -Fqx "bind=SUPER,P,spawn,\$HOME/.local/lib/mangowm/color-picker" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo Super+P para color-picker en 50-desktop.conf'
+"$TARGET/.local/lib/mangowm/color-picker"
+grep -q '^wl-copy .*--type.*text/plain' "$LOG" || fail 'el color no llegó al clipboard'
 
 
 "$TARGET/.local/lib/mangowm/night-light" on
