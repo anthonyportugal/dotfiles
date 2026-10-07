@@ -371,7 +371,7 @@ EOF
       return 0
       ;;
     10)
-      doctor_with_optional_components || true
+      cmd_doctor || true
       return 0
       ;;
     11)

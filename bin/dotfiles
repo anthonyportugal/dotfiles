@@ -45,6 +45,9 @@ HARNESS=0
 HARNESS_PATH=""
 HARNESS_ENTRYPOINT=""
 COMPLETION_SHELL="zsh"
+BASE_ONLY=0
+ALL_COMPONENTS=0
+COMPONENT_EXPLICIT=0
 
 PLATFORM=""
 BACKEND=""
@@ -107,6 +110,8 @@ Opciones:
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
   --target DIR                     Home objetivo (default: \$HOME).
+  --base-only                      Ejecuta diagnósticos únicamente para el repositorio base.
+  --all                            Diagnostica o sincroniza todos los componentes disponibles.
   --agent-harness                  Integrar agent-harness (cadena de herramientas para agentes IA).
   --agent-harness-path DIR         Ruta explícita al repositorio agent-harness.
   -y, --yes                        Confirmación automática en prompts de actualización.
@@ -144,6 +149,8 @@ Options:
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
   --target DIR                     Target home directory (default: \$HOME).
+  --base-only                      Run diagnostics solely for the base repository.
+  --all                            Diagnose or synchronize all available components.
   --agent-harness                  Integrate agent-harness (AI coding agents toolchain).
   --agent-harness-path DIR         Explicit path to agent-harness repository.
   -y, --yes                        Automatic yes to update prompts.
@@ -297,6 +304,7 @@ parse_args() {
       --wm)
         require_option_value "$1" "${2-}"
         WM=$2
+        COMPONENT_EXPLICIT=1
         case "$2" in
           both|all)
             append_unique WMS "mangowm"
@@ -315,6 +323,7 @@ parse_args() {
       --wm=*)
         WM=${1#*=}
         require_option_value "--wm" "$WM"
+        COMPONENT_EXPLICIT=1
         case "$WM" in
           both|all)
             append_unique WMS "mangowm"
@@ -333,6 +342,7 @@ parse_args() {
       --wm-path)
         require_option_value "$1" "${2-}"
         WM_PATH=$2
+        COMPONENT_EXPLICIT=1
         if (( ${#WMS[@]} > 0 )); then
           WM_PATHS["${WMS[-1]}"]="$WM_PATH"
         fi
@@ -341,6 +351,7 @@ parse_args() {
       --wm-path=*)
         WM_PATH=${1#*=}
         require_option_value "--wm-path" "$WM_PATH"
+        COMPONENT_EXPLICIT=1
         if (( ${#WMS[@]} > 0 )); then
           WM_PATHS["${WMS[-1]}"]="$WM_PATH"
         fi
@@ -371,34 +382,40 @@ parse_args() {
         ;;
       --wallpapers)
         WALLPAPERS=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --wallpapers-path)
         require_option_value "$1" "${2-}"
         WALLPAPERS_PATH=$2
         WALLPAPERS=1
+        COMPONENT_EXPLICIT=1
         shift 2
         ;;
       --wallpapers-path=*)
         WALLPAPERS_PATH=${1#*=}
         require_option_value "--wallpapers-path" "$WALLPAPERS_PATH"
         WALLPAPERS=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --private)
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --private-path)
         require_option_value "$1" "${2-}"
         PRIVATE_PATH=$2
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift 2
         ;;
       --private-path=*)
         PRIVATE_PATH=${1#*=}
         require_option_value "--private-path" "$PRIVATE_PATH"
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --private-profile)
@@ -406,6 +423,7 @@ parse_args() {
         PRIVATE_PROFILE=$2
         PRIVATE_PROFILE_EXPLICIT=1
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift 2
         ;;
       --private-profile=*)
@@ -413,6 +431,7 @@ parse_args() {
         require_option_value "--private-profile" "$PRIVATE_PROFILE"
         PRIVATE_PROFILE_EXPLICIT=1
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --private-work)
@@ -420,6 +439,7 @@ parse_args() {
         PRIVATE_WORK+=("$2")
         PRIVATE_WORK_EXPLICIT=1
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift 2
         ;;
       --private-work=*)
@@ -428,22 +448,35 @@ parse_args() {
         PRIVATE_WORK+=("$private_work_val")
         PRIVATE_WORK_EXPLICIT=1
         PRIVATE=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --agent-harness|--harness)
         HARNESS=1
+        COMPONENT_EXPLICIT=1
         shift
         ;;
       --agent-harness-path|--harness-path)
         require_option_value "$1" "${2-}"
         HARNESS_PATH=$2
         HARNESS=1
+        COMPONENT_EXPLICIT=1
         shift 2
         ;;
       --agent-harness-path=*|--harness-path=*)
         HARNESS_PATH=${1#*=}
         require_option_value "--agent-harness-path" "$HARNESS_PATH"
         HARNESS=1
+        COMPONENT_EXPLICIT=1
+        shift
+        ;;
+      --base-only)
+        BASE_ONLY=1
+        COMPONENT_EXPLICIT=1
+        shift
+        ;;
+      --all)
+        ALL_COMPONENTS=1
         shift
         ;;
       --apply)
@@ -513,13 +546,26 @@ parse_args() {
     fi
   fi
 
-  if [[ "$COMMAND" =~ ^(bootstrap|doctor|unlink)$ ]]; then
+  if [[ "$COMMAND" =~ ^(bootstrap|unlink)$ ]]; then
     if [[ -n "$WM" ]]; then
       [[ -n "$WM_PATH" ]] || usage_error "--wm $WM requiere --wm-path DIR"
     else
       [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
       (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
     fi
+  elif [[ "$COMMAND" == "doctor" ]]; then
+    if [[ -z "$WM" ]]; then
+      [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
+      (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
+    fi
+  fi
+
+  if (( BASE_ONLY == 1 && ALL_COMPONENTS == 1 )); then
+    usage_error "--base-only y --all son mutuamente excluyentes"
+  fi
+
+  if (( BASE_ONLY == 1 )) && [[ "$COMMAND" != "doctor" ]]; then
+    usage_error "--base-only solo está soportado para el comando doctor"
   fi
 
   if (( PRIVATE == 1 )); then
@@ -853,6 +899,72 @@ format_command() {
     printf '%q ' "$argument"
   done
   printf '\n'
+}
+
+detect_active_environment() {
+  if (( ${#WMS[@]} == 0 )); then
+    local mango_active=0 bspwm_active=0
+    [[ -L "$TARGET_DIR/.config/mango/config.conf" || -f "$TARGET_DIR/.local/state/dotfiles/mangowm.receipt" ]] && mango_active=1
+    [[ -L "$TARGET_DIR/.config/bspwm/bspwmrc" || -f "$TARGET_DIR/.local/state/dotfiles/bspwm.receipt" ]] && bspwm_active=1
+
+    if (( mango_active == 1 || bspwm_active == 1 )); then
+      if (( mango_active == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
+        append_unique WMS "mangowm"
+      fi
+      if (( bspwm_active == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
+        append_unique WMS "bspwm"
+      fi
+    elif [[ "$COMMAND" == "sync" ]]; then
+      if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
+        append_unique WMS "mangowm"
+      fi
+      if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
+        append_unique WMS "bspwm"
+      fi
+    fi
+  fi
+
+  if (( WALLPAPERS == 0 )); then
+    if [[ -L "$TARGET_DIR/.local/share/wallpapers" || -L "$TARGET_DIR/Pictures/Wallpapers" || "$COMMAND" == "sync" ]]; then
+      if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
+        WALLPAPERS=1
+      fi
+    fi
+  fi
+
+  if (( PRIVATE == 0 )); then
+    if [[ -f "$TARGET_DIR/.local/state/dotfiles/private.receipt" || "$COMMAND" == "sync" ]]; then
+      if [[ -d "$TARGET_DIR/.dotfiles/private" || -d "$REPO_ROOT/../private" ]]; then
+        PRIVATE=1
+      fi
+    fi
+  fi
+
+  if (( HARNESS == 0 )); then
+    if [[ -f "$TARGET_DIR/.local/state/dotfiles/agent-harness.receipt" || "$COMMAND" == "sync" ]]; then
+      if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
+        HARNESS=1
+      fi
+    fi
+  fi
+}
+
+detect_all_environment() {
+  if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
+    append_unique WMS "mangowm"
+  fi
+  if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
+    append_unique WMS "bspwm"
+  fi
+  if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
+    WALLPAPERS=1
+  fi
+  if [[ -d "$TARGET_DIR/.dotfiles/private" || -d "$REPO_ROOT/../private" ]]; then
+    PRIVATE=1
+  fi
+  if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
+    HARNESS=1
+  fi
 }
 
 validate_wm_checkout() {
@@ -2079,25 +2191,93 @@ bootstrap_with_optional_components() {
 
 doctor_with_optional_components() {
   local result=0
+  local -a report_items=()
 
-  if ! doctor; then
+  if doctor; then
+    report_items+=("  ✓ Base (dotfiles): OK")
+  else
+    report_items+=("  ✗ Base (dotfiles): FAIL")
     result=1
   fi
-  if ! run_wm_operation doctor 0; then
-    error "Doctor: falló la validación del repositorio $WM"
-    result=1
+
+  local current_wm
+  for current_wm in "${WMS[@]}"; do
+    local entrypoint="${WM_ENTRYPOINTS[$current_wm]}"
+    local wm_path="${WM_PATHS[$current_wm]}"
+    local -a wm_command=(
+      "$entrypoint"
+      doctor
+      "--profile=${WM_PROFILES[$current_wm]:-$WM_PROFILE}"
+      "--backend=$BACKEND_REQUEST"
+      "--platform=$PLATFORM_REQUEST"
+      "--target=$TARGET_DIR"
+    )
+
+    case "$MODE_SELECTION" in
+      packages)
+        wm_command+=(--packages-only)
+        ;;
+      stow)
+        wm_command+=(--stow-only)
+        ;;
+    esac
+
+    info "Delegando en el repositorio $current_wm ($wm_path)"
+    format_command "${wm_command[@]}"
+    if "${wm_command[@]}"; then
+      report_items+=("  ✓ Window Manager ($current_wm): OK")
+    else
+      report_items+=("  ✗ Window Manager ($current_wm): FAIL")
+      error "Doctor: falló la validación del repositorio $current_wm"
+      result=1
+    fi
+  done
+
+  if (( WALLPAPERS == 1 )); then
+    if run_wallpapers_operation doctor 0; then
+      report_items+=("  ✓ Wallpapers (walls): OK")
+    else
+      report_items+=("  ✗ Wallpapers (walls): FAIL")
+      error "Doctor: falló la validación del repositorio de wallpapers"
+      result=1
+    fi
   fi
-  if ! run_wallpapers_operation doctor 0; then
-    error "Doctor: falló la validación del repositorio de wallpapers"
-    result=1
+
+  if (( PRIVATE == 1 )); then
+    if run_private_operation doctor 0; then
+      report_items+=("  ✓ Private (dotfiles-private): OK")
+    else
+      report_items+=("  ✗ Private (dotfiles-private): FAIL")
+      error "Doctor: falló la validación de la capa privada"
+      result=1
+    fi
   fi
-  if ! run_private_operation doctor 0; then
-    error "Doctor: falló la validación de la capa privada"
-    result=1
+
+  if (( HARNESS == 1 )); then
+    if run_harness_operation doctor 0; then
+      report_items+=("  ✓ Agent Harness (agent-harness): OK")
+    else
+      report_items+=("  ✗ Agent Harness (agent-harness): FAIL")
+      error "Doctor: falló la validación de agent-harness"
+      result=1
+    fi
   fi
-  if ! run_harness_operation doctor 0; then
-    error "Doctor: falló la validación de agent-harness"
-    result=1
+
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "=== Composite Doctor Summary ===" "=== Resumen del Doctor Compuesto ===")" "$C_RESET"
+  local item
+  for item in "${report_items[@]}"; do
+    if [[ "$item" == *"OK"* ]]; then
+      printf '%b%s%b\n' "$C_GREEN" "$item" "$C_RESET"
+    else
+      printf '%b%s%b\n' "$C_RED" "$item" "$C_RESET"
+    fi
+  done
+  printf '\n'
+
+  if (( result == 0 )); then
+    success "$(_t "All ${#report_items[@]} audited component(s) passed doctor checks." "Los ${#report_items[@]} componente(s) auditados pasaron el chequeo de doctor exitosamente.")"
+  else
+    error "$(_t "Doctor detected issues across audited components." "Doctor detectó problemas en los componentes auditados.")"
   fi
   return "$result"
 }
@@ -2126,41 +2306,10 @@ unlink_with_optional_components() {
 sync_environment() {
   info "Iniciando re-sincronización local del entorno..."
 
-  if (( ${#WMS[@]} == 0 )); then
-    local mango_linked=0 bspwm_linked=0
-    [[ -L "$TARGET_DIR/.config/mango/config.conf" ]] && mango_linked=1
-    [[ -L "$TARGET_DIR/.config/bspwm/bspwmrc" ]] && bspwm_linked=1
-
-    if (( mango_linked == 1 || bspwm_linked == 1 )); then
-      if (( mango_linked == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
-        append_unique WMS "mangowm"
-      fi
-      if (( bspwm_linked == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
-        append_unique WMS "bspwm"
-      fi
-    else
-      if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
-        append_unique WMS "mangowm"
-      fi
-      if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
-        append_unique WMS "bspwm"
-      fi
-    fi
-  fi
-  if (( WALLPAPERS == 0 )); then
-    if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
-      WALLPAPERS=1
-    fi
-  fi
-  if (( PRIVATE == 0 )); then
-    if [[ -d "$TARGET_DIR/.dotfiles/private" || -d "$REPO_ROOT/../private" ]]; then
-      PRIVATE=1
-    fi
-  fi
-  if (( HARNESS == 0 )); then
-    if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
-      HARNESS=1
-    fi
+  if (( ALL_COMPONENTS == 1 )); then
+    detect_all_environment
+  else
+    detect_active_environment
   fi
 
   validate_wm_checkout
@@ -2247,6 +2396,22 @@ update_from_remote() {
   fi
 }
 
+cmd_doctor() {
+  if (( BASE_ONLY == 0 )); then
+    if (( ALL_COMPONENTS == 1 )); then
+      detect_all_environment
+    elif (( COMPONENT_EXPLICIT == 0 )); then
+      detect_active_environment
+    fi
+  fi
+
+  validate_wm_checkout
+  validate_wallpapers_checkout
+  validate_private_checkout
+  validate_harness_checkout
+  doctor_with_optional_components
+}
+
 cmd_unlink() {
   unlink_with_optional_components
 }
@@ -2272,11 +2437,7 @@ main() {
       bootstrap_with_optional_components
       ;;
     doctor)
-      validate_wm_checkout
-      validate_wallpapers_checkout
-      validate_private_checkout
-      validate_harness_checkout
-      doctor_with_optional_components
+      cmd_doctor
       ;;
     unlink)
       validate_wm_checkout

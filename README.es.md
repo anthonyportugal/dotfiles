@@ -164,9 +164,11 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ./bin/dotfiles update
   ./bin/dotfiles update -y
   ```
-- **Diagnóstico del Sistema (`doctor`):** Inspecciona la integridad de enlaces, shells y dependencias:
+- **Diagnóstico del Sistema (`doctor`):** Inspecciona la integridad de enlaces, shells y dependencias de la base y auto-detecta las capas activas (WM, wallpapers, privada, agent-harness) para emitir un reporte compuesto:
   ```bash
-  ./bin/dotfiles doctor
+  ./bin/dotfiles doctor             # Diagnóstico compuesto de componentes activos
+  ./bin/dotfiles doctor --base-only # Diagnóstico aislado del repositorio base
+  ./bin/dotfiles doctor --all       # Audita todos los repositorios disponibles en disco
   ```
 - **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos de GNU Stow del sistema:
   ```bash

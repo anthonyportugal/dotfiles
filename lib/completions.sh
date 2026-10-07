@@ -35,6 +35,8 @@ _dotfiles() {
     '--backend[Package backend]:backend:(auto shelly paru yay pacman)'
     '--platform[Platform override]:platform:(auto cachyos arch)'
     '--target[Target directory]:directory:_files -/'
+    '--base-only[Run diagnostics solely for base repository]'
+    '--all[Diagnose or synchronize all available components]'
     '(-y --yes)'{-y,--yes}'[Automatic yes to prompts]'
     '(-h --help)'{-h,--help}'[Shows help]'
   )
@@ -70,7 +72,7 @@ _dotfiles_completion() {
   _init_completion || return
 
   local commands="setup sync update bootstrap doctor unlink completion help"
-  local options="--profile --feature --backend --platform --target --packages-only --stow-only --wm --wm-path --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --agent-harness --agent-harness-path --apply -h --help"
+  local options="--profile --feature --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-path --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --agent-harness --agent-harness-path --apply -h --help"
 
   if (( cword == 1 )); then
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )

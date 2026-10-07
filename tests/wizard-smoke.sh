@@ -168,4 +168,55 @@ DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" update --profile core --stow-only --target "$CANON_HOME"
 
-echo "OK: Pruebas de Multi-WM, Private, Agent Harness, Sync y Update validadas exitosamente."
+# 6. Test composite doctor command (auto-detects active components)
+: > "$WM_LOG"
+: > "$WALLS_LOG"
+: > "$PRIVATE_LOG"
+: > "$HARNESS_LOG"
+
+cat > "$CANON_HOME/.local/state/dotfiles/mangowm.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="mangowm"
+PROFILE="desktop"
+EOF
+
+cat > "$CANON_HOME/.local/state/dotfiles/agent-harness.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="agent-harness"
+EOF
+
+mkdir -p "$CANON_HOME/.local/share"
+ln -s "$CANON_HOME/.dotfiles/walls/wallpapers" "$CANON_HOME/.local/share/wallpapers"
+
+DOTFILES_WM_TEST_LOG="$WM_LOG" \
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
+DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
+DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
+"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME"
+
+grep -q 'mango' "$WM_LOG" || fail "Doctor no detectó MangoWM activo automáticamente"
+if grep -q 'bspwm' "$WM_LOG"; then
+  fail "Doctor detectó BSPWM cuando no estaba activo"
+fi
+grep -q 'walls' "$WALLS_LOG" || fail "Doctor no detectó Walls activo automáticamente"
+grep -q 'private' "$PRIVATE_LOG" || fail "Doctor no detectó Private activo automáticamente"
+grep -q 'agent-harness' "$HARNESS_LOG" || fail "Doctor no detectó Agent Harness activo automáticamente"
+
+# 7. Test doctor with --base-only
+: > "$WM_LOG"
+: > "$WALLS_LOG"
+: > "$PRIVATE_LOG"
+: > "$HARNESS_LOG"
+
+DOTFILES_WM_TEST_LOG="$WM_LOG" \
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
+DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
+DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
+"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" --base-only
+
+[[ ! -s "$WM_LOG" ]] || fail "Doctor con --base-only delegó al WM"
+[[ ! -s "$WALLS_LOG" ]] || fail "Doctor con --base-only delegó a Walls"
+[[ ! -s "$PRIVATE_LOG" ]] || fail "Doctor con --base-only delegó a Private"
+[[ ! -s "$HARNESS_LOG" ]] || fail "Doctor con --base-only delegó a Agent Harness"
+
+echo "OK: Pruebas de Multi-WM, Private, Agent Harness, Sync, Update y Composite Doctor validadas exitosamente."

@@ -164,9 +164,11 @@ You can also orchestrate components directly using explicit flags:
   ./bin/dotfiles update
   ./bin/dotfiles update -y
   ```
-- **System Diagnostics (`doctor`):** Inspects link integrity, shells, and system dependencies:
+- **System Diagnostics (`doctor`):** Inspects link integrity, shells, and dependencies for base and auto-detects active components (WM, wallpapers, private, agent-harness) to produce a composite diagnostics report:
   ```bash
-  ./bin/dotfiles doctor
+  ./bin/dotfiles doctor             # Composite diagnostics across active layers
+  ./bin/dotfiles doctor --base-only # Isolated diagnostics for base repository only
+  ./bin/dotfiles doctor --all       # Audit all repositories available on disk
   ```
 - **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks from the system:
   ```bash
