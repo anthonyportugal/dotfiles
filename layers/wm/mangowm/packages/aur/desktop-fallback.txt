@@ -1,0 +1,2 @@
+# Use only when wlogout is absent from configured Arch binary repositories.
+wlogout

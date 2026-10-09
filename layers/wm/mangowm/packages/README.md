@@ -23,11 +23,9 @@ Both profiles select the single Stow package `mango`. The default profile is `de
 
 Resolution priority is CachyOS binary → Arch binary (`repo/`) → AUR (`aur/`).
 
-- **`repo/`**: Most of the Wayland stack is available as official binary packages.
-- **`aur/`**:
-  - `mangowm`: Stable upstream release packaged in AUR;
-  - `swaylock-effects`: Replaces standard `swaylock` to provide desktop blur effects, Catppuccin Mocha ring indicators, and aesthetic customization;
-  - `wlogout`: Wayland logout menu provided via AUR for distributions without the Archcraft repository.
+- **`cachyos/`**: Packages native to CachyOS repositories (`swaylock-effects` in `core` and `wlogout` in `desktop`).
+- **`repo/`**: Most of the Wayland stack is available as official binary packages in Arch (`extra`) and CachyOS, including `mangowm`.
+- **`aur/`**: Fallback source for generic Arch Linux (`core-fallback.txt` and `desktop-fallback.txt`), resolving only when absent from official binary repositories.
 - **`external/`**: No direct external downloads are currently used; intentionally empty.
 
 The package manager will deduplicate packages also declared by base dotfiles.
@@ -47,6 +45,6 @@ This repository never inspects manifests from other checkouts.
 
 The bootstrap detects Shelly only on CachyOS and continues through `paru`,
 `yay`, and `pacman`. Pacman is strictly limited to binary packages and aborts
-before modifying the system if an AUR package (`mangowm`, `swaylock-effects`,
-or `wlogout`) is missing. Shelly, paru, and yay preserve interactive review
-prompts without forcing automated confirmations.
+before modifying the system if an unmet AUR package is detected on generic Arch Linux.
+Shelly, paru, and yay preserve interactive review prompts without forcing automated
+confirmations.

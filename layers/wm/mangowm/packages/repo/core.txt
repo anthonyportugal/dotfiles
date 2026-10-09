@@ -1,6 +1,7 @@
 foot
 fuzzel
 mako
+mangowm
 pipewire
 pipewire-pulse
 polkit-gnome

@@ -1,3 +1,1 @@
-# Stable AUR release. Prefer a verified CachyOS binary later if available.
-mangowm
-swaylock-effects
+# Generic Arch AUR packages for core profile without binary repository alternatives.

@@ -62,16 +62,20 @@ check_backend_order() {
 }
 
 for manifest in \
-  "$REPO_ROOT"/packages/{repo,aur,external,stow}/{core,desktop}.txt; do
+  "$REPO_ROOT"/packages/{repo,aur,external,stow}/{core,desktop}.txt \
+  "$REPO_ROOT"/packages/cachyos/{core,desktop}.txt \
+  "$REPO_ROOT"/packages/aur/{core,desktop}-fallback.txt; do
   check_manifest "$manifest"
 done
 check_backend_order "$REPO_ROOT/packages/package-backends.txt"
 
-assert_manifest_line "$REPO_ROOT/packages/aur/core.txt" mangowm
-assert_manifest_line "$REPO_ROOT/packages/aur/desktop.txt" wlogout
+assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" mangowm
+assert_manifest_line "$REPO_ROOT/packages/cachyos/core.txt" swaylock-effects
+assert_manifest_line "$REPO_ROOT/packages/cachyos/desktop.txt" wlogout
+assert_manifest_line "$REPO_ROOT/packages/aur/core-fallback.txt" swaylock-effects
+assert_manifest_line "$REPO_ROOT/packages/aur/desktop-fallback.txt" wlogout
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" foot
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" fuzzel
-assert_manifest_line "$REPO_ROOT/packages/aur/core.txt" swaylock-effects
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swayidle
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" waybar
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
@@ -81,7 +85,7 @@ assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" wf-recorder
 assert_manifest_line "$REPO_ROOT/packages/stow/core.txt" mango
 
 if grep -ERq '^(mangowc-git|mangowm-git|hyprlock|hypridle|rofi|wofi|cliphist|wl-clip-persist|python-pywal|pulsemixer|xdg-desktop-portal-gnome)$' \
-    "$REPO_ROOT/packages"/{repo,aur}; then
+    "$REPO_ROOT/packages"; then
   fail "los manifests seleccionan un componente excluido por D34"
 fi
 

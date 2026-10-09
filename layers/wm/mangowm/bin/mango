@@ -484,9 +484,22 @@ detect_platform() {
   fi
 }
 
+package_in_official_arch_repos() {
+  local package_name=$1
+  local repo_name
+
+  for repo_name in core extra multilib; do
+    if pacman -Si "$repo_name/$package_name" >/dev/null 2>&1; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 resolve_system_packages() {
   local -a tiers=()
-  local tier
+  local -a fallback_packages=()
+  local tier package_name
 
   REPO_PACKAGES=()
   AUR_PACKAGES=()
@@ -503,8 +516,28 @@ resolve_system_packages() {
 
   for tier in "${tiers[@]}"; do
     append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/repo/$tier.txt"
-    append_manifest_unique AUR_PACKAGES "$PACKAGES_DIR/aur/$tier.txt"
-    append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/$tier.txt"
+    if [[ "$PLATFORM" == "cachyos" ]]; then
+      if [[ -f "$PACKAGES_DIR/cachyos/$tier.txt" ]]; then
+        append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/cachyos/$tier.txt"
+      fi
+    else
+      if [[ -f "$PACKAGES_DIR/aur/$tier-fallback.txt" ]]; then
+        read_manifest "$PACKAGES_DIR/aur/$tier-fallback.txt" fallback_packages
+        for package_name in "${fallback_packages[@]}"; do
+          if package_in_official_arch_repos "$package_name"; then
+            append_unique REPO_PACKAGES "$package_name"
+          else
+            append_unique AUR_PACKAGES "$package_name"
+          fi
+        done
+      fi
+    fi
+    if [[ -f "$PACKAGES_DIR/aur/$tier.txt" ]]; then
+      append_manifest_unique AUR_PACKAGES "$PACKAGES_DIR/aur/$tier.txt"
+    fi
+    if [[ -f "$PACKAGES_DIR/external/$tier.txt" ]]; then
+      append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/$tier.txt"
+    fi
   done
 }
 

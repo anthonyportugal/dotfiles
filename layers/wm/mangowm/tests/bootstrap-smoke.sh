@@ -179,18 +179,18 @@ PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
   > "$TEST_ROOT/shelly.out"
 grep -q 'shelly install standard' "$TEST_ROOT/shelly.out" || \
   fail "falta el comando de repositorio para Shelly"
-grep -Eq 'shelly install aur .*mangowm.*wlogout' "$TEST_ROOT/shelly.out" || \
+grep -Eq 'shelly install aur .*swaylock-effects.*wlogout' "$TEST_ROOT/shelly.out" || \
   fail "Shelly no conserva el lote AUR declarado"
-grep -Eq 'Paquetes repo:[[:space:]].*brightnessctl.*wf-recorder' \
-  "$TEST_ROOT/shelly.out" || fail "el perfil desktop no añadió brightnessctl y wf-recorder"
+grep -Eq 'Paquetes repo:[[:space:]].*mangowm.*brightnessctl.*wf-recorder' \
+  "$TEST_ROOT/shelly.out" || fail "el perfil desktop no añadió mangowm, brightnessctl y wf-recorder"
 
 PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
   --profile core --packages-only --platform cachyos \
   > "$TEST_ROOT/auto-cachyos.out"
 grep -Eq 'Backend:[[:space:]]+shelly' "$TEST_ROOT/auto-cachyos.out" || \
   fail "la detección automática de CachyOS no priorizó Shelly"
-grep -Eq 'Paquetes AUR:[[:space:]].*mangowm.*swaylock-effects' \
-  "$TEST_ROOT/auto-cachyos.out" || fail "el perfil core no declaró MangoWM y swaylock-effects"
+grep -Eq 'Paquetes repo:[[:space:]].*mangowm.*swaylock-effects' \
+  "$TEST_ROOT/auto-cachyos.out" || fail "el perfil core no declaró MangoWM y swaylock-effects en CachyOS"
 
 for backend in paru yay; do
   PATH="$FAKE_BIN:/usr/bin" "$MANGO" bootstrap \
@@ -198,7 +198,7 @@ for backend in paru yay; do
     > "$TEST_ROOT/$backend.out"
   grep -q "$backend -S --needed --repo" "$TEST_ROOT/$backend.out" || \
     fail "$backend no restringió el lote binario a repositorios"
-  grep -Eq "$backend -S --needed --aur .*mangowm.*wlogout" \
+  grep -Eq "$backend -S --needed --aur .*swaylock-effects.*wlogout" \
     "$TEST_ROOT/$backend.out" || \
     fail "$backend no restringió el lote AUR a su procedencia"
 done

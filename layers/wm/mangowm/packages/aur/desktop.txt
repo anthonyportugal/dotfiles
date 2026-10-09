@@ -1,1 +1,1 @@
-wlogout
+# Generic Arch AUR packages for desktop profile without binary repository alternatives.
