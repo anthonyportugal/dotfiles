@@ -55,7 +55,12 @@ if len(monitors) == 1:
     name = mon.get("name", "Unknown")
     w = mon.get("width", 1920)
     h = mon.get("height", 1080)
-    lines.append(f"monitorrule=name:{name},width:{w},height:{h},x:0,y:0,scale:1")
+    rr = mon.get("refresh") or mon.get("rate") or 60
+    try:
+        rr = int(round(float(rr)))
+    except Exception:
+        rr = 60
+    lines.append(f"monitor_rule=name:{name},width:{w},height:{h},refresh:{rr},x:0,y:0,scale:1")
     lines.append("")
     lines.append("# Tags 1-9 assigned to the single display")
     for i in range(1, 10):
@@ -83,12 +88,23 @@ elif len(monitors) == 2:
     r_name = right_mon["name"]
     r_w, r_h = right_mon.get("width", 1920), right_mon.get("height", 1080)
 
+    l_rr = left_mon.get("refresh") or left_mon.get("rate") or 60
+    r_rr = right_mon.get("refresh") or right_mon.get("rate") or 60
+    try:
+        l_rr = int(round(float(l_rr)))
+    except Exception:
+        l_rr = 60
+    try:
+        r_rr = int(round(float(r_rr)))
+    except Exception:
+        r_rr = 60
+
     y_offset = max(0, (l_h - r_h) // 2)
 
     lines.append(f"# Left monitor: {l_name} ({l_w}x{l_h})")
-    lines.append(f"monitorrule=name:{l_name},width:{l_w},height:{l_h},x:0,y:0,scale:1")
+    lines.append(f"monitor_rule=name:{l_name},width:{l_w},height:{l_h},refresh:{l_rr},x:0,y:0,scale:1")
     lines.append(f"# Right monitor: {r_name} ({r_w}x{r_h})")
-    lines.append(f"monitorrule=name:{r_name},width:{r_w},height:{r_h},x:{l_w},y:{y_offset},scale:1")
+    lines.append(f"monitor_rule=name:{r_name},width:{r_w},height:{r_h},refresh:{r_rr},x:{l_w},y:{y_offset},scale:1")
     lines.append("")
     lines.append("# Workspaces partition: Left (1-5), Right (6-9)")
     for i in range(1, 6):
@@ -106,7 +122,12 @@ else:
         m_name = m.get("name", "")
         m_w = m.get("width", 1920)
         m_h = m.get("height", 1080)
-        lines.append(f"monitorrule=name:{m_name},width:{m_w},height:{m_h},x:{cur_x},y:0,scale:1")
+        m_rr = m.get("refresh") or m.get("rate") or 60
+        try:
+            m_rr = int(round(float(m_rr)))
+        except Exception:
+            m_rr = 60
+        lines.append(f"monitor_rule=name:{m_name},width:{m_w},height:{m_h},refresh:{m_rr},x:{cur_x},y:0,scale:1")
         cur_x += m_w
 
     lines.append("")
