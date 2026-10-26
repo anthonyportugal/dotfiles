@@ -202,6 +202,30 @@ grep -q 'walls' "$WALLS_LOG" || fail "Doctor no detectó Walls activo automátic
 grep -q 'private' "$PRIVATE_LOG" || fail "Doctor no detectó Private activo automáticamente"
 grep -q 'agent-harness' "$HARNESS_LOG" || fail "Doctor no detectó Agent Harness activo automáticamente"
 
+# 6b. WM profile is restored from its receipt (default would be desktop),
+# and a receipt without PROFILE falls back instead of aborting.
+: > "$WM_LOG"
+cat > "$CANON_HOME/.local/state/dotfiles/mangowm.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="mangowm"
+PROFILE='core'
+EOF
+cat > "$CANON_HOME/.local/state/dotfiles/bspwm.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="bspwm"
+EOF
+
+DOTFILES_WM_TEST_LOG="$WM_LOG" \
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
+DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
+DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
+"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" >/dev/null ||
+  fail "Doctor falló con un recibo de WM sin PROFILE"
+
+grep -qE '^mango .*--profile=core' "$WM_LOG" || fail "Doctor no reutilizó PROFILE=core desde el recibo de MangoWM"
+grep -qE '^bspwm .*--profile=desktop' "$WM_LOG" || fail "Doctor no usó el perfil por defecto para un recibo de BSPWM sin PROFILE"
+rm -f "$CANON_HOME/.local/state/dotfiles/bspwm.receipt"
+
 # 7. Test doctor with --base-only
 : > "$WM_LOG"
 : > "$WALLS_LOG"
