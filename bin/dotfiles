@@ -74,6 +74,8 @@ LINK_OK=0
 
 # Layers of this run, each after the layers it requires (resolve_selected_layers).
 declare -a SELECTED_LAYERS=()
+# Base layers in cumulative order; each requires the previous one.
+BASE_LAYERS=(core cli desktop)
 FAILED_LAYER=""
 
 DOTFILES_LANG="${DOTFILES_LANG:-en}"
@@ -149,7 +151,7 @@ Comandos:
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
   --lang en|es                     Idioma de la interfaz (default: en).
-  --feature yazi-extras            Feature opt-in; se puede repetir.
+  --feature yazi-extras            Feature opt-in; aplica también la capa que la declara (cli).
   --backend auto|shelly|paru|yay|pacman
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
@@ -191,7 +193,7 @@ Commands:
 Options:
   --profile core|cli|desktop       Cumulative profile (default: desktop).
   --lang en|es                     Interface language (default: en).
-  --feature yazi-extras            Opt-in feature; repeatable.
+  --feature yazi-extras            Opt-in feature; also applies the layer declaring it (cli).
   --backend auto|shelly|paru|yay|pacman
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
@@ -983,8 +985,23 @@ validate_cli_command() {
 # each after what it requires. A WM requires the desktop layer, so choosing one
 # raises the recorded profile to desktop.
 resolve_selected_layers() {
-  local wm
+  local wm feature base_layer
   local -a requested=("$PROFILE")
+  local -A base_conf=()
+
+  # A selected feature pulls in the base layer that declares it.
+  for feature in "${FEATURES[@]}"; do
+    for base_layer in "${BASE_LAYERS[@]}"; do
+      read_layer_conf "$LAYERS_DIR/$base_layer" base_conf
+      [[ " ${base_conf[features]:-} " == *" $feature "* ]] || continue
+      if (( $(base_layer_rank "$base_layer") > $(base_layer_rank "$PROFILE") )); then
+        info "La feature $feature requiere la capa $base_layer; se aplica $base_layer en lugar de $PROFILE"
+        PROFILE=$base_layer
+        requested=("$PROFILE")
+      fi
+      break
+    done
+  done
 
   for wm in "${WMS[@]}"; do
     requested+=("wm/$wm")
@@ -996,6 +1013,15 @@ resolve_selected_layers() {
     info "Los WMs requieren el perfil desktop; se aplica desktop en lugar de $PROFILE"
     PROFILE=desktop
   fi
+}
+
+# Prints the position of base layer $1 in BASE_LAYERS (core=0, cli=1, ...).
+base_layer_rank() {
+  local index
+  for index in "${!BASE_LAYERS[@]}"; do
+    [[ "${BASE_LAYERS[index]}" != "$1" ]] || { printf '%s' "$index"; return 0; }
+  done
+  die "capa base desconocida: $1"
 }
 
 # Prints the profile a selected layer runs with.

@@ -193,4 +193,12 @@ check_wm_backends() {
 check_wm_backends bspwm 'i3lock-color' 'polybar' 'bspwm.*xorg-setxkbmap'
 check_wm_backends mangowm 'swaylock-effects.*wlogout' 'mangowm.*brightnessctl.*wf-recorder' 'mangowm.*swaylock-effects'
 
+# A feature pulls in the layer that declares it, like a WM pulls in desktop.
+PATH="$FAKE_BIN:/usr/bin" "$DOTFILES" bootstrap --profile core --feature yazi-extras \
+  --packages-only --platform arch > "$TEST_ROOT/feature-core.out" 2>&1 || fail "core + yazi-extras falló"
+grep -q 'La feature yazi-extras requiere la capa cli; se aplica cli en lugar de core' "$TEST_ROOT/feature-core.out" || \
+  fail "core + yazi-extras no explicó que sube el perfil a cli"
+layer_section "$TEST_ROOT/feature-core.out" cli | grep -Eq 'Paquetes repo:.*ripgrep' || \
+  fail "core + yazi-extras no instaló los paquetes de la feature"
+
 printf 'OK: capas de WM validadas a través de bin/dotfiles (recibos, perfiles, colisiones, unlink y backends)\n'
