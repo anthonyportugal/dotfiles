@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # lib/packages.sh - Platform detection and package backends (shelly, paru, yay, pacman).
 #
-# Reads PLATFORM_REQUEST, BACKEND_REQUEST, PACKAGES_DIR, PLATFORM, BACKEND,
+# Reads PLATFORM_REQUEST, BACKEND_REQUEST, PACKAGES_DIR (or
+# PACKAGE_BACKENDS_FILE for the backend order), PLATFORM, BACKEND,
 # REPO_PACKAGES, AUR_PACKAGES and EXTERNAL_PACKAGES; fills the INSTALLED_* and
 # MISSING_* package arrays. Requires lib/colors.sh and lib/core.sh.
 #
@@ -67,7 +68,7 @@ detect_backend() {
     return 0
   fi
 
-  read_manifest "$PACKAGES_DIR/package-backends.txt" backend_order
+  read_manifest "${PACKAGE_BACKENDS_FILE:-$PACKAGES_DIR/package-backends.txt}" backend_order
   for candidate in "${backend_order[@]}"; do
     case "$candidate" in
       shelly)

@@ -140,8 +140,7 @@ You can also orchestrate components directly using explicit flags:
 - **Compose with WMs, Wallpapers, Private Layer, and Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
-    --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
+    --wm mangowm --wm bspwm \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --private --private-path "$HOME/.dotfiles/private" \
     --agent-harness --agent-harness-path "$HOME/.dotfiles/agent-harness" \
@@ -155,11 +154,11 @@ You can also orchestrate components directly using explicit flags:
   ./bin/dotfiles setup            # English by default
   ./bin/dotfiles setup --lang es  # Spanish interface
   ```
-- **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks, configures Agent Harness, and validates packages without touching Git:
+- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap), configures Agent Harness, and validates packages without touching Git. Explicit flags such as `--profile` override the saved values:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`, `system`, `agent-harness`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
+- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `walls`, `private`, `system`, `agent-harness`; the WM layers live inside `base` under `layers/wm/`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y

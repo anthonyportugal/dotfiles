@@ -27,109 +27,91 @@ command -v stow >/dev/null 2>&1 || fail "GNU Stow es necesario para este smoke t
 TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-wizard-smoke.XXXXXX")
 TARGET_DIR="$TEST_ROOT/home"
 FAKE_BIN="$TEST_ROOT/bin"
-WM_MANGO="$TEST_ROOT/wm-mango"
-WM_BSPWM="$TEST_ROOT/wm-bspwm"
 WALLS_REPO="$TEST_ROOT/walls"
 PRIVATE_REPO="$TEST_ROOT/private"
 HARNESS_REPO="$TEST_ROOT/agent-harness"
 
-WM_LOG="$TEST_ROOT/wm.log"
 WALLS_LOG="$TEST_ROOT/walls.log"
 PRIVATE_LOG="$TEST_ROOT/private.log"
 HARNESS_LOG="$TEST_ROOT/harness.log"
 
-mkdir -p "$TARGET_DIR" "$FAKE_BIN" "$WM_MANGO/bin" "$WM_BSPWM/bin" "$WALLS_REPO/bin" "$PRIVATE_REPO/bin" "$HARNESS_REPO/bin"
-ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_MANGO/bin/mango"
-ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_BSPWM/bin/bspwm"
+mkdir -p "$TARGET_DIR" "$FAKE_BIN" "$WALLS_REPO/bin" "$PRIVATE_REPO/bin" "$HARNESS_REPO/bin"
 ln -s "$SCRIPT_DIR/fakes/walls-entrypoint" "$WALLS_REPO/bin/walls"
 ln -s "$SCRIPT_DIR/fakes/private-entrypoint" "$PRIVATE_REPO/bin/dotfiles-private"
 ln -s "$SCRIPT_DIR/fakes/harness-entrypoint" "$HARNESS_REPO/bin/agent-harness"
 
-: > "$WM_LOG"
 : > "$WALLS_LOG"
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
 
 # 1. Test multi-WM, private, and agent-harness integration via bootstrap flags
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
-  --wm mangowm --wm-path "$WM_MANGO" \
-  --wm bspwm --wm-path "$WM_BSPWM" \
+  --wm mangowm --wm bspwm \
   --wallpapers --wallpapers-path "$WALLS_REPO" \
   --private --private-path "$PRIVATE_REPO" --private-profile development --private-work corp \
   --agent-harness --agent-harness-path "$HARNESS_REPO" \
-  --apply
+  --apply > "$TEST_ROOT/multi-bootstrap.out"
 
-# Verify that both WMs, walls, private, and agent-harness were invoked
-grep -q 'mango' "$WM_LOG" || fail "MangoWM no fue ejecutado en multi-WM"
-grep -q 'bspwm' "$WM_LOG" || fail "BSPWM no fue ejecutado en multi-WM"
+# Verify that both WM layers were linked and walls, private, and agent-harness invoked
+[[ -L "$TARGET_DIR/.config/mango/config.conf" ]] || fail "MangoWM no fue enlazado en multi-WM"
+[[ -L "$TARGET_DIR/.config/bspwm/bspwmrc" ]] || fail "BSPWM no fue enlazado en multi-WM"
 grep -q 'link' "$WALLS_LOG" || fail "Walls link no fue invocado"
 grep -q 'corp' "$PRIVATE_LOG" || fail "Private work corp no fue invocado"
 grep -q 'development' "$PRIVATE_LOG" || fail "Private profile development no fue invocado"
 grep -q 'setup' "$HARNESS_LOG" || fail "Agent Harness setup no fue invocado"
 
 # 2. Test doctor on multi-WM, private, and agent-harness
-: > "$WM_LOG"
 : > "$WALLS_LOG"
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" doctor --profile core --stow-only --target "$TARGET_DIR" \
-  --wm mangowm --wm-path "$WM_MANGO" \
-  --wm bspwm --wm-path "$WM_BSPWM" \
+  --wm mangowm --wm bspwm \
   --wallpapers --wallpapers-path "$WALLS_REPO" \
   --private --private-path "$PRIVATE_REPO" \
-  --agent-harness --agent-harness-path "$HARNESS_REPO"
+  --agent-harness --agent-harness-path "$HARNESS_REPO" > "$TEST_ROOT/multi-doctor.out"
 
-grep -q 'mango' "$WM_LOG" || fail "Doctor no invocó MangoWM"
-grep -q 'bspwm' "$WM_LOG" || fail "Doctor no invocó BSPWM"
+grep -q 'Window Manager (mangowm): OK' "$TEST_ROOT/multi-doctor.out" || fail "Doctor no auditó MangoWM"
+grep -q 'Window Manager (bspwm): OK' "$TEST_ROOT/multi-doctor.out" || fail "Doctor no auditó BSPWM"
 grep -q 'walls' "$WALLS_LOG" || fail "Doctor no invocó Walls"
 grep -q 'private' "$PRIVATE_LOG" || fail "Doctor no invocó Private"
 grep -q 'doctor' "$HARNESS_LOG" || fail "Doctor no invocó Agent Harness"
 
 # 3. Test unlink on multi-WM, private, and agent-harness
-: > "$WM_LOG"
 : > "$WALLS_LOG"
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" unlink --profile core --target "$TARGET_DIR" \
-  --wm mangowm --wm-path "$WM_MANGO" \
-  --wm bspwm --wm-path "$WM_BSPWM" \
+  --wm mangowm --wm bspwm \
   --wallpapers --wallpapers-path "$WALLS_REPO" \
   --private --private-path "$PRIVATE_REPO" \
-  --agent-harness --agent-harness-path "$HARNESS_REPO" --apply
+  --agent-harness --agent-harness-path "$HARNESS_REPO" --apply > "$TEST_ROOT/multi-unlink.out"
 
-grep -q 'unlink' "$WM_LOG" || fail "Unlink no invocó WM"
+[[ ! -e "$TARGET_DIR/.config/mango/config.conf" ]] || fail "Unlink no retiró MangoWM"
+[[ ! -e "$TARGET_DIR/.config/bspwm/bspwmrc" ]] || fail "Unlink no retiró BSPWM"
 grep -q 'unlink' "$WALLS_LOG" || fail "Unlink no invocó Walls"
 grep -q 'unlink' "$PRIVATE_LOG" || fail "Unlink no invocó Private"
 
-# 4. Test sync command in canonical directory structure
+# 4. sync re-applies the saved selection without flags (other PCs, laptops, VPS)
 CANON_HOME="$TEST_ROOT/canon-home"
-mkdir -p "$CANON_HOME/.dotfiles/wm/mangowm/bin" \
-         "$CANON_HOME/.dotfiles/wm/bspwm/bin" \
-         "$CANON_HOME/.dotfiles/walls/bin" \
+mkdir -p "$CANON_HOME/.dotfiles/walls/bin" \
          "$CANON_HOME/.dotfiles/private/bin" \
          "$CANON_HOME/.dotfiles/agent-harness/bin"
 
-ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$CANON_HOME/.dotfiles/wm/mangowm/bin/mango"
-ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$CANON_HOME/.dotfiles/wm/bspwm/bin/bspwm"
 ln -s "$SCRIPT_DIR/fakes/walls-entrypoint" "$CANON_HOME/.dotfiles/walls/bin/walls"
 ln -s "$SCRIPT_DIR/fakes/private-entrypoint" "$CANON_HOME/.dotfiles/private/bin/dotfiles-private"
 ln -s "$SCRIPT_DIR/fakes/harness-entrypoint" "$CANON_HOME/.dotfiles/agent-harness/bin/agent-harness"
 
-: > "$WM_LOG"
 : > "$WALLS_LOG"
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
@@ -141,20 +123,42 @@ COMPONENT="private"
 PROFILE="development"
 WORK="corp"
 EOF
+cat > "$CANON_HOME/.local/state/dotfiles/dotfiles.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="dotfiles"
+PROFILE="core"
+FEATURES=""
+WMS="bspwm"
+BACKEND=""
+EOF
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
-"$DOTFILES" sync --profile core --stow-only --target "$CANON_HOME" --apply
+"$DOTFILES" sync --stow-only --target "$CANON_HOME" --apply > "$TEST_ROOT/sync.out"
 
-grep -q 'mango' "$WM_LOG" || fail "Sync no detectó MangoWM automáticamente"
-grep -q 'bspwm' "$WM_LOG" || fail "Sync no detectó BSPWM automáticamente"
+grep -q 'Selección restaurada del recibo: perfil core, WMs bspwm' "$TEST_ROOT/sync.out" || \
+  fail "Sync no restauró la selección guardada"
+[[ -L "$CANON_HOME/.zshrc" ]] || fail "Sync no enlazó la base"
+[[ ! -e "$CANON_HOME/.config/bat" ]] || fail "Sync aplicó un perfil más amplio que el core guardado"
+[[ -L "$CANON_HOME/.config/bspwm/bspwmrc" ]] || fail "Sync no re-aplicó el WM guardado"
+[[ ! -e "$CANON_HOME/.config/mango" ]] || fail "Sync instaló un WM que no estaba seleccionado"
 grep -q 'walls' "$WALLS_LOG" || fail "Sync no detectó Walls automáticamente"
 grep -q 'private' "$PRIVATE_LOG" || fail "Sync no detectó Private automáticamente"
 grep -q 'development' "$PRIVATE_LOG" || fail "Sync no reutilizó PROFILE=development desde el recibo de private"
 grep -q 'corp' "$PRIVATE_LOG" || fail "Sync no reutilizó WORK=corp desde el recibo de private"
 grep -q 'setup' "$HARNESS_LOG" || fail "Sync no detectó Agent Harness automáticamente"
+
+# An explicit --profile still wins over the saved selection.
+DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
+DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
+DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
+"$DOTFILES" sync --profile cli --stow-only --target "$CANON_HOME" > "$TEST_ROOT/sync-explicit.out"
+grep -q 'Selección restaurada del recibo: perfil cli' "$TEST_ROOT/sync-explicit.out" || \
+  fail "Sync ignoró el --profile explícito frente al recibo"
+[[ -L "$CANON_HOME/.config/bat/config" ]] || fail "Sync no aplicó el perfil cli explícito"
+grep -qx 'PROFILE="cli"' "$CANON_HOME/.local/state/dotfiles/dotfiles.receipt" || \
+  fail "Sync no actualizó el recibo de selección con el perfil aplicado"
 
 # 5. Test update command (checks git repositories)
 mkdir -p "$CANON_HOME/.dotfiles/walls/.git"
@@ -162,23 +166,15 @@ git init -q "$CANON_HOME/.dotfiles/walls"
 mkdir -p "$CANON_HOME/.dotfiles/agent-harness/.git"
 git init -q "$CANON_HOME/.dotfiles/agent-harness"
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" update --profile core --stow-only --target "$CANON_HOME"
 
 # 6. Test composite doctor command (auto-detects active components)
-: > "$WM_LOG"
 : > "$WALLS_LOG"
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
-
-cat > "$CANON_HOME/.local/state/dotfiles/mangowm.receipt" <<'EOF'
-RECEIPT_VERSION=1
-COMPONENT="mangowm"
-PROFILE="desktop"
-EOF
 
 cat > "$CANON_HOME/.local/state/dotfiles/agent-harness.receipt" <<'EOF'
 RECEIPT_VERSION=1
@@ -188,15 +184,14 @@ EOF
 mkdir -p "$CANON_HOME/.local/share"
 ln -s "$CANON_HOME/.dotfiles/walls/wallpapers" "$CANON_HOME/.local/share/wallpapers"
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
-"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME"
+"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" > "$TEST_ROOT/auto-doctor.out"
 
-grep -q 'mango' "$WM_LOG" || fail "Doctor no detectó MangoWM activo automáticamente"
-if grep -q 'bspwm' "$WM_LOG"; then
-  fail "Doctor detectó BSPWM cuando no estaba activo"
+grep -q 'Window Manager (bspwm): OK' "$TEST_ROOT/auto-doctor.out" || fail "Doctor no detectó BSPWM activo automáticamente"
+if grep -q 'Window Manager (mangowm)' "$TEST_ROOT/auto-doctor.out"; then
+  fail "Doctor detectó MangoWM cuando no estaba activo"
 fi
 grep -q 'walls' "$WALLS_LOG" || fail "Doctor no detectó Walls activo automáticamente"
 grep -q 'private' "$PRIVATE_LOG" || fail "Doctor no detectó Private activo automáticamente"
@@ -204,41 +199,49 @@ grep -q 'agent-harness' "$HARNESS_LOG" || fail "Doctor no detectó Agent Harness
 
 # 6b. WM profile is restored from its receipt (default would be desktop),
 # and a receipt without PROFILE falls back instead of aborting.
-: > "$WM_LOG"
-cat > "$CANON_HOME/.local/state/dotfiles/mangowm.receipt" <<'EOF'
-RECEIPT_VERSION=1
-COMPONENT="mangowm"
-PROFILE='core'
-EOF
+# Prints the "Perfil:" value of the plan of layer $2 in output file $1.
+layer_profile() {
+  awk -v header="Plan de la capa $2" '
+    index($0, header) { in_layer = 1; next }
+    in_layer && /Perfil:/ { print $NF; exit }
+  ' "$1"
+}
 cat > "$CANON_HOME/.local/state/dotfiles/bspwm.receipt" <<'EOF'
 RECEIPT_VERSION=1
 COMPONENT="bspwm"
+PROFILE='core'
+EOF
+cat > "$CANON_HOME/.local/state/dotfiles/mangowm.receipt" <<'EOF'
+RECEIPT_VERSION=1
+COMPONENT="mangowm"
 EOF
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
-"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" >/dev/null ||
-  fail "Doctor falló con un recibo de WM sin PROFILE"
+"$DOTFILES" bootstrap --profile core --stow-only --target "$CANON_HOME" \
+  --wm bspwm --wm mangowm > "$TEST_ROOT/receipt-profiles.out" ||
+  fail "Bootstrap falló con un recibo de WM sin PROFILE"
 
-grep -qE '^mango .*--profile=core' "$WM_LOG" || fail "Doctor no reutilizó PROFILE=core desde el recibo de MangoWM"
-grep -qE '^bspwm .*--profile=desktop' "$WM_LOG" || fail "Doctor no usó el perfil por defecto para un recibo de BSPWM sin PROFILE"
-rm -f "$CANON_HOME/.local/state/dotfiles/bspwm.receipt"
+[[ "$(layer_profile "$TEST_ROOT/receipt-profiles.out" wm/bspwm)" == core ]] || \
+  fail "Bootstrap no reutilizó PROFILE=core desde el recibo de BSPWM"
+[[ "$(layer_profile "$TEST_ROOT/receipt-profiles.out" wm/mangowm)" == desktop ]] || \
+  fail "Bootstrap no usó el perfil por defecto para un recibo de MangoWM sin PROFILE"
+rm -f "$CANON_HOME/.local/state/dotfiles/mangowm.receipt"
 
 # 7. Test doctor with --base-only
-: > "$WM_LOG"
 : > "$WALLS_LOG"
 : > "$PRIVATE_LOG"
 : > "$HARNESS_LOG"
 
-DOTFILES_WM_TEST_LOG="$WM_LOG" \
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
-"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" --base-only
+"$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" --base-only > "$TEST_ROOT/base-only.out"
 
-[[ ! -s "$WM_LOG" ]] || fail "Doctor con --base-only delegó al WM"
+if grep -q 'Plan de la capa' "$TEST_ROOT/base-only.out"; then
+  fail "Doctor con --base-only auditó una capa de WM"
+fi
 [[ ! -s "$WALLS_LOG" ]] || fail "Doctor con --base-only delegó a Walls"
 [[ ! -s "$PRIVATE_LOG" ]] || fail "Doctor con --base-only delegó a Private"
 [[ ! -s "$HARNESS_LOG" ]] || fail "Doctor con --base-only delegó a Agent Harness"

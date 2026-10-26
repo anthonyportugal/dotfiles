@@ -8,9 +8,13 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "$(realpath -e -- "${BASH_SOURCE[0]}")")" && pw
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 STOW_DIR="$REPO_ROOT/home"
 PACKAGES_DIR="$REPO_ROOT/packages"
+LAYERS_DIR="$REPO_ROOT/layers"
+# Every layer resolves its backend with the same, root-level order.
+PACKAGE_BACKENDS_FILE="$PACKAGES_DIR/package-backends.txt"
 
 COMMAND=""
 PROFILE="desktop"
+PROFILE_EXPLICIT=0
 BACKEND_REQUEST="auto"
 PLATFORM_REQUEST="auto"
 TARGET_DIR=${HOME:?HOME no está definida}
@@ -19,15 +23,11 @@ SYSTEM_ENABLED=1
 STOW_ENABLED=1
 MODE_SELECTION="both"
 WM=""
-WM_PATH=""
 WM_PROFILE="desktop"
 WM_PROFILE_SET=0
-WM_ENTRYPOINT=""
 
 declare -a WMS=()
-declare -A WM_PATHS=()
 declare -A WM_PROFILES=()
-declare -A WM_ENTRYPOINTS=()
 
 WALLPAPERS=0
 WALLPAPERS_PATH=""
@@ -92,6 +92,10 @@ source "$LIB_DIR/packages.sh"
 source "$LIB_DIR/links.sh"
 # shellcheck source=../lib/receipts.sh
 source "$LIB_DIR/receipts.sh"
+# shellcheck source=../lib/layers.sh
+source "$LIB_DIR/layers.sh"
+# shellcheck source=../lib/layer_ops.sh
+source "$LIB_DIR/layer_ops.sh"
 
 # shellcheck source=../lib/completions.sh
 source "$LIB_DIR/completions.sh"
@@ -113,8 +117,8 @@ Uso:
 
 Comandos:
   setup       Asistente interactivo guiado para configurar e instalar por capas.
-  sync        Re-sincroniza enlaces locales y paquetes sin tocar repositorios Git.
-  update      Descarga actualizaciones de GitHub (fast-forward) y re-sincroniza.
+  sync        Re-aplica la selección guardada (perfil, WMs) sin tocar Git.
+  update      Descarga actualizaciones (fast-forward) y re-aplica la selección guardada.
   doctor      Comprueba dependencias, sintaxis y enlaces sin modificar nada.
   unlink      Retira únicamente los enlaces Stow del sistema.
 
@@ -126,6 +130,8 @@ Opciones:
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
   --target DIR                     Home objetivo (default: \$HOME).
+  --wm mangowm|bspwm|both          Capa de WM de layers/wm/; se puede repetir.
+  --wm-profile core|desktop        Perfil de los WMs (default: desktop o el del recibo).
   --base-only                      Ejecuta diagnósticos únicamente para el repositorio base.
   --all                            Diagnostica o sincroniza todos los componentes disponibles.
   --agent-harness                  Integrar agent-harness (cadena de herramientas para agentes IA).
@@ -152,8 +158,8 @@ Usage:
 
 Commands:
   setup       Interactive guided assistant to configure and install by layers.
-  sync        Re-synchronizes local symlinks and packages without touching Git.
-  update      Pulls updates from remote repositories (fast-forward) and syncs.
+  sync        Re-applies the saved selection (profile, WMs) without touching Git.
+  update      Pulls updates (fast-forward) and re-applies the saved selection.
   doctor      Verifies dependencies, syntax, and symlinks without modifying anything.
   unlink      Removes GNU Stow symlinks from the system.
 
@@ -165,6 +171,8 @@ Options:
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
   --target DIR                     Target home directory (default: \$HOME).
+  --wm mangowm|bspwm|both          WM layer from layers/wm/; repeatable.
+  --wm-profile core|desktop        WM profile (default: desktop or the saved one).
   --base-only                      Run diagnostics solely for the base repository.
   --all                            Diagnose or synchronize all available components.
   --agent-harness                  Integrate agent-harness (AI coding agents toolchain).
@@ -253,10 +261,12 @@ parse_args() {
       --profile)
         require_option_value "$1" "${2-}"
         PROFILE=$2
+        PROFILE_EXPLICIT=1
         shift 2
         ;;
       --profile=*)
         PROFILE=${1#*=}
+        PROFILE_EXPLICIT=1
         require_option_value "--profile" "$PROFILE"
         shift
         ;;
@@ -355,23 +365,8 @@ parse_args() {
         esac
         shift
         ;;
-      --wm-path)
-        require_option_value "$1" "${2-}"
-        WM_PATH=$2
-        COMPONENT_EXPLICIT=1
-        if (( ${#WMS[@]} > 0 )); then
-          WM_PATHS["${WMS[-1]}"]="$WM_PATH"
-        fi
-        shift 2
-        ;;
-      --wm-path=*)
-        WM_PATH=${1#*=}
-        require_option_value "--wm-path" "$WM_PATH"
-        COMPONENT_EXPLICIT=1
-        if (( ${#WMS[@]} > 0 )); then
-          WM_PATHS["${WMS[-1]}"]="$WM_PATH"
-        fi
-        shift
+      --wm-path|--wm-path=*)
+        usage_error "--wm-path ya no existe: los WMs viven en $LAYERS_DIR/wm/<nombre>; use sólo --wm <nombre>"
         ;;
       --wm-profile)
         require_option_value "$1" "${2-}"
@@ -552,28 +547,8 @@ parse_args() {
       ;;
   esac
 
-  if [[ -z "$WM" && -n "$WM_PATH" ]]; then
-    if [[ -f "$WM_PATH/bin/mango" ]]; then
-      WM="mangowm"
-      append_unique WMS "mangowm"
-    elif [[ -f "$WM_PATH/bin/bspwm" ]]; then
-      WM="bspwm"
-      append_unique WMS "bspwm"
-    fi
-  fi
-
-  if [[ "$COMMAND" =~ ^(bootstrap|unlink)$ ]]; then
-    if [[ -n "$WM" ]]; then
-      [[ -n "$WM_PATH" ]] || usage_error "--wm $WM requiere --wm-path DIR"
-    else
-      [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
-      (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
-    fi
-  elif [[ "$COMMAND" == "doctor" ]]; then
-    if [[ -z "$WM" ]]; then
-      [[ -z "$WM_PATH" ]] || usage_error "--wm-path requiere --wm"
-      (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
-    fi
+  if [[ "$COMMAND" =~ ^(bootstrap|unlink|doctor)$ && -z "$WM" ]]; then
+    (( WM_PROFILE_SET == 0 )) || usage_error "--wm-profile requiere --wm"
   fi
 
   if (( BASE_ONLY == 1 && ALL_COMPONENTS == 1 )); then
@@ -706,25 +681,13 @@ resolve_stow_packages() {
 }
 
 detect_active_environment() {
+  # Every WM layer ships with the repository, so only what is installed counts.
   if (( ${#WMS[@]} == 0 )); then
-    local mango_active=0 bspwm_active=0
-    [[ -L "$TARGET_DIR/.config/mango/config.conf" || -f "$TARGET_DIR/.local/state/dotfiles/mangowm.receipt" ]] && mango_active=1
-    [[ -L "$TARGET_DIR/.config/bspwm/bspwmrc" || -f "$TARGET_DIR/.local/state/dotfiles/bspwm.receipt" ]] && bspwm_active=1
-
-    if (( mango_active == 1 || bspwm_active == 1 )); then
-      if (( mango_active == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
-        append_unique WMS "mangowm"
-      fi
-      if (( bspwm_active == 1 )) && [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
-        append_unique WMS "bspwm"
-      fi
-    elif [[ "$COMMAND" == "sync" ]]; then
-      if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
-        append_unique WMS "mangowm"
-      fi
-      if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
-        append_unique WMS "bspwm"
-      fi
+    if [[ -L "$TARGET_DIR/.config/mango/config.conf" || -f "$(receipt_path mangowm)" ]]; then
+      append_unique WMS "mangowm"
+    fi
+    if [[ -L "$TARGET_DIR/.config/bspwm/bspwmrc" || -f "$(receipt_path bspwm)" ]]; then
+      append_unique WMS "bspwm"
     fi
   fi
 
@@ -754,12 +717,12 @@ detect_active_environment() {
 }
 
 detect_all_environment() {
-  if [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" || -d "$REPO_ROOT/../wm/mangowm" ]]; then
-    append_unique WMS "mangowm"
-  fi
-  if [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" || -d "$REPO_ROOT/../wm/bspwm" ]]; then
-    append_unique WMS "bspwm"
-  fi
+  local wm_layer
+  for wm_layer in "$LAYERS_DIR"/wm/*/; do
+    [[ -f "$wm_layer/layer.conf" ]] || continue
+    wm_layer=${wm_layer%/}
+    append_unique WMS "${wm_layer##*/}"
+  done
   if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
     WALLPAPERS=1
   fi
@@ -771,60 +734,17 @@ detect_all_environment() {
   fi
 }
 
-validate_wm_checkout() {
-  local base_root wm_root current_wm
+resolve_wm_layers() {
+  local current_wm
 
   if (( ${#WMS[@]} == 0 )) && [[ -n "$WM" ]]; then
     WMS+=("$WM")
   fi
-
   (( ${#WMS[@]} > 0 )) || return 0
-  command_exists realpath || die "falta el comando requerido: realpath"
-
-  base_root=$(realpath -m -- "$REPO_ROOT")
 
   for current_wm in "${WMS[@]}"; do
-    case "$current_wm" in
-      bspwm|mangowm)
-        ;;
-      *)
-        die "entorno de ventanas no soportado: $current_wm"
-        ;;
-    esac
-
-    local path="${WM_PATHS[$current_wm]-}"
-    if [[ -z "$path" ]]; then
-      if [[ -n "$WM_PATH" && ${#WMS[@]} -eq 1 ]]; then
-        path="$WM_PATH"
-      elif [[ -d "$TARGET_DIR/.dotfiles/wm/$current_wm" ]]; then
-        path="$TARGET_DIR/.dotfiles/wm/$current_wm"
-      elif [[ -d "$REPO_ROOT/../wm/$current_wm" ]]; then
-        path="$REPO_ROOT/../wm/$current_wm"
-      fi
-    fi
-
-    [[ -n "$path" ]] || die "--wm $current_wm requiere --wm-path DIR"
-
-    wm_root=$(realpath -m -- "$path")
-    [[ -d "$wm_root" ]] || die "el checkout del WM no existe: $wm_root"
-    [[ "$wm_root" != "$base_root" && "$wm_root" != "$base_root/"* ]] || \
-      die "el checkout del WM debe estar fuera del repositorio base: $wm_root"
-
-    local entrypoint=""
-    case "$current_wm" in
-      bspwm)
-        entrypoint="$wm_root/bin/bspwm"
-        ;;
-      mangowm)
-        entrypoint="$wm_root/bin/mango"
-        ;;
-    esac
-
-    [[ -f "$entrypoint" && -x "$entrypoint" ]] || \
-      die "el checkout de $current_wm no expone el entrypoint ejecutable esperado: $entrypoint"
-
-    WM_PATHS["$current_wm"]="$wm_root"
-    WM_ENTRYPOINTS["$current_wm"]="$entrypoint"
+    [[ -f "$LAYERS_DIR/wm/$current_wm/layer.conf" ]] || \
+      die "entorno de ventanas no soportado: $current_wm (no existe $LAYERS_DIR/wm/$current_wm/layer.conf)"
 
     if (( WM_PROFILE_SET == 0 )) && [[ -z "${WM_PROFILES[$current_wm]:-}" ]]; then
       local -A wm_receipt=()
@@ -838,9 +758,6 @@ validate_wm_checkout() {
   done
 
   WM="${WMS[0]}"
-  WM_PATH="${WM_PATHS[${WMS[0]}]}"
-  # shellcheck disable=SC2034
-  WM_ENTRYPOINT="${WM_ENTRYPOINTS[${WMS[0]}]}"
 }
 
 run_wm_operation() {
@@ -851,33 +768,8 @@ run_wm_operation() {
   (( ${#WMS[@]} > 0 )) || return 0
 
   for current_wm in "${WMS[@]}"; do
-    local entrypoint="${WM_ENTRYPOINTS[$current_wm]}"
-    local wm_path="${WM_PATHS[$current_wm]}"
-    local -a wm_command=(
-      "$entrypoint"
-      "$operation"
-      "--profile=${WM_PROFILES[$current_wm]:-$WM_PROFILE}"
-      "--backend=$BACKEND_REQUEST"
-      "--platform=$PLATFORM_REQUEST"
-      "--target=$TARGET_DIR"
-    )
-
-    case "$MODE_SELECTION" in
-      packages)
-        wm_command+=(--packages-only)
-        ;;
-      stow)
-        wm_command+=(--stow-only)
-        ;;
-    esac
-
-    if [[ "$apply_mode" == 1 && "$operation" != doctor ]]; then
-      wm_command+=(--apply)
-    fi
-
-    info "Delegando en el repositorio $current_wm ($wm_path)"
-    format_command "${wm_command[@]}"
-    "${wm_command[@]}"
+    run_layer "$LAYERS_DIR" "wm/$current_wm" "$operation" \
+      "${WM_PROFILES[$current_wm]:-$WM_PROFILE}" "$apply_mode" || return 1
   done
 }
 
@@ -1422,17 +1314,10 @@ print_plan() {
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
   print_array "Features" FEATURES
 
-  if (( ${#WMS[@]} > 1 )); then
-    printf '  %-24s %s\n' 'WMs opcionales:' "${WMS[*]}"
-    local current_wm
-    for current_wm in "${WMS[@]}"; do
-      printf '  %-24s %s\n' "  Checkout $current_wm:" "${WM_PATHS[$current_wm]:-desconocido}"
-    done
-  elif [[ -n "$WM" ]]; then
-    printf '  %-24s %s\n' 'WM opcional:' "$WM"
-    printf '  %-24s %s\n' 'Checkout WM:' "$WM_PATH"
-    printf '  %-24s %s\n' 'Perfil WM:' "$WM_PROFILE"
-  fi
+  local current_wm
+  for current_wm in "${WMS[@]}"; do
+    printf '  %-24s %s\n' "WM $current_wm:" "perfil ${WM_PROFILES[$current_wm]:-$WM_PROFILE} ($LAYERS_DIR/wm/$current_wm)"
+  done
 
   if (( WALLPAPERS == 1 )); then
     printf '  %-24s %s\n' 'Wallpapers:' "$WALLPAPERS_PATH"
@@ -1595,10 +1480,10 @@ unlink_dotfiles() {
 bootstrap_with_optional_components() {
   if (( ${#WMS[@]} > 0 )) && [[ "$APPLY" == 1 ]]; then
     info "Preflight del WM antes de modificar la base"
-    run_wm_operation bootstrap 0 || die "falló el preflight del repositorio $WM; no se modificó la base"
+    run_wm_operation bootstrap 0 || die "falló el preflight de la capa $WM; no se modificó la base"
   elif [[ -n "$WM" && "$APPLY" == 1 ]]; then
     info "Preflight del WM antes de modificar la base"
-    run_wm_operation bootstrap 0 || die "falló el preflight del repositorio $WM; no se modificó la base"
+    run_wm_operation bootstrap 0 || die "falló el preflight de la capa $WM; no se modificó la base"
   fi
 
   if (( PRIVATE == 1 && APPLY == 1 )); then
@@ -1612,7 +1497,8 @@ bootstrap_with_optional_components() {
   fi
 
   bootstrap
-  run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap del repositorio $WM"
+  run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa $WM"
+  (( APPLY == 0 )) || save_selection_receipt
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
   run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
   run_harness_operation bootstrap "$APPLY" || die "falló el bootstrap de agent-harness"
@@ -1647,33 +1533,11 @@ doctor_with_optional_components() {
 
   local current_wm
   for current_wm in "${WMS[@]}"; do
-    local entrypoint="${WM_ENTRYPOINTS[$current_wm]}"
-    local wm_path="${WM_PATHS[$current_wm]}"
-    local -a wm_command=(
-      "$entrypoint"
-      doctor
-      "--profile=${WM_PROFILES[$current_wm]:-$WM_PROFILE}"
-      "--backend=$BACKEND_REQUEST"
-      "--platform=$PLATFORM_REQUEST"
-      "--target=$TARGET_DIR"
-    )
-
-    case "$MODE_SELECTION" in
-      packages)
-        wm_command+=(--packages-only)
-        ;;
-      stow)
-        wm_command+=(--stow-only)
-        ;;
-    esac
-
-    info "Delegando en el repositorio $current_wm ($wm_path)"
-    format_command "${wm_command[@]}"
-    if "${wm_command[@]}"; then
+    if run_layer "$LAYERS_DIR" "wm/$current_wm" doctor "${WM_PROFILES[$current_wm]:-$WM_PROFILE}" 0; then
       report_items+=("  ✓ Window Manager ($current_wm): OK")
     else
       report_items+=("  ✗ Window Manager ($current_wm): FAIL")
-      error "Doctor: falló la validación del repositorio $current_wm"
+      error "Doctor: falló la validación de la capa $current_wm"
       result=1
     fi
   done
@@ -1730,10 +1594,10 @@ doctor_with_optional_components() {
 unlink_with_optional_components() {
   if (( ${#WMS[@]} > 0 )) && [[ "$APPLY" == 1 ]]; then
     info "Preflight de unlink del WM antes de modificar la base"
-    run_wm_operation unlink 0 || die "falló el preflight de unlink del repositorio $WM; no se modificó la base"
+    run_wm_operation unlink 0 || die "falló el preflight de unlink de la capa $WM; no se modificó la base"
   elif [[ -n "$WM" && "$APPLY" == 1 ]]; then
     info "Preflight de unlink del WM antes de modificar la base"
-    run_wm_operation unlink 0 || die "falló el preflight de unlink del repositorio $WM; no se modificó la base"
+    run_wm_operation unlink 0 || die "falló el preflight de unlink de la capa $WM; no se modificó la base"
   fi
 
   if (( PRIVATE == 1 && APPLY == 1 )); then
@@ -1742,14 +1606,55 @@ unlink_with_optional_components() {
   fi
 
   unlink_dotfiles
-  run_wm_operation unlink "$APPLY" || die "falló el unlink del repositorio $WM"
+  (( APPLY == 0 )) || rm -f -- "$(receipt_path dotfiles)"
+  run_wm_operation unlink "$APPLY" || die "falló el unlink de la capa $WM"
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
   run_private_operation unlink "$APPLY" || die "falló el unlink de la capa privada"
   run_harness_operation unlink "$APPLY" || die "falló el unlink de agent-harness"
 }
 
+# Records what this machine selected so sync/update re-apply it without flags.
+save_selection_receipt() {
+  write_receipt dotfiles PROFILE="$PROFILE" FEATURES="${FEATURES[*]}" WMS="${WMS[*]}" BACKEND="${BACKEND:-}"
+}
+
+# Restores the recorded selection for whatever the command line left unset.
+load_selection_receipt() {
+  local -A selection=()
+  local entry
+  local -a entries=()
+
+  read_receipt dotfiles selection || return 0
+  if (( PROFILE_EXPLICIT == 0 )); then
+    case "${selection[PROFILE]:-}" in
+      core|cli|desktop) PROFILE=${selection[PROFILE]} ;;
+    esac
+  fi
+  if (( ${#FEATURES[@]} == 0 )); then
+    read -r -a entries <<< "${selection[FEATURES]:-}"
+    for entry in "${entries[@]}"; do
+      append_unique FEATURES "$entry"
+    done
+  fi
+  if (( ${#WMS[@]} == 0 )); then
+    read -r -a entries <<< "${selection[WMS]:-}"
+    for entry in "${entries[@]}"; do
+      [[ -f "$LAYERS_DIR/wm/$entry/layer.conf" ]] && append_unique WMS "$entry"
+    done
+  fi
+  if [[ "$BACKEND_REQUEST" == auto ]]; then
+    case "${selection[BACKEND]:-}" in
+      shelly|paru|yay|pacman)
+        command_exists "${selection[BACKEND]}" && BACKEND_REQUEST=${selection[BACKEND]}
+        ;;
+    esac
+  fi
+  info "Selección restaurada del recibo: perfil $PROFILE${WMS[*]:+, WMs ${WMS[*]}}"
+}
+
 sync_environment() {
   info "Iniciando re-sincronización local del entorno..."
+  load_selection_receipt
 
   if (( ALL_COMPONENTS == 1 )); then
     detect_all_environment
@@ -1757,7 +1662,7 @@ sync_environment() {
     detect_active_environment
   fi
 
-  validate_wm_checkout
+  resolve_wm_layers
   validate_wallpapers_checkout
   validate_private_checkout
   validate_harness_checkout
@@ -1776,8 +1681,6 @@ update_from_remote() {
 
   local candidate
   for candidate in \
-    "$REPO_ROOT/../wm/mangowm" "$TARGET_DIR/.dotfiles/wm/mangowm" \
-    "$REPO_ROOT/../wm/bspwm" "$TARGET_DIR/.dotfiles/wm/bspwm" \
     "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
     "$REPO_ROOT/../system" "$TARGET_DIR/.dotfiles/system" \
     "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private" \
@@ -1850,7 +1753,7 @@ cmd_doctor() {
     fi
   fi
 
-  validate_wm_checkout
+  resolve_wm_layers
   validate_wallpapers_checkout
   validate_private_checkout
   validate_harness_checkout
@@ -1875,7 +1778,7 @@ main() {
       update_from_remote
       ;;
     bootstrap)
-      validate_wm_checkout
+      resolve_wm_layers
       validate_wallpapers_checkout
       validate_private_checkout
       validate_harness_checkout
@@ -1885,7 +1788,7 @@ main() {
       cmd_doctor
       ;;
     unlink)
-      validate_wm_checkout
+      resolve_wm_layers
       validate_wallpapers_checkout
       validate_private_checkout
       validate_harness_checkout

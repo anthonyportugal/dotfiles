@@ -140,8 +140,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
 - **Composición con WMs, Wallpapers, Capa Privada y Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
-    --wm mangowm --wm-path "$HOME/.dotfiles/wm/mangowm" \
-    --wm bspwm --wm-path "$HOME/.dotfiles/wm/bspwm" \
+    --wm mangowm --wm bspwm \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --private --private-path "$HOME/.dotfiles/private" \
     --agent-harness --agent-harness-path "$HOME/.dotfiles/agent-harness" \
@@ -155,11 +154,11 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ./bin/dotfiles setup            # Inglés por defecto
   ./bin/dotfiles setup --lang es  # Interfaz en español
   ```
-- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow, configura Agent Harness y valida paquetes sin tocar Git:
+- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado), configura Agent Harness y valida paquetes sin tocar Git. Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `wm/*`, `walls`, `private`, `system`, `agent-harness`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
+- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, `private`, `system`, `agent-harness`; las capas de WM viven dentro de `base` en `layers/wm/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y

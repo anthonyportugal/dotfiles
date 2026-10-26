@@ -158,22 +158,14 @@ EOF
   printf '  • Base:     %b[✓ %s]%b (%s)\n' "$C_GREEN" "$(_t "Present" "Presente")" "$C_RESET" "$(prettify_path "$REPO_ROOT")"
 
   local mango_dir=""
-  if [[ -d "$REPO_ROOT/../wm/mangowm" ]]; then
-    mango_dir="$REPO_ROOT/../wm/mangowm"
-  elif [[ -d "$TARGET_DIR/.dotfiles/wm/mangowm" ]]; then
-    mango_dir="$TARGET_DIR/.dotfiles/wm/mangowm"
-  fi
+  [[ ! -f "$LAYERS_DIR/wm/mangowm/layer.conf" ]] || mango_dir="$LAYERS_DIR/wm/mangowm"
   local mango_status
   mango_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
   [[ -n "$mango_dir" ]] && mango_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • MangoWM:  %b\n' "$mango_status"
 
   local bspwm_dir=""
-  if [[ -d "$REPO_ROOT/../wm/bspwm" ]]; then
-    bspwm_dir="$REPO_ROOT/../wm/bspwm"
-  elif [[ -d "$TARGET_DIR/.dotfiles/wm/bspwm" ]]; then
-    bspwm_dir="$TARGET_DIR/.dotfiles/wm/bspwm"
-  fi
+  [[ ! -f "$LAYERS_DIR/wm/bspwm/layer.conf" ]] || bspwm_dir="$LAYERS_DIR/wm/bspwm"
   local bspwm_status
   bspwm_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
   [[ -n "$bspwm_dir" ]] && bspwm_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
@@ -278,34 +270,27 @@ EOF
       bootstrap
       return 0
       ;;
-    2) # MangoWM setup
-      local m_path="${mango_dir:-$TARGET_DIR/.dotfiles/wm/mangowm}"
-      if [[ ! -d "$m_path" ]]; then
-        wizard_clone_if_missing "dotfiles-mangowm" \
-          "https://github.com/anthonyportugal/dotfiles-mangowm.git" \
-          "git@github.com:anthonyportugal/dotfiles-mangowm.git" \
-          "$m_path" || return 1
-      fi
-      if [[ -x "$m_path/bin/mango" ]]; then
-        "$m_path/bin/mango" setup --lang "$DOTFILES_LANG"
-      else
-        error "$(_t "MangoWM executable not found in $m_path" "Ejecutable MangoWM no encontrado en $m_path")"
-      fi
-      return 0
-      ;;
-    3) # BSPWM setup
-      local b_path="${bspwm_dir:-$TARGET_DIR/.dotfiles/wm/bspwm}"
-      if [[ ! -d "$b_path" ]]; then
-        wizard_clone_if_missing "dotfiles-bspwm" \
-          "https://github.com/anthonyportugal/dotfiles-bspwm.git" \
-          "git@github.com:anthonyportugal/dotfiles-bspwm.git" \
-          "$b_path" || return 1
-      fi
-      if [[ -x "$b_path/bin/bspwm" ]]; then
-        "$b_path/bin/bspwm" setup --lang "$DOTFILES_LANG"
-      else
-        error "$(_t "BSPWM executable not found in $b_path" "Ejecutable BSPWM no encontrado en $b_path")"
-      fi
+    2|3) # Window manager layer (with the base it builds on)
+      local wm_name="mangowm"
+      (( action_choice == 3 )) && wm_name="bspwm"
+      [[ -f "$LAYERS_DIR/wm/$wm_name/layer.conf" ]] || {
+        error "$(_t "WM layer not found: $LAYERS_DIR/wm/$wm_name" "Capa de WM no encontrada: $LAYERS_DIR/wm/$wm_name")"
+        return 1
+      }
+      WMS=("$wm_name")
+      local wm_act=0
+      prompt_choice wm_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
+        "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
+        "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
+        "$(_t "Cancel and exit" "Cancelar y salir")"
+      case "$wm_act" in
+        0) APPLY=1 ;;
+        1) APPLY=0 ;;
+        2) return 0 ;;
+      esac
+      COMMAND="bootstrap"
+      resolve_wm_layers
+      bootstrap_with_optional_components
       return 0
       ;;
     4) # System setup
@@ -411,35 +396,6 @@ EOF
     2) append_unique WMS "mangowm"; append_unique WMS "bspwm" ;;
     3) ;;
   esac
-
-  local wm
-  for wm in "${WMS[@]}"; do
-    local wm_target_path="$TARGET_DIR/.dotfiles/wm/$wm"
-    case "$wm" in
-      mangowm)
-        wizard_clone_if_missing "dotfiles-mangowm" \
-          "https://github.com/anthonyportugal/dotfiles-mangowm.git" \
-          "git@github.com:anthonyportugal/dotfiles-mangowm.git" \
-          "$wm_target_path" || true
-        if [[ -x "$wm_target_path/bin/mango" ]]; then
-          if prompt_yes_no "$(_t "Run MangoWM setup wizard now?" "¿Ejecutar el asistente interactivo de MangoWM ahora?")" Y; then
-            "$wm_target_path/bin/mango" setup --lang "$DOTFILES_LANG" || true
-          fi
-        fi
-        ;;
-      bspwm)
-        wizard_clone_if_missing "dotfiles-bspwm" \
-          "https://github.com/anthonyportugal/dotfiles-bspwm.git" \
-          "git@github.com:anthonyportugal/dotfiles-bspwm.git" \
-          "$wm_target_path" || true
-        if [[ -x "$wm_target_path/bin/bspwm" ]]; then
-          if prompt_yes_no "$(_t "Run BSPWM setup wizard now?" "¿Ejecutar el asistente interactivo de BSPWM ahora?")" Y; then
-            "$wm_target_path/bin/bspwm" setup --lang "$DOTFILES_LANG" || true
-          fi
-        fi
-        ;;
-    esac
-  done
 
   WALLPAPERS=0
   printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 3: Wallpaper Collection (walls)" "Paso 3: Colección de Fondos de Pantalla (walls)")" "$C_RESET"

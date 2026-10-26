@@ -38,17 +38,13 @@ CONFLICT_DIR="$TEST_ROOT/conflict"
 PARENT_CONFLICT_DIR="$TEST_ROOT/parent-conflict"
 PARENT_DESTINATION="$TEST_ROOT/parent-destination"
 FAKE_BIN="$TEST_ROOT/fake-bin"
-WM_REPO="$TEST_ROOT/external bspwm"
 WM_TARGET="$TEST_ROOT/wm target"
 WM_FAILURE_TARGET="$TEST_ROOT/wm failure target"
-WM_LOG="$TEST_ROOT/wm.log"
 WALLS_REPO="$TEST_ROOT/external walls"
 WALLS_LOG="$TEST_ROOT/walls.log"
 mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
-  "$PARENT_DESTINATION" "$FAKE_BIN" "$WM_REPO" "$WM_TARGET" \
-  "$WM_FAILURE_TARGET" "$WM_REPO/bin" "$WALLS_REPO" "$WALLS_REPO/bin"
-ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/bspwm"
-ln -s "$SCRIPT_DIR/fakes/wm-entrypoint" "$WM_REPO/bin/mango"
+  "$PARENT_DESTINATION" "$FAKE_BIN" "$WM_TARGET" \
+  "$WM_FAILURE_TARGET" "$WALLS_REPO" "$WALLS_REPO/bin"
 ln -s "$SCRIPT_DIR/fakes/walls-entrypoint" "$WALLS_REPO/bin/walls"
 
 # Dry-run, aplicación, doctor e idempotencia sobre un home desechable.
@@ -143,80 +139,70 @@ lg_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
 [[ "$lg_definition" == *'lazygit'* ]] ||
   fail "el alias lg no apunta a lazygit"
 
-# La integración de WM consume únicamente un checkout externo y su entrypoint
-# público. Un apply ejecuta primero el dry-run del WM y propaga después las
-# opciones compartidas sin mezclar perfiles ni manifests.
-DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" bootstrap \
-  --profile core --stow-only --target "$WM_TARGET" \
-  --wm bspwm --wm-path "$WM_REPO" --wm-profile core --apply
-[[ $(wc -l < "$WM_LOG") == 2 ]] || \
-  fail "bootstrap no ejecutó preflight y apply del WM"
-sed -n '1p' "$WM_LOG" | grep -qv -- '--apply' || \
-  fail "el preflight del WM recibió --apply"
-sed -n '2p' "$WM_LOG" | grep -q -- '--apply' || \
-  fail "el apply del WM no recibió --apply"
-grep -q -- 'bootstrap --profile=core --backend=auto --platform=auto' "$WM_LOG" || \
-  fail "bootstrap no propagó operación, perfil o detección al WM"
-wm_target_argument=$(printf '%q' "--target=$WM_TARGET")
-grep -Fq -- "$wm_target_argument --stow-only" "$WM_LOG" || \
-  fail "bootstrap no propagó target o alcance Stow al WM"
+# Los WMs son capas de layers/wm/ que la base enlaza con el mismo motor. Un
+# apply ejecuta primero el preflight de la capa y no mezcla perfiles.
+"$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+  --wm bspwm --wm-profile core --apply > "$TEST_ROOT/wm-apply.out"
+grep -q 'Dry-run de la capa wm/bspwm completado' "$TEST_ROOT/wm-apply.out" || \
+  fail "bootstrap no ejecutó el preflight de la capa antes de aplicar"
+[[ -L "$WM_TARGET/.zshrc" ]] || fail "bootstrap con WM no enlazó la base"
+[[ -L "$WM_TARGET/.config/bspwm/bspwmrc" ]] || fail "bootstrap no enlazó la capa bspwm"
+[[ "$(realpath "$WM_TARGET/.config/bspwm/bspwmrc")" == "$REPO_ROOT/layers/wm/bspwm/home/bspwm/.config/bspwm/bspwmrc" ]] || \
+  fail "el enlace de bspwm no apunta a layers/wm/bspwm"
+WM_STATE="$WM_TARGET/.local/state/dotfiles"
+grep -qx 'PROFILE="core"' "$WM_STATE/bspwm.receipt" || fail "el recibo de bspwm no guardó el perfil core"
+grep -qx 'PROFILE="core"' "$WM_STATE/dotfiles.receipt" || fail "el recibo de selección no guardó el perfil base"
+grep -qx 'WMS="bspwm"' "$WM_STATE/dotfiles.receipt" || fail "el recibo de selección no guardó los WMs"
 
-: > "$WM_LOG"
-DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" bootstrap \
-  --profile core --stow-only --target "$WM_TARGET" \
-  --wm mangowm --wm-path "$WM_REPO" --wm-profile desktop
-grep -q -- 'bootstrap --profile=desktop' "$WM_LOG" || \
-  fail "la base no resolvió el entrypoint de MangoWM"
+"$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+  --wm mangowm --wm-profile desktop > "$TEST_ROOT/wm-dry.out"
+grep -q 'Plan de la capa wm/mangowm' "$TEST_ROOT/wm-dry.out" || fail "la base no resolvió la capa de MangoWM"
+grep -Eq 'Perfil: +desktop' "$TEST_ROOT/wm-dry.out" || fail "la capa no recibió su perfil independiente"
+[[ ! -e "$WM_TARGET/.config/mango" ]] || fail "un dry-run de MangoWM creó enlaces"
 
-: > "$WM_LOG"
-DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" doctor \
-  --profile core --stow-only --target "$WM_TARGET" \
-  --wm bspwm --wm-path "$WM_REPO" --wm-profile desktop
-[[ $(wc -l < "$WM_LOG") == 1 ]] || fail "doctor no delegó una sola vez en el WM"
-grep -q -- 'doctor --profile=desktop' "$WM_LOG" || \
-  fail "doctor mezcló el perfil base con el perfil independiente del WM"
+"$DOTFILES" doctor --profile core --stow-only --target "$WM_TARGET" \
+  --wm bspwm > "$TEST_ROOT/wm-doctor.out" || fail "doctor falló sobre una capa bspwm enlazada"
+grep -q 'Window Manager (bspwm): OK' "$TEST_ROOT/wm-doctor.out" || fail "doctor no auditó la capa bspwm"
+grep -Eq 'Perfil: +core' "$TEST_ROOT/wm-doctor.out" || fail "doctor no restauró el perfil del recibo de bspwm"
 
-: > "$WM_LOG"
-DOTFILES_WM_TEST_LOG="$WM_LOG" "$DOTFILES" unlink \
-  --profile core --target "$WM_TARGET" \
-  --wm bspwm --wm-path "$WM_REPO" --wm-profile core --apply
-[[ $(wc -l < "$WM_LOG") == 2 ]] || \
-  fail "unlink no ejecutó preflight y apply del WM"
-sed -n '1p' "$WM_LOG" | grep -qv -- '--apply' || \
-  fail "el preflight de unlink del WM recibió --apply"
-sed -n '2p' "$WM_LOG" | grep -q -- '--apply' || \
-  fail "el apply de unlink del WM no recibió --apply"
+"$DOTFILES" unlink --profile core --target "$WM_TARGET" --wm bspwm --apply > "$TEST_ROOT/wm-unlink.out"
+grep -q 'Dry-run de unlink de la capa wm/bspwm completado' "$TEST_ROOT/wm-unlink.out" || \
+  fail "unlink no ejecutó el preflight de la capa antes de aplicar"
+[[ ! -e "$WM_TARGET/.config/bspwm/bspwmrc" ]] || fail "unlink no retiró el enlace de bspwm"
+[[ ! -e "$WM_STATE/bspwm.receipt" ]] || fail "unlink no eliminó el recibo de bspwm"
+[[ ! -e "$WM_STATE/dotfiles.receipt" ]] || fail "unlink no eliminó el recibo de selección"
 
-# Si el dry-run externo falla, la base no debe llegar a crear ningún enlace.
-: > "$WM_LOG"
-if DOTFILES_WM_TEST_LOG="$WM_LOG" DOTFILES_WM_TEST_FAILURE=always \
-    "$DOTFILES" bootstrap --profile core --stow-only \
-    --target "$WM_FAILURE_TARGET" --wm bspwm --wm-path "$WM_REPO" \
-    --wm-profile core --apply > "$TEST_ROOT/wm-failure.out" 2>&1; then
+# Si el preflight de la capa falla, la base no debe llegar a crear ningún enlace.
+mkdir -p "$WM_FAILURE_TARGET/.config/bspwm"
+printf 'local\n' > "$WM_FAILURE_TARGET/.config/bspwm/bspwmrc"
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_FAILURE_TARGET" \
+    --wm bspwm --wm-profile core --apply > "$TEST_ROOT/wm-failure.out" 2>&1; then
   fail "bootstrap ignoró un preflight fallido del WM"
 fi
 [[ ! -e "$WM_FAILURE_TARGET/.zshrc" ]] || \
   fail "la base se modificó después de fallar el preflight del WM"
 grep -q 'no se modificó la base' "$TEST_ROOT/wm-failure.out" || \
-  fail "el fallo del preflight externo no fue accionable"
+  fail "el fallo del preflight de la capa no fue accionable"
+[[ "$(cat "$WM_FAILURE_TARGET/.config/bspwm/bspwmrc")" == local ]] || \
+  fail "el preflight fallido tocó el archivo local del usuario"
 
-# La interfaz rechaza opciones incompletas y checkouts anidados en la base.
+# La interfaz rechaza opciones retiradas, incompletas o WMs inexistentes.
 if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
-    --wm bspwm > "$TEST_ROOT/wm-no-path.out" 2>&1; then
-  fail "--wm fue aceptado sin --wm-path"
+    --wm bspwm --wm-path "$REPO_ROOT" > "$TEST_ROOT/wm-path.out" 2>&1; then
+  fail "--wm-path fue aceptado"
+fi
+grep -q -- '--wm-path ya no existe' "$TEST_ROOT/wm-path.out" || fail "el rechazo de --wm-path no fue accionable"
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+    --wm-profile core > "$TEST_ROOT/wm-no-name.out" 2>&1; then
+  fail "--wm-profile fue aceptado sin --wm"
 fi
 if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
-    --wm-path "$WM_REPO" > "$TEST_ROOT/wm-no-name.out" 2>&1; then
-  fail "--wm-path fue aceptado sin --wm"
+    --wm openbox > "$TEST_ROOT/wm-unknown.out" 2>&1; then
+  fail "se aceptó un WM sin capa"
 fi
-if "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
-    --wm bspwm --wm-path "$REPO_ROOT" > "$TEST_ROOT/wm-nested.out" 2>&1; then
-  fail "se aceptó un checkout WM dentro del repositorio base"
-fi
-grep -q 'debe estar fuera del repositorio base' "$TEST_ROOT/wm-nested.out" || \
-  fail "no se explicó el límite de independencia del checkout WM"
+grep -q 'no soportado' "$TEST_ROOT/wm-unknown.out" || fail "el rechazo de un WM desconocido no fue accionable"
 "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
-  --wm mangowm --wm-path "$WM_REPO" --wm-feature laptop \
+  --wm mangowm --wm-feature laptop \
   > "$TEST_ROOT/wm-feature-deprecate.out" 2>&1 || true
 grep -q 'deprecado' "$TEST_ROOT/wm-feature-deprecate.out" || \
   fail "la opción --wm-feature no produjo advertencia de deprecación"
