@@ -1126,13 +1126,15 @@ bootstrap_with_optional_components() {
   fi
 
   run_selected_layers bootstrap "$APPLY" || die "falló el bootstrap de la capa $FAILED_LAYER"
-  if (( APPLY == 1 && STOW_ENABLED == 1 )); then
-    link_cli_command
+  if (( APPLY == 1 )); then
+    # Recorded as soon as the layers are on disk, so a failing optional
+    # component below never leaves applied layers without a selection.
+    save_selection_receipt
+    (( STOW_ENABLED == 0 )) || link_cli_command
   fi
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
   run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
   run_harness_operation bootstrap "$APPLY" || die "falló el bootstrap de agent-harness"
-  (( APPLY == 0 )) || save_selection_receipt
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
     local -a sys_flags=()

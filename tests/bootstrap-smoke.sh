@@ -242,6 +242,20 @@ grep -q 'no soportado' "$TEST_ROOT/wm-unknown.out" || fail "el rechazo de un WM 
 grep -q 'deprecado' "$TEST_ROOT/wm-feature-deprecate.out" || \
   fail "la opción --wm-feature no produjo advertencia de deprecación"
 
+# A failing optional component after the layers were linked must still leave the
+# selection recorded, so a later sync can restore what is on disk. The walls
+# double fails when its log variable is missing.
+RECEIPT_ORDER_TARGET="$TEST_ROOT/receipt order target"
+mkdir -p "$RECEIPT_ORDER_TARGET"
+if env -u DOTFILES_WALLS_TEST_LOG "$DOTFILES" bootstrap --profile core --stow-only \
+    --target "$RECEIPT_ORDER_TARGET" --wallpapers --wallpapers-path "$WALLS_REPO" --apply \
+    > "$TEST_ROOT/receipt-order.out" 2>&1; then
+  fail "bootstrap ignoró el fallo del componente de wallpapers"
+fi
+[[ -L "$RECEIPT_ORDER_TARGET/.zshrc" ]] || fail "las capas no se enlazaron antes del componente opcional"
+grep -qx 'PROFILE="core"' "$RECEIPT_ORDER_TARGET/.local/state/dotfiles/dotfiles.receipt" 2>/dev/null || \
+  fail "un componente opcional fallido impidió guardar la selección ya aplicada"
+
 # Integración con repositorio de wallpapers (anthonyportugal/walls)
 : > "$WALLS_LOG"
 DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" bootstrap \

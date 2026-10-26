@@ -12,14 +12,8 @@ PROGRAM_NAME=desktop
 source "$DOTFILES_LIB/colors.sh"
 # shellcheck source=../../../lib/core.sh
 source "$DOTFILES_LIB/core.sh"
-# shellcheck source=../../../lib/layers.sh
-source "$DOTFILES_LIB/layers.sh"
 
 STOW_DIR="$LAYER_DIR/home"
-# Read by the checks through array_contains.
-# shellcheck disable=SC2034
-declare -a STOW_PACKAGES=()
-read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
 
 validate_alacritty_syntax() {
   local config_path="$STOW_DIR/alacritty/.config/alacritty/alacritty.toml"
