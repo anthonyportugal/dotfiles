@@ -115,7 +115,19 @@ run_engine "
 [[ -L "$PRUNE_HOME/.config/app/foreign.conf" ]] || fail "prune eliminó un enlace ajeno al repo"
 [[ -L "$PRUNE_HOME/.config/other/gone.conf" ]] || fail "prune salió de los directorios configurados"
 
-# --- layers: layer.conf parsing --------------------------------------------
+# --- layers ------------------------------------------------------------------
+# Runs a failing engine snippet and checks that the expected guard fired.
+expect_fail() {
+  local expected=$1
+  local snippet=$2
+  local stderr_output
+  if stderr_output=$(run_engine "$snippet" 2>&1 >/dev/null); then
+    fail "se esperaba un fallo con '$expected' y el snippet terminó bien: $snippet"
+  fi
+  [[ "$stderr_output" == *"$expected"* ]] || \
+    fail "se esperaba '$expected' pero el error fue: $stderr_output"
+}
+
 LAYERS="$TEST_ROOT/layers"
 make_layer() {
   mkdir -p "$LAYERS/$1"
@@ -125,6 +137,7 @@ make_layer base '# comment\n\nprofiles = core desktop\n'
 make_layer desktop 'requires=base\n'
 make_layer wm/mango 'requires=desktop base\nprofiles=core desktop\nreceipt=mangowm\nprune_dirs=.config/mango .local/bin\n'
 
+# layer.conf parsing
 output=$(run_engine "
   declare -A conf=()
   read_layer_conf '$LAYERS/wm/mango' conf
@@ -134,74 +147,91 @@ output=$(run_engine "
 output=$(run_engine "declare -A conf=(); read_layer_conf '$LAYERS/base' conf; printf '%s' \"\${conf[profiles]}\"")
 [[ "$output" == "core desktop" ]] || fail "read_layer_conf no recortó espacios: '$output'"
 
+output=$(run_engine "IFS=\$'\\n\\t'; declare -A conf=(); read_layer_conf '$LAYERS/wm/mango' conf; printf '%s' \"\${conf[profiles]}\"")
+[[ "$output" == "core desktop" ]] || fail "read_layer_conf depende del IFS del caller: '$output'"
+
 make_layer bad-key 'colour=red\n'
-if run_engine "declare -A conf=(); read_layer_conf '$LAYERS/bad-key' conf" 2>/dev/null; then
-  fail "read_layer_conf aceptó una clave desconocida"
-fi
+expect_fail "clave desconocida" "declare -A conf=(); read_layer_conf '$LAYERS/bad-key' conf"
 # shellcheck disable=SC2016
 make_layer bad-value 'requires=$(touch pwned)\n'
-if (cd "$TEST_ROOT" && run_engine "declare -A conf=(); read_layer_conf '$LAYERS/bad-value' conf") 2>/dev/null; then
-  fail "read_layer_conf aceptó un valor inseguro"
-fi
+(cd "$TEST_ROOT" && expect_fail "valor inválido para requires" "declare -A conf=(); read_layer_conf '$LAYERS/bad-value' conf")
 [[ ! -e "$TEST_ROOT/pwned" ]] || fail "read_layer_conf ejecutó contenido de layer.conf"
 make_layer dup 'receipt=a\nreceipt=b\n'
-if run_engine "declare -A conf=(); read_layer_conf '$LAYERS/dup' conf" 2>/dev/null; then
-  fail "read_layer_conf aceptó una clave duplicada"
-fi
-if run_engine "declare -A conf=(); read_layer_conf '$LAYERS/missing' conf" 2>/dev/null; then
-  fail "read_layer_conf aceptó una capa sin layer.conf"
-fi
+expect_fail "clave duplicada" "declare -A conf=(); read_layer_conf '$LAYERS/dup' conf"
+make_layer two-receipts 'receipt=a b\n'
+expect_fail "receipt debe tener exactamente un valor" "declare -A conf=(); read_layer_conf '$LAYERS/two-receipts' conf"
+for escaping in ../etc /etc .config/../../etc ./x; do
+  make_layer prune-escape "prune_dirs=.config/ok $escaping\n"
+  expect_fail "valor inválido para prune_dirs" "declare -A conf=(); read_layer_conf '$LAYERS/prune-escape' conf"
+done
+expect_fail "no existe el manifiesto de capa" "declare -A conf=(); read_layer_conf '$LAYERS/missing' conf"
 
-# --- layers: requires= resolution -------------------------------------------
+# requires= resolution
 output=$(run_engine "declare -a order=(); resolve_layers '$LAYERS' order wm/mango; printf '%s,' \"\${order[@]}\"")
 [[ "$output" == "base,desktop,wm/mango," ]] || fail "resolve_layers devolvió '$output'"
 output=$(run_engine "declare -a order=(); resolve_layers '$LAYERS' order desktop wm/mango base; printf '%s,' \"\${order[@]}\"")
 [[ "$output" == "base,desktop,wm/mango," ]] || fail "resolve_layers no deduplicó: '$output'"
+# Caller array names that used to be internal locals must still receive results.
+for array_name in dependencies resolve_state chain layer_name output_name; do
+  output=$(run_engine "declare -a $array_name=(); resolve_layers '$LAYERS' $array_name wm/mango; printf '%s,' \"\${${array_name}[@]}\"")
+  [[ "$output" == "base,desktop,wm/mango," ]] || fail "resolve_layers perdió el resultado en el array '$array_name': '$output'"
+done
 
 make_layer cycle-a 'requires=cycle-b\n'
 make_layer cycle-b 'requires=cycle-a\n'
-if run_engine "declare -a order=(); resolve_layers '$LAYERS' order cycle-a" 2>/dev/null; then
-  fail "resolve_layers aceptó un ciclo"
-fi
+expect_fail "dependencia circular entre capas: cycle-a -> cycle-b -> cycle-a" \
+  "declare -a order=(); resolve_layers '$LAYERS' order cycle-a"
 make_layer orphan 'requires=nowhere\n'
-if run_engine "declare -a order=(); resolve_layers '$LAYERS' order orphan" 2>/dev/null; then
-  fail "resolve_layers aceptó una dependencia inexistente"
-fi
-if run_engine "declare -a order=(); resolve_layers '$LAYERS' order ../escape" 2>/dev/null; then
-  fail "resolve_layers aceptó un nombre de capa fuera de layers/"
-fi
+expect_fail "la capa 'nowhere' no existe" "declare -a order=(); resolve_layers '$LAYERS' order orphan"
+expect_fail "nombre de capa inválido" "declare -a order=(); resolve_layers '$LAYERS' order ../escape"
 
-# --- layers: hooks ------------------------------------------------------------
+# profile tiers and Stow packages
+mkdir -p "$LAYERS/wm/mango/packages/stow" "$LAYERS/wm/mango/home/mango" "$LAYERS/wm/mango/home/extra"
+printf 'mango\n' > "$LAYERS/wm/mango/packages/stow/core.txt"
+printf 'extra\n' > "$LAYERS/wm/mango/packages/stow/desktop.txt"
+output=$(run_engine "declare -a tiers=(); layer_profile_tiers '$LAYERS/wm/mango' desktop tiers; printf '%s,' \"\${tiers[@]}\"")
+[[ "$output" == "core,desktop," ]] || fail "layer_profile_tiers devolvió '$output'"
+output=$(run_engine "declare -a tiers=(); layer_profile_tiers '$LAYERS/wm/mango' core tiers; printf '%s,' \"\${tiers[@]}\"")
+[[ "$output" == "core," ]] || fail "layer_profile_tiers no cortó en el perfil pedido: '$output'"
+expect_fail "no declara el perfil 'server'" "declare -a tiers=(); layer_profile_tiers '$LAYERS/wm/mango' server tiers"
+output=$(run_engine "declare -a pkgs=(); read_layer_stow_packages '$LAYERS/wm/mango' desktop pkgs; printf '%s,' \"\${pkgs[@]}\"")
+[[ "$output" == "mango,extra," ]] || fail "read_layer_stow_packages devolvió '$output'"
+output=$(run_engine "declare -a pkgs=(); read_layer_stow_packages '$LAYERS/wm/mango' core pkgs; printf '%s,' \"\${pkgs[@]}\"")
+[[ "$output" == "mango," ]] || fail "read_layer_stow_packages no respetó el perfil core: '$output'"
+printf 'ghost\n' > "$LAYERS/wm/mango/packages/stow/desktop.txt"
+expect_fail "el paquete Stow 'ghost' no existe" "declare -a pkgs=(); read_layer_stow_packages '$LAYERS/wm/mango' desktop pkgs"
+printf 'extra\n' > "$LAYERS/wm/mango/packages/stow/desktop.txt"
+
+# hooks
 HOOK_LOG="$TEST_ROOT/hook.log"
 mkdir -p "$LAYERS/wm/mango/hooks"
 {
   printf '#!/usr/bin/env bash\n'
   # shellcheck disable=SC2016
-  printf 'printf "%%s|%%s|%%s|%%s|%%s\\n" "$LAYER_DIR" "$TARGET_DIR" "$PROFILE" "$APPLY" "${DOTFILES_LIB:+lib}" > %q\n' "$HOOK_LOG"
-  # shellcheck disable=SC2016
-  printf '[[ -z "${SECRET_ENGINE_STATE:-}" ]] || echo leaked >> %q\n' "$HOOK_LOG"
+  printf 'printf "%%s|%%s|%%s|%%s|%%s|%%s\\n" "$LAYER_DIR" "$TARGET_DIR" "$PROFILE" "$APPLY" "$OPERATION" "${DOTFILES_LIB:+lib}" > %q\n' "$HOOK_LOG"
 } > "$LAYERS/wm/mango/hooks/validate"
 chmod +x "$LAYERS/wm/mango/hooks/validate"
-run_engine "
-  SECRET_ENGINE_STATE=1 TARGET_DIR='$TEST_ROOT/home' PROFILE=core APPLY=0
+run_engine "TARGET_DIR='$TEST_ROOT/home' PROFILE=core APPLY=0 OPERATION=unlink
   run_layer_hook '$LAYERS/wm/mango' validate" >/dev/null
-[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|$TEST_ROOT/home|core|0|lib" ]] || \
+[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|$TEST_ROOT/home|core|0|unlink|lib" ]] || \
   fail "el hook recibió un entorno inesperado: $(cat "$HOOK_LOG")"
+run_engine "run_layer_hook '$LAYERS/wm/mango' validate" >/dev/null || \
+  fail "run_layer_hook falló con PROFILE/APPLY sin definir"
+[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|||0||lib" ]] || \
+  fail "run_layer_hook no aplicó valores por defecto: $(cat "$HOOK_LOG")"
 
 run_engine "TARGET_DIR=/x PROFILE=core APPLY=0; run_layer_hook '$LAYERS/base' validate" >/dev/null || \
   fail "run_layer_hook falló para un hook ausente"
 
 printf '#!/usr/bin/env bash\nexit 7\n' > "$LAYERS/wm/mango/hooks/post-link"
 chmod +x "$LAYERS/wm/mango/hooks/post-link"
-if run_engine "TARGET_DIR=/x PROFILE=core APPLY=1; run_layer_hook '$LAYERS/wm/mango' post-link" >/dev/null 2>&1; then
-  fail "run_layer_hook ocultó el fallo de un hook"
-fi
+set +e
+run_engine "TARGET_DIR=/x PROFILE=core APPLY=1; run_layer_hook '$LAYERS/wm/mango' post-link" >/dev/null 2>&1
+hook_status=$?
+set -e
+(( hook_status == 7 )) || fail "run_layer_hook no propagó el código del hook (obtuvo $hook_status)"
 chmod -x "$LAYERS/wm/mango/hooks/post-link"
-if run_engine "TARGET_DIR=/x PROFILE=core APPLY=1; run_layer_hook '$LAYERS/wm/mango' post-link" >/dev/null 2>&1; then
-  fail "run_layer_hook aceptó un hook no ejecutable"
-fi
-if run_engine "TARGET_DIR=/x PROFILE=core APPLY=1; run_layer_hook '$LAYERS/wm/mango' unknown-phase" >/dev/null 2>&1; then
-  fail "run_layer_hook aceptó una fase desconocida"
-fi
+expect_fail "no es un archivo ejecutable" "run_layer_hook '$LAYERS/wm/mango' post-link"
+expect_fail "fase de hook desconocida" "run_layer_hook '$LAYERS/wm/mango' unknown-phase"
 
 printf 'OK: motor compartido de lib/ validado (manifiestos, backends, recibos, prune y capas)\n'
