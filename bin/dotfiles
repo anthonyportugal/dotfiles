@@ -68,6 +68,13 @@ declare -a LINK_DUPLICATES=()
 declare -a LINK_REPLACE=()
 LINK_OK=0
 
+# Where base links live; prune_dangling_dotfiles_links only searches here.
+PRUNE_SEARCH_DIRS=(
+  .config/zsh .config/git .config/alacritty .config/micro .config/yazi .config/nvim
+  .local/bin .local/lib/dotfiles
+)
+PRUNE_ROOT_LINKS=(.zshrc .gitconfig)
+
 DOTFILES_LANG="${DOTFILES_LANG:-en}"
 FORCE_YES=0
 
@@ -76,6 +83,15 @@ LIB_DIR="$REPO_ROOT/lib"
 # shellcheck source=../lib/colors.sh
 source "$LIB_DIR/colors.sh"
 setup_colors
+
+# shellcheck source=../lib/core.sh
+source "$LIB_DIR/core.sh"
+# shellcheck source=../lib/packages.sh
+source "$LIB_DIR/packages.sh"
+# shellcheck source=../lib/links.sh
+source "$LIB_DIR/links.sh"
+# shellcheck source=../lib/receipts.sh
+source "$LIB_DIR/receipts.sh"
 
 # shellcheck source=../lib/completions.sh
 source "$LIB_DIR/completions.sh"
@@ -598,79 +614,6 @@ parse_args() {
   fi
 }
 
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-trim_line() {
-  local value=$1
-  value=${value#"${value%%[![:space:]]*}"}
-  value=${value%"${value##*[![:space:]]}"}
-  printf '%s' "$value"
-}
-
-append_unique() {
-  local array_name=$1
-  local value=$2
-  local -n append_destination_ref=$array_name
-  local existing
-
-  for existing in "${append_destination_ref[@]}"; do
-    [[ "$existing" != "$value" ]] || return 0
-  done
-  append_destination_ref+=("$value")
-}
-
-array_contains() {
-  local array_name=$1
-  local expected=$2
-  local -n entries=$array_name
-  local entry
-
-  for entry in "${entries[@]}"; do
-    [[ "$entry" != "$expected" ]] || return 0
-  done
-  return 1
-}
-
-read_manifest() {
-  local manifest_path=$1
-  local array_name=$2
-  local -n manifest_destination_ref=$array_name
-  local raw_line line
-  declare -A manifest_seen=()
-
-  [[ -f "$manifest_path" ]] || die "no existe el manifiesto $manifest_path"
-  manifest_destination_ref=()
-
-  while IFS= read -r raw_line || [[ -n "$raw_line" ]]; do
-    line=$(trim_line "$raw_line")
-    [[ -n "$line" ]] || continue
-    [[ "$line" != \#* ]] || continue
-    [[ "$line" != *\#* ]] || \
-      die "comentario inline no permitido en $manifest_path: $line"
-    [[ "$line" != -* ]] || die "entrada insegura en $manifest_path: $line"
-    [[ "$line" =~ ^[A-Za-z0-9@._+:-]+$ ]] || \
-      die "entrada inválida en $manifest_path: $line"
-    [[ ! -v "manifest_seen[$line]" ]] || \
-      die "entrada duplicada en $manifest_path: $line"
-    manifest_seen["$line"]=1
-    manifest_destination_ref+=("$line")
-  done < "$manifest_path"
-}
-
-append_manifest_unique() {
-  local array_name=$1
-  local manifest_path=$2
-  local -a manifest_entries=()
-  local entry
-
-  read_manifest "$manifest_path" manifest_entries
-  for entry in "${manifest_entries[@]}"; do
-    append_unique "$array_name" "$entry"
-  done
-}
-
 validate_features() {
   local feature
   local -a unique_features=()
@@ -686,55 +629,6 @@ validate_features() {
     esac
   done
   FEATURES=("${unique_features[@]}")
-}
-
-read_os_release_value() {
-  local requested_key=$1
-  local key value
-
-  [[ -r /etc/os-release ]] || return 1
-  while IFS='=' read -r key value; do
-    [[ "$key" == "$requested_key" ]] || continue
-    if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
-      value=${value:1:${#value}-2}
-    fi
-    printf '%s' "$value"
-    return 0
-  done < /etc/os-release
-  return 1
-}
-
-detect_platform() {
-  local os_id os_like os_identity
-
-  if [[ "$PLATFORM_REQUEST" != "auto" ]]; then
-    PLATFORM=$PLATFORM_REQUEST
-    return 0
-  fi
-
-  os_id=$(read_os_release_value ID || true)
-  os_like=$(read_os_release_value ID_LIKE || true)
-  os_identity=" $os_id $os_like "
-
-  if [[ "$os_identity" == *" cachyos "* ]]; then
-    PLATFORM="cachyos"
-  elif [[ "$os_identity" == *" arch "* || "$os_id" == arch* ]]; then
-    PLATFORM="arch"
-  else
-    die "plataforma no soportada (${os_id:-desconocida}); use --platform sólo si es compatible con Arch"
-  fi
-}
-
-package_in_official_arch_repos() {
-  local package_name=$1
-  local repo_name
-
-  for repo_name in core extra multilib; do
-    if pacman -Si "$repo_name/$package_name" >/dev/null 2>&1; then
-      return 0
-    fi
-  done
-  return 1
 }
 
 resolve_system_packages() {
@@ -809,96 +703,6 @@ resolve_stow_packages() {
       append_unique STOW_PACKAGES "$package_name"
     done
   done
-}
-
-detect_backend() {
-  local -a backend_order=()
-  local candidate
-
-  if [[ "$BACKEND_REQUEST" != "auto" ]]; then
-    command_exists "$BACKEND_REQUEST" || \
-      die "el backend solicitado no está instalado: $BACKEND_REQUEST"
-    BACKEND=$BACKEND_REQUEST
-    return 0
-  fi
-
-  read_manifest "$PACKAGES_DIR/package-backends.txt" backend_order
-  for candidate in "${backend_order[@]}"; do
-    case "$candidate" in
-      shelly)
-        [[ "$PLATFORM" == "cachyos" ]] || continue
-        ;;
-      paru|yay|pacman)
-        ;;
-      *)
-        die "backend desconocido en package-backends.txt: $candidate"
-        ;;
-    esac
-    if command_exists "$candidate"; then
-      BACKEND=$candidate
-      return 0
-    fi
-  done
-
-  die "no se encontró ningún backend de paquetes soportado"
-}
-
-package_is_installed() {
-  pacman -Qq "$1" >/dev/null 2>&1
-}
-
-classify_packages() {
-  local package_name
-  local -A installed_set=()
-
-  INSTALLED_REPO_PACKAGES=()
-  INSTALLED_AUR_PACKAGES=()
-  MISSING_REPO_PACKAGES=()
-  MISSING_AUR_PACKAGES=()
-
-  if command_exists pacman; then
-    local pkg
-    while IFS= read -r pkg; do
-      [[ -n "$pkg" ]] && installed_set["$pkg"]=1
-    done < <(pacman -Qq 2>/dev/null || true)
-  fi
-
-  for package_name in "${REPO_PACKAGES[@]}"; do
-    if [[ -n "${installed_set[$package_name]:-}" ]]; then
-      INSTALLED_REPO_PACKAGES+=("$package_name")
-    else
-      MISSING_REPO_PACKAGES+=("$package_name")
-    fi
-  done
-
-  for package_name in "${AUR_PACKAGES[@]}"; do
-    if [[ -n "${installed_set[$package_name]:-}" ]]; then
-      INSTALLED_AUR_PACKAGES+=("$package_name")
-    else
-      MISSING_AUR_PACKAGES+=("$package_name")
-    fi
-  done
-}
-
-print_array() {
-  local label=$1
-  local array_name=$2
-  local -n entries=$array_name
-
-  if (( ${#entries[@]} == 0 )); then
-    printf '  %-24s %s\n' "$label:" '(ninguno)'
-  else
-    printf '  %-24s %s\n' "$label:" "${entries[*]}"
-  fi
-}
-
-format_command() {
-  local argument
-  printf '    '
-  for argument in "$@"; do
-    printf '%q ' "$argument"
-  done
-  printf '\n'
 }
 
 detect_active_environment() {
@@ -1023,10 +827,9 @@ validate_wm_checkout() {
     WM_ENTRYPOINTS["$current_wm"]="$entrypoint"
 
     if (( WM_PROFILE_SET == 0 )) && [[ -z "${WM_PROFILES[$current_wm]:-}" ]]; then
-      local wm_receipt="${TARGET_DIR}/.local/state/dotfiles/${current_wm}.receipt"
-      if [[ -f "$wm_receipt" ]]; then
-        local saved_wm_profile
-        saved_wm_profile=$(grep -E '^PROFILE=' "$wm_receipt" | head -n 1 | cut -d= -f2- | tr -d "'\"")
+      local -A wm_receipt=()
+      if read_receipt "$current_wm" wm_receipt; then
+        local saved_wm_profile=${wm_receipt[PROFILE]:-}
         if [[ "$saved_wm_profile" == "core" || "$saved_wm_profile" == "desktop" ]]; then
           WM_PROFILES["$current_wm"]="$saved_wm_profile"
         fi
@@ -1159,30 +962,21 @@ run_wallpapers_operation() {
 }
 
 load_private_receipt() {
-  local private_receipt="${TARGET_DIR}/.local/state/dotfiles/private.receipt"
-  [[ -f "$private_receipt" ]] || return 0
+  local -A private_receipt=()
+  read_receipt private private_receipt || return 0
 
-  local key val
-  while IFS='=' read -r key val || [[ -n "$key" ]]; do
-    key=$(trim_line "$key")
-    val=$(trim_line "$val")
-    val=$(printf '%s' "$val" | tr -d "'\"")
-    case "$key" in
-      PROFILE)
-        if (( PRIVATE_PROFILE_EXPLICIT == 0 )) && [[ "$val" == core || "$val" == development ]]; then
-          PRIVATE_PROFILE="$val"
-        fi
-        ;;
-      WORK)
-        if (( PRIVATE_WORK_EXPLICIT == 0 )) && [[ -n "$val" ]]; then
-          local work_item
-          for work_item in $val; do
-            append_unique PRIVATE_WORK "$work_item"
-          done
-        fi
-        ;;
-    esac
-  done < "$private_receipt"
+  local val=${private_receipt[PROFILE]:-}
+  if (( PRIVATE_PROFILE_EXPLICIT == 0 )) && [[ "$val" == core || "$val" == development ]]; then
+    PRIVATE_PROFILE="$val"
+  fi
+
+  val=${private_receipt[WORK]:-}
+  if (( PRIVATE_WORK_EXPLICIT == 0 )) && [[ -n "$val" ]]; then
+    local work_item
+    for work_item in $val; do
+      append_unique PRIVATE_WORK "$work_item"
+    done
+  fi
 }
 
 validate_private_checkout() {
@@ -1319,355 +1113,6 @@ run_harness_operation() {
 
 
 
-
-# ShellCheck no puede seguir el array que se devuelve mediante nameref.
-# shellcheck disable=SC2034
-build_repo_install_command() {
-  local output_name=$1
-  local -n repo_output_ref=$output_name
-
-  repo_output_ref=()
-  (( ${#MISSING_REPO_PACKAGES[@]} > 0 )) || return 0
-  case "$BACKEND" in
-    shelly)
-      repo_output_ref=(shelly install standard "${MISSING_REPO_PACKAGES[@]}")
-      ;;
-    paru|yay)
-      # Evita que el helper convierta silenciosamente una entrada repo en AUR.
-      repo_output_ref=("$BACKEND" -S --needed --repo "${MISSING_REPO_PACKAGES[@]}")
-      ;;
-    pacman)
-      if (( EUID == 0 )); then
-        repo_output_ref=(pacman -S --needed "${MISSING_REPO_PACKAGES[@]}")
-      else
-        repo_output_ref=(sudo pacman -S --needed "${MISSING_REPO_PACKAGES[@]}")
-      fi
-      ;;
-  esac
-}
-
-# ShellCheck no puede seguir el array que se devuelve mediante nameref.
-# shellcheck disable=SC2034
-build_aur_install_command() {
-  local output_name=$1
-  local -n aur_output_ref=$output_name
-
-  aur_output_ref=()
-  (( ${#MISSING_AUR_PACKAGES[@]} > 0 )) || return 0
-  case "$BACKEND" in
-    shelly)
-      aur_output_ref=(shelly install aur "${MISSING_AUR_PACKAGES[@]}")
-      ;;
-    paru|yay)
-      # Mantiene explícita la procedencia declarada por el manifest.
-      aur_output_ref=("$BACKEND" -S --needed --aur "${MISSING_AUR_PACKAGES[@]}")
-      ;;
-    pacman)
-      return 1
-      ;;
-  esac
-}
-
-show_package_commands() {
-  local -a repo_command=()
-  local -a aur_command=()
-  local result=0
-
-  info "Comandos de instalación previstos"
-  build_repo_install_command repo_command
-  if (( ${#repo_command[@]} > 0 )); then
-    format_command "${repo_command[@]}"
-  fi
-
-  if ! build_aur_install_command aur_command; then
-    error "pacman no puede instalar los paquetes AUR faltantes: ${MISSING_AUR_PACKAGES[*]}"
-    result=1
-  elif (( ${#aur_command[@]} > 0 )); then
-    format_command "${aur_command[@]}"
-  fi
-
-  if (( ${#repo_command[@]} == 0 && ${#aur_command[@]} == 0 )); then
-    printf '    (todos los paquetes seleccionados ya están instalados)\n'
-  fi
-  return "$result"
-}
-
-validate_package_plan() {
-  local result=0
-
-  if (( ${#EXTERNAL_PACKAGES[@]} > 0 )); then
-    error "no hay adaptador para fuentes externas: ${EXTERNAL_PACKAGES[*]}"
-    result=1
-  fi
-  if [[ "$BACKEND" == "pacman" && ${#MISSING_AUR_PACKAGES[@]} -gt 0 ]]; then
-    error "el perfil necesita AUR pero pacman sólo gestiona repositorios; instale Shelly, paru o yay, o fuerce otro backend"
-    result=1
-  fi
-  return "$result"
-}
-
-execute_package_install() {
-  local -a repo_command=()
-  local -a aur_command=()
-
-  validate_package_plan || return 1
-  if [[ "$BACKEND" == "pacman" && "$EUID" -ne 0 ]]; then
-    command_exists sudo || die "sudo es necesario para instalar paquetes con pacman"
-  fi
-
-  build_repo_install_command repo_command
-  build_aur_install_command aur_command
-
-  if (( ${#repo_command[@]} > 0 )); then
-    info "Instalando paquetes de repositorio con $BACKEND"
-    "${repo_command[@]}"
-  fi
-  if (( ${#aur_command[@]} > 0 )); then
-    info "Instalando paquetes AUR con $BACKEND; revise PKGBUILD y prompts del helper"
-    "${aur_command[@]}"
-  fi
-
-  classify_packages
-  if (( ${#MISSING_REPO_PACKAGES[@]} > 0 || ${#MISSING_AUR_PACKAGES[@]} > 0 )); then
-    print_array "Repo aún faltantes" MISSING_REPO_PACKAGES
-    print_array "AUR aún faltantes" MISSING_AUR_PACKAGES
-    error "la validación posterior de paquetes falló"
-    return 1
-  fi
-  return 0
-}
-
-is_repo_symlink() {
-  local target_link=$1
-  [[ -L "$target_link" ]] || return 1
-
-  local dest
-  dest=$(realpath -m -- "$target_link" 2>/dev/null || true)
-  local repo_canon stow_canon dots_canon
-  repo_canon=$(realpath -m -- "$REPO_ROOT" 2>/dev/null || true)
-  stow_canon=$(realpath -m -- "$STOW_DIR" 2>/dev/null || true)
-  dots_canon=$(realpath -m -- "$TARGET_DIR/.dotfiles" 2>/dev/null || true)
-
-  if [[ -n "$repo_canon" && ( "$dest" == "$repo_canon/"* || "$dest" == "$repo_canon" ) ]]; then
-    return 0
-  fi
-  if [[ -n "$stow_canon" && ( "$dest" == "$stow_canon/"* || "$dest" == "$stow_canon" ) ]]; then
-    return 0
-  fi
-  if [[ -n "$dots_canon" && "$dest" == "$dots_canon/"* ]]; then
-    return 0
-  fi
-  return 1
-}
-
-prune_dangling_dotfiles_links() {
-  local apply=${1:-0}
-  local repo_canon stow_canon dots_canon
-  repo_canon=$(realpath -m -- "$REPO_ROOT" 2>/dev/null || true)
-  stow_canon=$(realpath -m -- "$STOW_DIR" 2>/dev/null || true)
-  dots_canon=$(realpath -m -- "$TARGET_DIR/.dotfiles" 2>/dev/null || true)
-
-  local -a search_dirs=()
-  for dir in "$TARGET_DIR/.config/zsh" "$TARGET_DIR/.config/git" "$TARGET_DIR/.config/alacritty" \
-             "$TARGET_DIR/.config/micro" "$TARGET_DIR/.config/yazi" "$TARGET_DIR/.config/nvim" \
-             "$TARGET_DIR/.local/bin" "$TARGET_DIR/.local/lib/dotfiles"; do
-    [[ -d "$dir" ]] && search_dirs+=("$dir")
-  done
-
-  local root_candidate
-  for root_candidate in "$TARGET_DIR/.zshrc" "$TARGET_DIR/.gitconfig"; do
-    if [[ -L "$root_candidate" && ! -e "$root_candidate" ]]; then
-      local dest
-      dest=$(realpath -m -- "$root_candidate" 2>/dev/null || true)
-      if [[ -n "$dest" && ( "$dest" == "$repo_canon/"* || "$dest" == "$repo_canon" || \
-            "$dest" == "$stow_canon/"* || "$dest" == "$stow_canon" || \
-            "$dest" == "$dots_canon/"* ) ]]; then
-        if (( apply == 1 )); then
-          info "Eliminando enlace huérfano: $root_candidate"
-          rm -f -- "$root_candidate"
-        else
-          warn "Enlace huérfano detectado: $root_candidate"
-        fi
-      fi
-    fi
-  done
-
-  (( ${#search_dirs[@]} > 0 )) || return 0
-
-  while IFS= read -r -d '' dead_link; do
-    local dest
-    dest=$(realpath -m -- "$dead_link" 2>/dev/null || true)
-    if [[ -n "$dest" && ( "$dest" == "$repo_canon/"* || "$dest" == "$repo_canon" || \
-          "$dest" == "$stow_canon/"* || "$dest" == "$stow_canon" || \
-          "$dest" == "$dots_canon/"* ) ]]; then
-      if (( apply == 1 )); then
-        info "Eliminando enlace huérfano: $dead_link"
-        rm -f -- "$dead_link"
-      else
-        warn "Enlace huérfano detectado: $dead_link"
-      fi
-    fi
-  done < <(find "${search_dirs[@]}" -xtype l -print0 2>/dev/null || true)
-}
-
-inspect_links() {
-  local package_name package_dir source_path relative_path target_path
-  local canonical_source canonical_target existing_source link_value
-  local package_entries relative_parent parent_component current_parent parent_state
-  local -a parent_components=()
-  declare -A target_owners=()
-  declare -A parent_states=()
-
-  LINK_OK=0
-  LINK_MISSING=()
-  LINK_CONFLICTS=()
-  LINK_DUPLICATES=()
-  LINK_REPLACE=()
-
-  for package_name in "${STOW_PACKAGES[@]}"; do
-    package_dir="$STOW_DIR/$package_name"
-    package_entries=0
-    while IFS= read -r -d '' source_path; do
-      ((package_entries += 1))
-      relative_path=${source_path#"$package_dir"/}
-      target_path="$TARGET_DIR/$relative_path"
-
-      if [[ -v "target_owners[$target_path]" ]]; then
-        existing_source=${target_owners[$target_path]}
-        LINK_DUPLICATES+=("$target_path <- $existing_source y $source_path")
-        continue
-      fi
-      target_owners["$target_path"]=$source_path
-
-      relative_parent=${relative_path%/*}
-      if [[ "$relative_parent" != "$relative_path" ]]; then
-        IFS='/' read -r -a parent_components <<< "$relative_parent"
-        current_parent=$TARGET_DIR
-        for parent_component in "${parent_components[@]}"; do
-          [[ -n "$parent_component" ]] || continue
-          current_parent="$current_parent/$parent_component"
-          if [[ -v "parent_states[$current_parent]" ]]; then
-            parent_state=${parent_states[$current_parent]}
-            [[ "$parent_state" == "ok" ]] && continue
-            break
-          fi
-
-          if [[ -L "$current_parent" ]]; then
-            link_value=$(readlink -- "$current_parent" || true)
-            LINK_CONFLICTS+=("$current_parent (directorio padre es symlink a $link_value)")
-            parent_states["$current_parent"]="blocked"
-            break
-          elif [[ -e "$current_parent" && ! -d "$current_parent" ]]; then
-            LINK_CONFLICTS+=("$current_parent (ruta padre existe y no es directorio)")
-            parent_states["$current_parent"]="blocked"
-            break
-          elif [[ -d "$current_parent" ]]; then
-            parent_states["$current_parent"]="ok"
-          else
-            parent_states["$current_parent"]="missing"
-            break
-          fi
-        done
-      fi
-
-      if [[ -L "$target_path" ]]; then
-        canonical_source=$(realpath -m -- "$source_path")
-        canonical_target=$(realpath -m -- "$target_path")
-        if [[ "$canonical_source" == "$canonical_target" ]]; then
-          link_value=$(readlink -- "$target_path" || true)
-          if [[ "$link_value" == /* ]]; then
-            LINK_REPLACE+=("$target_path")
-          else
-            ((LINK_OK += 1))
-          fi
-        elif is_repo_symlink "$target_path"; then
-          LINK_REPLACE+=("$target_path")
-        else
-          link_value=$(readlink -- "$target_path" || true)
-          LINK_CONFLICTS+=("$target_path (symlink a $link_value)")
-        fi
-      elif [[ -e "$target_path" ]]; then
-        LINK_CONFLICTS+=("$target_path (ya existe y no es el enlace esperado)")
-      else
-        LINK_MISSING+=("$target_path")
-      fi
-    done < <(find "$package_dir" -mindepth 1 \( -type f -o -type l \) -print0)
-
-    (( package_entries > 0 )) || \
-      LINK_CONFLICTS+=("$package_dir (paquete Stow vacío)")
-  done
-}
-
-print_link_issues() {
-  local issue
-
-  for issue in "${LINK_DUPLICATES[@]}"; do
-    error "ownership duplicado: $issue"
-  done
-  for issue in "${LINK_CONFLICTS[@]}"; do
-    error "colisión: $issue"
-  done
-}
-
-ensure_no_link_collisions() {
-  inspect_links
-  print_link_issues
-  if (( ${#LINK_DUPLICATES[@]} > 0 || ${#LINK_CONFLICTS[@]} > 0 )); then
-    return 1
-  fi
-  local replace_msg=""
-  (( ${#LINK_REPLACE[@]} > 0 )) && replace_msg=", ${#LINK_REPLACE[@]} por actualizar"
-  info "Preflight Stow: $LINK_OK enlaces correctos, ${#LINK_MISSING[@]} por crear$replace_msg, 0 colisiones"
-  return 0
-}
-
-run_stow() {
-  local operation=$1
-  local simulate=$2
-  local -a stow_command=(
-    stow
-    "--dir=$STOW_DIR"
-    "--target=$TARGET_DIR"
-    --no-folding
-  )
-
-  if [[ "$operation" == "delete" ]]; then
-    stow_command+=(--delete)
-  fi
-  if [[ "$simulate" == 1 ]]; then
-    stow_command+=(--simulate --verbose=1)
-  else
-    stow_command+=(--verbose=1)
-  fi
-  stow_command+=("${STOW_PACKAGES[@]}")
-
-  format_command "${stow_command[@]}"
-  "${stow_command[@]}"
-}
-
-validate_links_installed() {
-  inspect_links
-  print_link_issues
-  if (( ${#LINK_DUPLICATES[@]} > 0 || ${#LINK_CONFLICTS[@]} > 0 || ${#LINK_MISSING[@]} > 0 )); then
-    local missing_path
-    for missing_path in "${LINK_MISSING[@]}"; do
-      error "enlace ausente: $missing_path"
-    done
-    return 1
-  fi
-  info "Enlaces validados: $LINK_OK correctos"
-  return 0
-}
-
-validate_links_unlinked() {
-  inspect_links
-  if (( LINK_OK > 0 )); then
-    error "quedaron $LINK_OK enlaces que todavía apuntan al stow directory"
-    return 1
-  fi
-  info "Unlink validado: no quedan enlaces administrados para el perfil"
-  return 0
-}
 
 validate_zsh_syntax() {
   local config_path
