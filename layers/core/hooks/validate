@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# Validates the core layer: public Git contract and Zsh syntax.
+# Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
+
+set -Eeuo pipefail
+
+# Read by lib/colors.sh as the log prefix.
+# shellcheck disable=SC2034
+PROGRAM_NAME=core
+# shellcheck source=../../../lib/colors.sh
+source "$DOTFILES_LIB/colors.sh"
+# shellcheck source=../../../lib/core.sh
+source "$DOTFILES_LIB/core.sh"
+# shellcheck source=../../../lib/layers.sh
+source "$DOTFILES_LIB/layers.sh"
+# shellcheck source=zsh-shell.sh
+source "$LAYER_DIR/hooks/zsh-shell.sh"
+
+STOW_DIR="$LAYER_DIR/home"
+# Read by the checks through array_contains.
+# shellcheck disable=SC2034
+declare -a STOW_PACKAGES=()
+read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
+
+validate_git_contract() {
+  local config_path="$STOW_DIR/git/.config/git/config"
+  local legacy_config="$TARGET_DIR/.gitconfig"
+  local identity_key
+  local -a include_paths=()
+
+  array_contains STOW_PACKAGES git || return 0
+  command_exists git || {
+    error "Git es necesario para validar su configuración pública"
+    return 1
+  }
+  [[ -f "$config_path" ]] || {
+    error "falta la configuración Git pública: $config_path"
+    return 1
+  }
+  git config --file "$config_path" --list --name-only >/dev/null || {
+    error "configuración Git pública inválida: $config_path"
+    return 1
+  }
+  [[ $(git config --file "$config_path" --get user.useConfigOnly || true) == true ]] || {
+    error "Git público debe usar user.useConfigOnly=true para fallar sin identidad"
+    return 1
+  }
+  for identity_key in user.name user.email user.signingKey; do
+    if git config --file "$config_path" --get "$identity_key" >/dev/null 2>&1; then
+      error "Git público no debe definir $identity_key"
+      return 1
+    fi
+  done
+  mapfile -t include_paths < <(
+    git config --file "$config_path" --get-all include.path || true
+  )
+  if (( ${#include_paths[@]} != 2 )) || \
+      [[ "${include_paths[0]-}" != \~/.config/git/private.gitconfig ]] || \
+      [[ "${include_paths[1]-}" != \~/.config/git/local.gitconfig ]]; then
+    error "los includes Git deben conservar la precedencia público → privado → local"
+    return 1
+  fi
+  if [[ -e "$legacy_config" || -L "$legacy_config" ]]; then
+    error "configuración Git legacy detectada: $legacy_config"
+    error "Git la leería después de ~/.config/git/config y podría sobrescribir el contrato nuevo; respáldela y migre sus responsabilidades antes de aplicar"
+    return 1
+  fi
+  info "Contrato Git público validado (fail-closed, sin identidad y sin ~/.gitconfig legacy)"
+}
+
+validate_zsh_syntax() {
+  local config_path
+  local result=0
+  local -a config_paths=("$STOW_DIR/zsh/.zshrc")
+
+  command_exists zsh || return 0
+  while IFS= read -r -d '' config_path; do
+    config_paths+=("$config_path")
+  done < <(find "$STOW_DIR/zsh/.config/zsh" -type f -name '*.zsh' -print0)
+
+  for config_path in "${config_paths[@]}"; do
+    if ! zsh -n "$config_path"; then
+      error "sintaxis Zsh inválida: $config_path"
+      result=1
+    fi
+  done
+  (( result == 0 )) && info "Sintaxis Zsh validada (${#config_paths[@]} archivos)"
+  return "$result"
+}
+
+# Unlinking needs no checks: these validate sources, not ownership.
+[[ "$OPERATION" != unlink ]] || exit 0
+
+result=0
+validate_git_contract || result=1
+validate_zsh_syntax || result=1
+[[ "$OPERATION" != doctor ]] || report_zsh_activation
+exit "$result"

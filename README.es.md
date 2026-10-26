@@ -88,8 +88,8 @@ Configuración Base Pública  ──►  Capa Privada Opcional  ──►  Sobre
      (~/.config/...)               (dotfiles-private)              (*.local.*)
 ```
 
-1. **Identidad Git Múltiple:** `home/git/.config/git/config` carga `~/.config/git/private.gitconfig` (si existe) para emails y claves de firma personales o laborales, seguido de `~/.config/git/local.gitconfig` específico de la máquina.
-2. **Entorno de Shell:** `home/zsh/.zshrc` carga automáticamente `~/.config/zsh/private.zsh` (si existe) para alias privados, variables de entorno y rutas laborales, seguido de `~/.config/zsh/local.zsh`.
+1. **Identidad Git Múltiple:** `layers/core/home/git/.config/git/config` carga `~/.config/git/private.gitconfig` (si existe) para emails y claves de firma personales o laborales, seguido de `~/.config/git/local.gitconfig` específico de la máquina.
+2. **Entorno de Shell:** `layers/core/home/zsh/.zshrc` carga automáticamente `~/.config/zsh/private.zsh` (si existe) para alias privados, variables de entorno y rutas laborales, seguido de `~/.config/zsh/local.zsh`.
 3. **Fail-Closed e Independiente:** La ausencia de la capa privada nunca rompe la configuración pública. Ningún secreto, credencial o clave privada es rastreado en repositorios públicos.
 
 ---

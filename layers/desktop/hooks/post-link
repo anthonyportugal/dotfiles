@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# Applies the GTK prefer-dark preference after linking the desktop layer.
+# Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
+
+set -Eeuo pipefail
+
+# Read by lib/colors.sh as the log prefix.
+# shellcheck disable=SC2034
+PROGRAM_NAME=desktop
+# shellcheck source=../../../lib/colors.sh
+source "$DOTFILES_LIB/colors.sh"
+# shellcheck source=../../../lib/core.sh
+source "$DOTFILES_LIB/core.sh"
+
+apply_session_preferences() {
+  local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
+
+  [[ "$PROFILE" == desktop ]] || return 0
+  if ! target_is_current_home; then
+    info "Preferencias de sesión omitidas: el target no es el home actual"
+    return 0
+  fi
+  if [[ ! -x "$preferences" ]]; then
+    warn "no se encontró el entrypoint de preferencias: $preferences"
+    return 0
+  fi
+  if ! "$preferences" apply; then
+    warn "no se pudo aplicar prefer-dark durante el bootstrap; MangoWM volverá a intentarlo al iniciar sesión"
+    return 0
+  fi
+  info "Preferencia GTK validada: prefer-dark"
+}
+
+apply_session_preferences

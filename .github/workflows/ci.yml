@@ -26,13 +26,13 @@ jobs:
       - name: Validate syntax (bash -n)
         run: |
           # bash -n only parses its first operand; the rest become arguments.
-          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh; do
+          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh; do
             bash -n "$file"
           done
 
       - name: Run ShellCheck
         run: |
-          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh
+          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh
 
       - name: Scan for secrets
         run: |
@@ -69,7 +69,7 @@ jobs:
 
       - name: Validate Zsh configuration syntax (zsh -n)
         run: |
-          for f in home/zsh/.zshrc home/zsh/.config/zsh/conf.d/*.zsh home/zsh/.config/zsh/init.d/*.zsh; do
+          for f in layers/core/home/zsh/.zshrc layers/core/home/zsh/.config/zsh/conf.d/*.zsh layers/core/home/zsh/.config/zsh/init.d/*.zsh; do
             [[ -f "$f" ]] && zsh -n "$f"
           done
 

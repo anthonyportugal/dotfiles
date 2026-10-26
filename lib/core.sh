@@ -98,3 +98,12 @@ format_command() {
   done
   printf '\n'
 }
+
+# True when TARGET_DIR is the home of the user running the command.
+target_is_current_home() {
+  local current_home target_home
+
+  current_home=$(realpath -m -- "$HOME")
+  target_home=$(realpath -m -- "$TARGET_DIR")
+  [[ "$target_home" == "$current_home" ]]
+}

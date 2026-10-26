@@ -27,7 +27,7 @@ command -v stow >/dev/null 2>&1 || fail "GNU Stow es necesario para este smoke t
 
 if command -v alacritty >/dev/null 2>&1; then
   alacritty migrate --dry-run --skip-imports \
-    --config-file "$REPO_ROOT/home/alacritty/.config/alacritty/alacritty.toml" \
+    --config-file "$REPO_ROOT/layers/desktop/home/alacritty/.config/alacritty/alacritty.toml" \
     >/dev/null || fail "la configuración de Alacritty no es válida"
 fi
 
@@ -128,14 +128,14 @@ grep -q 'chsh -s /bin/zsh' "$TEST_ROOT/zsh-activation.out" ||
 for alias_name in l la ll ld; do
   alias_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
     dotfiles-alias-check \
-    "$REPO_ROOT/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "$alias_name")
+    "$REPO_ROOT/layers/core/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "$alias_name")
   [[ "$alias_definition" == *'ls --color=auto '* ]] ||
     fail "el alias $alias_name no activa colores sólo para terminal"
 done
 
 lg_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
   dotfiles-alias-check \
-  "$REPO_ROOT/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "lg")
+  "$REPO_ROOT/layers/core/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "lg")
 [[ "$lg_definition" == *'lazygit'* ]] ||
   fail "el alias lg no apunta a lazygit"
 
@@ -151,7 +151,11 @@ grep -q 'Dry-run de la capa wm/bspwm completado' "$TEST_ROOT/wm-apply.out" || \
   fail "el enlace de bspwm no apunta a layers/wm/bspwm"
 WM_STATE="$WM_TARGET/.local/state/dotfiles"
 grep -qx 'PROFILE="core"' "$WM_STATE/bspwm.receipt" || fail "el recibo de bspwm no guardó el perfil core"
-grep -qx 'PROFILE="core"' "$WM_STATE/dotfiles.receipt" || fail "el recibo de selección no guardó el perfil base"
+# A WM pulls in the desktop layer, so the recorded base profile is desktop.
+grep -qx 'PROFILE="desktop"' "$WM_STATE/dotfiles.receipt" || fail "el recibo de selección no guardó el perfil desktop que exige el WM"
+grep -q 'Los WMs requieren el perfil desktop; se aplica desktop en lugar de core' "$TEST_ROOT/wm-apply.out" || \
+  fail "bootstrap no explicó por qué subió el perfil a desktop"
+[[ -L "$WM_TARGET/.config/alacritty/alacritty.toml" ]] || fail "el WM no arrastró la capa desktop"
 grep -qx 'WMS="bspwm"' "$WM_STATE/dotfiles.receipt" || fail "el recibo de selección no guardó los WMs"
 
 "$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
@@ -193,11 +197,12 @@ if (( EUID != 0 )); then
   # The layer must have reached its apply step, so the failure came from it.
   grep -q 'Aplicando enlaces GNU Stow' "$TEST_ROOT/wm-errexit.out" || \
     fail "el bootstrap falló antes de que la capa llegara a aplicar"
-  [[ -L "$ERREXIT_TARGET/.config/bspwm/bspwmrc" ]] || \
-    fail "la capa no enlazó antes del fallo del recibo"
-  if grep -q 'Bootstrap de la capa wm/bspwm completado' "$TEST_ROOT/wm-errexit.out"; then
+  # core is the first layer to write its receipt, so it is the one that stops.
+  [[ -L "$ERREXIT_TARGET/.zshrc" ]] || fail "la capa core no enlazó antes del fallo del recibo"
+  if grep -q 'Bootstrap de la capa core completado' "$TEST_ROOT/wm-errexit.out"; then
     fail "la capa informó éxito después de un fallo no comprobado"
   fi
+  [[ ! -e "$ERREXIT_TARGET/.config/bspwm" ]] || fail "las capas siguientes se ejecutaron tras el fallo de core"
 else
   printf 'SKIP: la prueba de errexit de capas necesita un usuario sin privilegios de root\n'
 fi

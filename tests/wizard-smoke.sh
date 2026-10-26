@@ -126,7 +126,7 @@ EOF
 cat > "$CANON_HOME/.local/state/dotfiles/dotfiles.receipt" <<'EOF'
 RECEIPT_VERSION=1
 COMPONENT="dotfiles"
-PROFILE="core"
+PROFILE="desktop"
 FEATURES=""
 WMS="bspwm"
 BACKEND=""
@@ -137,10 +137,9 @@ DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" sync --stow-only --target "$CANON_HOME" --apply > "$TEST_ROOT/sync.out"
 
-grep -q 'Selección restaurada del recibo: perfil core, WMs bspwm' "$TEST_ROOT/sync.out" || \
+grep -q 'Selección restaurada del recibo: perfil desktop, WMs bspwm' "$TEST_ROOT/sync.out" || \
   fail "Sync no restauró la selección guardada"
 [[ -L "$CANON_HOME/.zshrc" ]] || fail "Sync no enlazó la base"
-[[ ! -e "$CANON_HOME/.config/bat" ]] || fail "Sync aplicó un perfil más amplio que el core guardado"
 [[ -L "$CANON_HOME/.config/bspwm/bspwmrc" ]] || fail "Sync no re-aplicó el WM guardado"
 [[ ! -e "$CANON_HOME/.config/mango" ]] || fail "Sync instaló un WM que no estaba seleccionado"
 grep -q 'walls' "$WALLS_LOG" || fail "Sync no detectó Walls automáticamente"
@@ -149,16 +148,35 @@ grep -q 'development' "$PRIVATE_LOG" || fail "Sync no reutilizó PROFILE=develop
 grep -q 'corp' "$PRIVATE_LOG" || fail "Sync no reutilizó WORK=corp desde el recibo de private"
 grep -q 'setup' "$HARNESS_LOG" || fail "Sync no detectó Agent Harness automáticamente"
 
-# An explicit --profile still wins over the saved selection.
-DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
-DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
-DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
-"$DOTFILES" sync --profile cli --stow-only --target "$CANON_HOME" > "$TEST_ROOT/sync-explicit.out"
-grep -q 'Selección restaurada del recibo: WMs bspwm$' "$TEST_ROOT/sync-explicit.out" || \
-  fail "Sync no informó sólo los valores tomados del recibo"
-[[ -L "$CANON_HOME/.config/bat/config" ]] || fail "Sync no aplicó el perfil cli explícito"
-grep -qx 'PROFILE="cli"' "$CANON_HOME/.local/state/dotfiles/dotfiles.receipt" || \
-  fail "Sync no actualizó el recibo de selección con el perfil aplicado"
+# A saved cli profile without WMs is restored without pulling in desktop, and an
+# explicit --profile still wins over it.
+CLI_HOME="$TEST_ROOT/cli-home"
+mkdir -p "$CLI_HOME/.local/state/dotfiles"
+printf 'RECEIPT_VERSION=1\nCOMPONENT="dotfiles"\nPROFILE="cli"\nWMS=""\n' \
+  > "$CLI_HOME/.local/state/dotfiles/dotfiles.receipt"
+"$DOTFILES" sync --stow-only --target "$CLI_HOME" > "$TEST_ROOT/sync-cli.out"
+grep -q 'Selección restaurada del recibo: perfil cli$' "$TEST_ROOT/sync-cli.out" || \
+  fail "Sync no restauró el perfil cli guardado"
+[[ -L "$CLI_HOME/.config/bat/config" ]] || fail "Sync no aplicó el perfil cli guardado"
+[[ ! -e "$CLI_HOME/.config/alacritty" ]] || fail "Sync aplicó un perfil más amplio que el cli guardado"
+
+"$DOTFILES" sync --profile core --stow-only --target "$CLI_HOME" > "$TEST_ROOT/sync-explicit.out"
+if grep -q 'Selección restaurada del recibo' "$TEST_ROOT/sync-explicit.out"; then
+  fail "Sync atribuyó al recibo un perfil que vino de --profile"
+fi
+grep -qx 'PROFILE="core"' "$CLI_HOME/.local/state/dotfiles/dotfiles.receipt" || \
+  fail "Sync no actualizó el recibo de selección con el perfil explícito"
+
+# An invalid saved profile never installs more than core.
+INVALID_HOME="$TEST_ROOT/invalid-profile-home"
+mkdir -p "$INVALID_HOME/.local/state/dotfiles"
+printf 'RECEIPT_VERSION=1\nCOMPONENT="dotfiles"\nPROFILE="everything"\n' \
+  > "$INVALID_HOME/.local/state/dotfiles/dotfiles.receipt"
+"$DOTFILES" sync --stow-only --target "$INVALID_HOME" > "$TEST_ROOT/sync-invalid.out" 2>&1
+grep -q 'perfil inválido en el recibo de selección: everything; se usa core' "$TEST_ROOT/sync-invalid.out" || \
+  fail "Sync no avisó del perfil inválido del recibo"
+[[ -L "$INVALID_HOME/.zshrc" && ! -e "$INVALID_HOME/.config/bat" ]] || \
+  fail "Sync no usó core ante un perfil inválido en el recibo"
 
 # A tampered selection receipt can never reach a layer outside layers/wm/.
 TAMPER_HOME="$TEST_ROOT/tamper-home"
@@ -267,7 +285,7 @@ DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" doctor --profile core --stow-only --target "$CANON_HOME" --base-only > "$TEST_ROOT/base-only.out"
 
-if grep -q 'Plan de la capa' "$TEST_ROOT/base-only.out"; then
+if grep -q 'Plan de la capa wm/' "$TEST_ROOT/base-only.out"; then
   fail "Doctor con --base-only auditó una capa de WM"
 fi
 [[ ! -s "$WALLS_LOG" ]] || fail "Doctor con --base-only delegó a Walls"

@@ -7,6 +7,10 @@ REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 DOTFILES="$REPO_ROOT/../../../bin/dotfiles"
 TEST_ROOT=''
 LOCK_PID=''
+# The session checks export HOME=$TARGET; doctor and unlink run with the real
+# HOME so the target is never mistaken for the current user's home.
+ORIGINAL_HOME=$HOME
+ORIGINAL_PATH=$PATH
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -105,9 +109,9 @@ grep -Fxq 'org.freedesktop.impl.portal.ScreenCast=wlr' \
   fail 'el override local no tiene la última precedencia'
 
 mapfile -d '' shell_files < <(find \
-  "$REPO_ROOT/bin" "$REPO_ROOT/home" "$REPO_ROOT/tests" \
+  "$REPO_ROOT/hooks" "$REPO_ROOT/home" "$REPO_ROOT/tests" \
   -type f -perm -u+x -print0)
-shellcheck "${shell_files[@]}"
+shellcheck -x "${shell_files[@]}"
 
 # Todos los procesos y herramientas externas se reemplazan por dobles. La
 # prueba inspecciona composición sin necesitar Wayland ni tocar el host.
@@ -136,6 +140,14 @@ export MANGOWM_TEST_SERVICE_STATE="$SERVICE_STATE"
 export MANGOWM_TEST_MEDIA_ROOT="$MEDIA_ROOT"
 export PATH="$FAKE_BIN:/usr/bin"
 
+# The desktop layer the WM requires installs the base prefer-dark entrypoint.
+# Swap it for a double so session-start never reaches the host's gsettings, and
+# restore the managed link afterwards.
+PREFERENCES="$TARGET/.local/lib/dotfiles/session-preferences"
+[[ -L "$PREFERENCES" ]] || fail 'la capa desktop no enlazó session-preferences'
+managed_preferences=$(readlink -- "$PREFERENCES")
+ln -sfn "$REPO_ROOT/tests/fakes/desktop-command" "$PREFERENCES"
+
 "$TARGET/.local/lib/mangowm/session-start"
 for unit_name in mangowm-mako mangowm-swayidle mangowm-swaybg mangowm-waybar; do
   grep -q -- "--unit=$unit_name" "$LOG" || fail "session-start no inició $unit_name"
@@ -143,13 +155,9 @@ done
 grep -q 'WAYLAND_DISPLAY.*XDG_CURRENT_DESKTOP' "$LOG" || \
   fail 'session-start no importó el entorno Wayland'
 
-# MangoWM inicia sin la base y consume su entrypoint público cuando aparece.
-mkdir -p "$TARGET/.local/lib/dotfiles"
-ln -s "$REPO_ROOT/tests/fakes/desktop-command" \
-  "$TARGET/.local/lib/dotfiles/session-preferences"
-"$TARGET/.local/lib/mangowm/session-start"
 grep -q '^session-preferences apply ' "$LOG" || \
-  fail 'session-start no consumió el contrato opcional de preferencias de base'
+  fail 'session-start no consumió el contrato de preferencias de la capa desktop'
+ln -sfn "$managed_preferences" "$PREFERENCES"
 
 "$TARGET/.local/lib/mangowm/lock"
 read -r LOCK_PID < "$RUNTIME/mangowm/swaylock.pid"
@@ -221,10 +229,10 @@ grep -Fqx "bind=SUPER,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo Super+W para seleccionar wallpaper'
 
-"$DOTFILES" doctor --profile core --wm mangowm --wm-profile desktop \
-  --stow-only --target "$TARGET" >/dev/null 2>&1
-"$DOTFILES" unlink --profile core --wm mangowm --wm-profile desktop \
-  --stow-only --target "$TARGET" --apply >/dev/null 2>&1
+HOME="$ORIGINAL_HOME" PATH="$ORIGINAL_PATH" "$DOTFILES" doctor --profile core --wm mangowm \
+  --wm-profile desktop --stow-only --target "$TARGET" >/dev/null 2>&1 || fail 'doctor falló tras la sesión'
+HOME="$ORIGINAL_HOME" PATH="$ORIGINAL_PATH" "$DOTFILES" unlink --profile core --wm mangowm \
+  --wm-profile desktop --stow-only --target "$TARGET" --apply >/dev/null 2>&1
 [[ ! -e "$TARGET/.config/mango/config.conf" ]] || fail 'unlink dejó enlaces de sesión'
 
 printf 'OK: sesión, tema y wrappers MangoWM validados\n'

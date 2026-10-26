@@ -6,7 +6,6 @@ set -Eeuo pipefail
 PROGRAM_NAME=${0##*/}
 SCRIPT_DIR=$(cd -- "$(dirname -- "$(realpath -e -- "${BASH_SOURCE[0]}")")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
-STOW_DIR="$REPO_ROOT/home"
 PACKAGES_DIR="$REPO_ROOT/packages"
 LAYERS_DIR="$REPO_ROOT/layers"
 # A WM name is a single directory under layers/wm/, never a path.
@@ -73,12 +72,9 @@ declare -a LINK_DUPLICATES=()
 declare -a LINK_REPLACE=()
 LINK_OK=0
 
-# Where base links live; prune_dangling_dotfiles_links only searches here.
-PRUNE_SEARCH_DIRS=(
-  .config/zsh .config/git .config/alacritty .config/micro .config/yazi .config/nvim
-  .local/bin .local/lib/dotfiles
-)
-PRUNE_ROOT_LINKS=(.zshrc .gitconfig)
+# Layers of this run, each after the layers it requires (resolve_selected_layers).
+declare -a SELECTED_LAYERS=()
+FAILED_LAYER=""
 
 DOTFILES_LANG="${DOTFILES_LANG:-en}"
 FORCE_YES=0
@@ -109,6 +105,29 @@ source "$LIB_DIR/completions.sh"
 source "$LIB_DIR/wizard.sh"
 
 
+# Adds a --wm value to WMS: a layer name under layers/wm/, "all"/"both" for
+# every WM layer, or the "mango" alias.
+add_wm_selection() {
+  local requested=$1 wm_layer
+
+  case "$requested" in
+    all|both)
+      for wm_layer in "$LAYERS_DIR"/wm/*/; do
+        [[ -f "$wm_layer/layer.conf" ]] || continue
+        wm_layer=${wm_layer%/}
+        append_unique WMS "${wm_layer##*/}"
+      done
+      ;;
+    mango)
+      append_unique WMS mangowm
+      ;;
+    *)
+      append_unique WMS "$requested"
+      ;;
+  esac
+  WM=${WMS[0]:-}
+}
+
 usage() {
   if [[ "${DOTFILES_LANG:-en}" == "es" ]]; then
     cat <<EOF
@@ -135,7 +154,8 @@ Opciones:
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
   --target DIR                     Home objetivo (default: \$HOME).
-  --wm mangowm|bspwm|both          Capa de WM de layers/wm/; se puede repetir.
+  --wm NOMBRE|all                  Capa de WM de layers/wm/ (bspwm, mangowm); se puede repetir.
+                                   Elegir un WM aplica también el perfil desktop.
   --wm-profile core|desktop        Perfil de los WMs (default: desktop o el del recibo).
   --base-only                      Ejecuta diagnósticos únicamente para el repositorio base.
   --all                            Diagnostica o sincroniza todos los componentes disponibles.
@@ -176,7 +196,8 @@ Options:
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
   --target DIR                     Target home directory (default: \$HOME).
-  --wm mangowm|bspwm|both          WM layer from layers/wm/; repeatable.
+  --wm NAME|all                    WM layer from layers/wm/ (bspwm, mangowm); repeatable.
+                                   Choosing a WM also applies the desktop profile.
   --wm-profile core|desktop        WM profile (default: desktop or the saved one).
   --base-only                      Run diagnostics solely for the base repository.
   --all                            Diagnose or synchronize all available components.
@@ -336,40 +357,14 @@ parse_args() {
         require_option_value "$1" "${2-}"
         WM=$2
         COMPONENT_EXPLICIT=1
-        case "$2" in
-          both|all)
-            WM="mangowm"
-            append_unique WMS "mangowm"
-            append_unique WMS "bspwm"
-            ;;
-          mango)
-            WM="mangowm"
-            append_unique WMS "mangowm"
-            ;;
-          *)
-            append_unique WMS "$2"
-            ;;
-        esac
+        add_wm_selection "$2"
         shift 2
         ;;
       --wm=*)
         WM=${1#*=}
         require_option_value "--wm" "$WM"
         COMPONENT_EXPLICIT=1
-        case "$WM" in
-          both|all)
-            WM="mangowm"
-            append_unique WMS "mangowm"
-            append_unique WMS "bspwm"
-            ;;
-          mango)
-            WM="mangowm"
-            append_unique WMS "mangowm"
-            ;;
-          *)
-            append_unique WMS "$WM"
-            ;;
-        esac
+        add_wm_selection "$WM"
         shift
         ;;
       --wm-path|--wm-path=*)
@@ -535,17 +530,6 @@ parse_args() {
       ;;
   esac
 
-  case "$WM" in
-    mango)
-      WM="mangowm"
-      ;;
-    ""|bspwm|mangowm)
-      ;;
-    *)
-      usage_error "WM no soportado: $WM"
-      ;;
-  esac
-
   case "$WM_PROFILE" in
     core|desktop)
       ;;
@@ -607,79 +591,7 @@ validate_features() {
   FEATURES=("${unique_features[@]}")
 }
 
-resolve_system_packages() {
-  local -a tiers=()
-  local -a fallback_packages=()
-  local tier package_name feature
 
-  REPO_PACKAGES=()
-  AUR_PACKAGES=()
-  EXTERNAL_PACKAGES=()
-
-  case "$PROFILE" in
-    core)
-      tiers=(core)
-      ;;
-    cli)
-      tiers=(core cli)
-      ;;
-    desktop)
-      tiers=(core cli desktop)
-      ;;
-  esac
-
-  for tier in "${tiers[@]}"; do
-    append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/repo/$tier.txt"
-  done
-
-  for feature in "${FEATURES[@]}"; do
-    append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/repo/$feature.txt"
-  done
-
-  if [[ "$PROFILE" == "desktop" ]]; then
-    if [[ "$PLATFORM" == "cachyos" ]]; then
-      append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/cachyos/desktop.txt"
-    else
-      read_manifest "$PACKAGES_DIR/aur/desktop-fallback.txt" fallback_packages
-      for package_name in "${fallback_packages[@]}"; do
-        if package_in_official_arch_repos "$package_name"; then
-          append_unique REPO_PACKAGES "$package_name"
-        else
-          append_unique AUR_PACKAGES "$package_name"
-        fi
-      done
-    fi
-    append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/desktop.txt"
-  fi
-}
-
-resolve_stow_packages() {
-  local -a tiers=()
-  local tier package_name
-
-  STOW_PACKAGES=()
-  case "$PROFILE" in
-    core)
-      tiers=(core)
-      ;;
-    cli)
-      tiers=(core cli)
-      ;;
-    desktop)
-      tiers=(core cli desktop)
-      ;;
-  esac
-
-  for tier in "${tiers[@]}"; do
-    local -a tier_packages=()
-    read_manifest "$PACKAGES_DIR/stow/$tier.txt" tier_packages
-    for package_name in "${tier_packages[@]}"; do
-      [[ -d "$STOW_DIR/$package_name" ]] || \
-        die "el paquete Stow '$package_name' no existe bajo $STOW_DIR"
-      append_unique STOW_PACKAGES "$package_name"
-    done
-  done
-}
 
 detect_active_environment() {
   # Every WM layer ships with the repository, so only what is installed counts.
@@ -762,18 +674,6 @@ resolve_wm_layers() {
   WM="${WMS[0]}"
 }
 
-run_wm_operation() {
-  local operation=$1
-  local apply_mode=$2
-  local current_wm
-
-  (( ${#WMS[@]} > 0 )) || return 0
-
-  for current_wm in "${WMS[@]}"; do
-    run_layer "$LAYERS_DIR" "wm/$current_wm" "$operation" \
-      "${WM_PROFILES[$current_wm]:-$WM_PROFILE}" "$apply_mode" || return 1
-  done
-}
 
 validate_wallpapers_checkout() {
   local base_root walls_root
@@ -1008,198 +908,14 @@ run_harness_operation() {
 
 
 
-validate_zsh_syntax() {
-  local config_path
-  local result=0
-  local -a config_paths=("$STOW_DIR/zsh/.zshrc")
 
-  command_exists zsh || return 0
-  while IFS= read -r -d '' config_path; do
-    config_paths+=("$config_path")
-  done < <(find "$STOW_DIR/zsh/.config/zsh" -type f -name '*.zsh' -print0)
 
-  for config_path in "${config_paths[@]}"; do
-    if ! zsh -n "$config_path"; then
-      error "sintaxis Zsh inválida: $config_path"
-      result=1
-    fi
-  done
-  (( result == 0 )) && info "Sintaxis Zsh validada (${#config_paths[@]} archivos)"
-  return "$result"
-}
 
-validate_git_contract() {
-  local config_path="$STOW_DIR/git/.config/git/config"
-  local legacy_config="$TARGET_DIR/.gitconfig"
-  local identity_key
-  local -a include_paths=()
 
-  array_contains STOW_PACKAGES git || return 0
-  command_exists git || {
-    error "Git es necesario para validar su configuración pública"
-    return 1
-  }
-  [[ -f "$config_path" ]] || {
-    error "falta la configuración Git pública: $config_path"
-    return 1
-  }
-  git config --file "$config_path" --list --name-only >/dev/null || {
-    error "configuración Git pública inválida: $config_path"
-    return 1
-  }
-  [[ $(git config --file "$config_path" --get user.useConfigOnly || true) == true ]] || {
-    error "Git público debe usar user.useConfigOnly=true para fallar sin identidad"
-    return 1
-  }
-  for identity_key in user.name user.email user.signingKey; do
-    if git config --file "$config_path" --get "$identity_key" >/dev/null 2>&1; then
-      error "Git público no debe definir $identity_key"
-      return 1
-    fi
-  done
-  mapfile -t include_paths < <(
-    git config --file "$config_path" --get-all include.path || true
-  )
-  if (( ${#include_paths[@]} != 2 )) || \
-      [[ "${include_paths[0]-}" != \~/.config/git/private.gitconfig ]] || \
-      [[ "${include_paths[1]-}" != \~/.config/git/local.gitconfig ]]; then
-    error "los includes Git deben conservar la precedencia público → privado → local"
-    return 1
-  fi
-  if [[ -e "$legacy_config" || -L "$legacy_config" ]]; then
-    error "configuración Git legacy detectada: $legacy_config"
-    error "Git la leería después de ~/.config/git/config y podría sobrescribir el contrato nuevo; respáldela y migre sus responsabilidades antes de aplicar"
-    return 1
-  fi
-  info "Contrato Git público validado (fail-closed, sin identidad y sin ~/.gitconfig legacy)"
-}
 
-select_registered_zsh_shell() {
-  local shell_path
 
-  if command_exists chsh; then
-    while read -r shell_path _; do
-      [[ "${shell_path##*/}" == zsh && -x "$shell_path" ]] || continue
-      printf '%s\n' "$shell_path"
-      return 0
-    done < <(chsh --list-shells 2>/dev/null)
-  fi
 
-  if [[ -r /etc/shells ]]; then
-    while read -r shell_path _; do
-      [[ "${shell_path##*/}" == zsh && -x "$shell_path" ]] || continue
-      printf '%s\n' "$shell_path"
-      return 0
-    done < /etc/shells
-  fi
 
-  return 1
-}
-
-report_zsh_activation() {
-  local account current_home login_shell passwd_entry registered_zsh_shell
-  local target_home
-
-  (( STOW_ENABLED == 1 )) || return 0
-  command_exists zsh || return 0
-
-  current_home=$(realpath -m -- "$HOME")
-  target_home=$(realpath -m -- "$TARGET_DIR")
-  [[ "$target_home" == "$current_home" ]] || return 0
-
-  account=${USER-}
-  [[ -n "$account" ]] || account=$(id -un 2>/dev/null || true)
-  [[ -n "$account" ]] || return 0
-
-  if command_exists getent; then
-    passwd_entry=$(getent passwd "$account" 2>/dev/null || true)
-    [[ -n "$passwd_entry" ]] && login_shell=${passwd_entry##*:}
-  fi
-  login_shell=${login_shell:-${SHELL-}}
-
-  if [[ "${login_shell##*/}" != zsh ]]; then
-    warn "Zsh está instalado, pero el shell de login de '$account' es '${login_shell:-desconocido}'; Bash no carga los plugins de .zshrc"
-    if registered_zsh_shell=$(select_registered_zsh_shell); then
-      warn "prueba inmediata: exec zsh; cambio persistente: chsh -s $registered_zsh_shell (después cierre por completo la sesión)"
-    else
-      warn "no se encontró una ruta ejecutable de Zsh registrada por chsh; revise 'chsh --list-shells' antes de cambiar la cuenta"
-    fi
-  elif [[ "${SHELL##*/}" != zsh ]]; then
-    warn "el shell de login ya es Zsh, pero esta sesión conserva SHELL='${SHELL:-desconocido}'; cierre la sesión y vuelva a entrar"
-  else
-    info "Shell de login Zsh validado: $login_shell"
-  fi
-}
-
-validate_alacritty_syntax() {
-  local config_path="$STOW_DIR/alacritty/.config/alacritty/alacritty.toml"
-
-  [[ "$PROFILE" == desktop ]] || return 0
-  [[ -f "$config_path" ]] || {
-    error "falta la configuración de Alacritty: $config_path"
-    return 1
-  }
-  command_exists alacritty || return 0
-
-  if ! alacritty migrate --dry-run --skip-imports \
-      --config-file "$config_path" >/dev/null; then
-    error "configuración de Alacritty inválida: $config_path"
-    return 1
-  fi
-  info "Configuración de Alacritty validada"
-}
-
-target_is_current_home() {
-  local current_home target_home
-
-  current_home=$(realpath -m -- "$HOME")
-  target_home=$(realpath -m -- "$TARGET_DIR")
-  [[ "$target_home" == "$current_home" ]]
-}
-
-apply_session_preferences() {
-  local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
-
-  [[ "$PROFILE" == desktop ]] || return 0
-  (( STOW_ENABLED == 1 )) || return 0
-  if ! target_is_current_home; then
-    info "Preferencias de sesión omitidas: el target no es el home actual"
-    return 0
-  fi
-  if [[ ! -x "$preferences" ]]; then
-    warn "no se encontró el entrypoint de preferencias: $preferences"
-    return 0
-  fi
-  if ! "$preferences" apply; then
-    warn "no se pudo aplicar prefer-dark durante el bootstrap; MangoWM volverá a intentarlo al iniciar sesión"
-    return 0
-  fi
-  info "Preferencia GTK validada: prefer-dark"
-}
-
-apply_bat_cache() {
-  command_exists bat || return 0
-  (( STOW_ENABLED == 1 )) || return 0
-  target_is_current_home || return 0
-  bat cache --build >/dev/null 2>&1 || true
-}
-
-validate_session_preferences() {
-  local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
-
-  [[ "$PROFILE" == desktop ]] || return 0
-  (( STOW_ENABLED == 1 )) || return 0
-  target_is_current_home || return 0
-  [[ -x "$preferences" ]] || {
-    error "falta el entrypoint de preferencias: $preferences"
-    return 1
-  }
-  if ! "$preferences" check >/dev/null; then
-    error "la preferencia GTK oscura no está aplicada; ejecute '$preferences apply'"
-    return 1
-  fi
-  info "Preferencia GTK validada: prefer-dark"
-}
 
 link_cli_command() {
   (( STOW_ENABLED == 1 )) || return 0
@@ -1261,46 +977,52 @@ validate_cli_command() {
   return 0
 }
 
-preflight() {
-  command_exists find || die "falta el comando requerido: find"
-  command_exists realpath || die "falta el comando requerido: realpath"
 
-  if (( SYSTEM_ENABLED == 1 )); then
-    [[ -d "$PACKAGES_DIR" ]] || die "no existe $PACKAGES_DIR"
-    command_exists pacman || die "pacman es necesario para resolver el estado de paquetes"
-  fi
 
-  if (( STOW_ENABLED == 1 )); then
-    [[ -f "$STOW_DIR/.stow" ]] || die "falta el marcador $STOW_DIR/.stow"
-    TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
-    [[ -d "$TARGET_DIR" ]] || die "el target no es un directorio existente: $TARGET_DIR"
-    [[ "$TARGET_DIR" != "/" ]] || die "se rechaza usar / como target de Stow"
-    if (( APPLY == 1 )); then
-      [[ -w "$TARGET_DIR" ]] || die "el target no es escribible: $TARGET_DIR"
-      if (( EUID == 0 )) && [[ -n "${SUDO_USER-}" ]]; then
-        die "no ejecute el bootstrap completo con sudo; el script eleva sólo el package manager"
-      fi
-    fi
+# Resolves the layers of this run: base tiers up to PROFILE plus the WM layers,
+# each after what it requires. A WM requires the desktop layer, so choosing one
+# raises the recorded profile to desktop.
+resolve_selected_layers() {
+  local wm
+  local -a requested=("$PROFILE")
+
+  for wm in "${WMS[@]}"; do
+    requested+=("wm/$wm")
+  done
+  SELECTED_LAYERS=()
+  resolve_layers "$LAYERS_DIR" SELECTED_LAYERS "${requested[@]}"
+
+  if [[ "$PROFILE" != desktop ]] && array_contains SELECTED_LAYERS desktop; then
+    info "Los WMs requieren el perfil desktop; se aplica desktop en lugar de $PROFILE"
+    PROFILE=desktop
   fi
 }
 
-prepare() {
+# Prints the profile a selected layer runs with.
+layer_profile() {
+  case "$1" in
+    wm/*) printf '%s' "${WM_PROFILES[${1#wm/}]:-$WM_PROFILE}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+# Prints the composite doctor label of a selected layer.
+layer_label() {
+  case "$1" in
+    wm/*) printf 'Window Manager (%s)' "${1#wm/}" ;;
+    *) printf 'Base (%s)' "$1" ;;
+  esac
+}
+
+# Common start of bootstrap, doctor and unlink: validates the request,
+# resolves the layers and prints the selection plan.
+prepare_selection() {
+  local execution_mode current_layer
+
   validate_features
-  preflight
-
-  if (( SYSTEM_ENABLED == 1 )); then
-    detect_platform
-    resolve_system_packages
-    detect_backend
-    classify_packages
-  fi
-  if (( STOW_ENABLED == 1 )); then
-    resolve_stow_packages
-  fi
-}
-
-print_plan() {
-  local execution_mode
+  command_exists realpath || die "falta el comando requerido: realpath"
+  TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
+  resolve_selected_layers
 
   if [[ "$COMMAND" == "doctor" ]]; then
     execution_mode="read-only"
@@ -1310,16 +1032,15 @@ print_plan() {
     execution_mode="dry-run"
   fi
 
-  info "Plan del repositorio base"
+  info "Plan de la selección"
   printf '  %-24s %s\n' 'Comando:' "$COMMAND"
   printf '  %-24s %s\n' 'Modo:' "$execution_mode"
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
   print_array "Features" FEATURES
-
-  local current_wm
-  for current_wm in "${WMS[@]}"; do
-    printf '  %-24s %s\n' "WM $current_wm:" "perfil ${WM_PROFILES[$current_wm]:-$WM_PROFILE} ($LAYERS_DIR/wm/$current_wm)"
+  for current_layer in "${SELECTED_LAYERS[@]}"; do
+    printf '  %-24s %s\n' "Capa $current_layer:" "perfil $(layer_profile "$current_layer")"
   done
+  printf '  %-24s %s\n' 'Target:' "$TARGET_DIR"
 
   if (( WALLPAPERS == 1 )); then
     printf '  %-24s %s\n' 'Wallpapers:' "$WALLPAPERS_PATH"
@@ -1334,158 +1055,38 @@ print_plan() {
   if (( HARNESS == 1 )); then
     printf '  %-24s %s\n' 'Agent Harness:' "$HARNESS_PATH"
   fi
-
-  if (( SYSTEM_ENABLED == 1 )); then
-    printf '  %-24s %s\n' 'Plataforma:' "$PLATFORM"
-    printf '  %-24s %s\n' 'Backend:' "$BACKEND"
-    print_array "Paquetes repo" REPO_PACKAGES
-    print_array "Paquetes AUR" AUR_PACKAGES
-    print_array "Paquetes externos" EXTERNAL_PACKAGES
-    print_array "Repo faltantes" MISSING_REPO_PACKAGES
-    print_array "AUR faltantes" MISSING_AUR_PACKAGES
-  fi
-  if (( STOW_ENABLED == 1 )); then
-    printf '  %-24s %s\n' 'Target:' "$TARGET_DIR"
-    print_array "Paquetes Stow" STOW_PACKAGES
-  fi
 }
 
-bootstrap() {
-  local plan_valid=1
+# Runs operation $1 with apply mode $2 on every selected layer, in reverse
+# order when $3 is "reverse". Stops at the first failing layer.
+run_selected_layers() {
+  local operation=$1 apply_mode=$2 order=${3:-forward}
+  local -a layers=("${SELECTED_LAYERS[@]}")
+  local index current_layer
 
-  prepare
-  print_plan
-
-  if (( SYSTEM_ENABLED == 1 )); then
-    show_package_commands || plan_valid=0
-    validate_package_plan || plan_valid=0
-  fi
-
-  if (( STOW_ENABLED == 1 )); then
-    validate_git_contract || plan_valid=0
-    ensure_no_link_collisions || plan_valid=0
-    if command_exists stow; then
-      if (( ${#LINK_REPLACE[@]} > 0 )); then
-        info "$(_t "Self-healing: ${#LINK_REPLACE[@]} symlink(s) will be replaced on --apply; skipping initial Stow simulation" "Autorreparación: se reemplazarán ${#LINK_REPLACE[@]} enlace(s) con --apply; omitiendo simulación inicial de Stow")"
-      else
-        info "$(_t "Native GNU Stow simulation" "Simulación nativa de GNU Stow")"
-        run_stow install 1 || plan_valid=0
-      fi
-    elif (( SYSTEM_ENABLED == 1 )) && array_contains MISSING_REPO_PACKAGES stow; then
-      warn "Stow aún no está instalado; el preflight interno pasó y el perfil lo instalará antes de enlazar"
+  for (( index = 0; index < ${#layers[@]}; index++ )); do
+    if [[ "$order" == reverse ]]; then
+      current_layer=${layers[${#layers[@]} - 1 - index]}
     else
-      error "GNU Stow no está instalado"
-      plan_valid=0
+      current_layer=${layers[index]}
     fi
-  fi
-
-  (( plan_valid == 1 )) || die "el preflight falló; no se modificó nada"
-
-  if (( APPLY == 0 )); then
-    info "Dry-run completado; vuelva a ejecutar con --apply para aplicar este plan"
-    return 0
-  fi
-
-  if (( SYSTEM_ENABLED == 1 )); then
-    execute_package_install || die "falló la instalación o su validación"
-  fi
-
-  if (( STOW_ENABLED == 1 )); then
-    command_exists stow || die "GNU Stow no quedó disponible después de instalar paquetes"
-    ensure_no_link_collisions || die "apareció una colisión antes de enlazar"
-    if (( ${#LINK_REPLACE[@]} > 0 )); then
-      info "$(_t "Replacing ${#LINK_REPLACE[@]} obsolete or absolute repository symlink(s)" "Reemplazando ${#LINK_REPLACE[@]} enlace(s) obsoletos o absolutos del repositorio")"
-      for replace_target in "${LINK_REPLACE[@]}"; do
-        rm -f -- "$replace_target"
-      done
+    if ! run_layer "$LAYERS_DIR" "$current_layer" "$operation" "$(layer_profile "$current_layer")" "$apply_mode"; then
+      FAILED_LAYER=$current_layer
+      return 1
     fi
-    info "Última simulación de GNU Stow antes de aplicar"
-    run_stow install 1 || die "la simulación de GNU Stow falló"
-    info "Aplicando enlaces GNU Stow"
-    run_stow install 0 || die "GNU Stow no pudo crear los enlaces"
-    validate_links_installed || die "falló la validación posterior de enlaces"
-    prune_dangling_dotfiles_links 1
-    apply_session_preferences
-    apply_bat_cache
-    link_cli_command
-  fi
-
-  if (( SYSTEM_ENABLED == 1 )); then
-    validate_zsh_syntax || die "falló la validación de configuración"
-    validate_alacritty_syntax || die "falló la validación de configuración"
-  fi
-  report_zsh_activation
-  info "Bootstrap completado"
+  done
 }
 
-doctor() {
-  local result=0
 
-  prepare
-  print_plan
 
-  if (( SYSTEM_ENABLED == 1 )); then
-    if (( ${#MISSING_REPO_PACKAGES[@]} > 0 || ${#MISSING_AUR_PACKAGES[@]} > 0 )); then
-      error "faltan paquetes del perfil"
-      result=1
-    else
-      info "Paquetes validados: ${#REPO_PACKAGES[@]} de repo y ${#AUR_PACKAGES[@]} de AUR"
-    fi
-    validate_package_plan || result=1
-    validate_zsh_syntax || result=1
-    validate_alacritty_syntax || result=1
-  fi
-
-  if (( STOW_ENABLED == 1 )); then
-    validate_git_contract || result=1
-    if ! command_exists stow; then
-      error "GNU Stow no está instalado"
-      result=1
-    fi
-    validate_links_installed || result=1
-    prune_dangling_dotfiles_links 0
-    validate_session_preferences || result=1
-    validate_cli_command || result=1
-  fi
-
-  report_zsh_activation
-
-  if (( result == 0 )); then
-    info "Doctor: todo correcto para el alcance seleccionado"
-  else
-    error "Doctor: se encontraron problemas"
-  fi
-  return "$result"
-}
-
-unlink_dotfiles() {
-  prepare
-  print_plan
-
-  command_exists stow || die "GNU Stow es necesario para retirar enlaces"
-  info "Simulación de unlink con GNU Stow"
-  run_stow delete 1 || die "la simulación de unlink falló; no se modificó nada"
-
-  if (( APPLY == 0 )); then
-    info "Dry-run completado; vuelva a ejecutar con --apply para retirar los enlaces"
-    return 0
-  fi
-
-  info "Retirando enlaces GNU Stow; no se eliminarán paquetes ni archivos ajenos"
-  run_stow delete 0 || die "GNU Stow no pudo retirar los enlaces"
-  prune_dangling_dotfiles_links 1
-  validate_links_unlinked || die "falló la validación posterior de unlink"
-  unlink_cli_command
-  info "Unlink completado"
-}
 
 bootstrap_with_optional_components() {
-  if (( ${#WMS[@]} > 0 )) && [[ "$APPLY" == 1 ]]; then
-    info "Preflight del WM antes de modificar la base"
-    run_wm_operation bootstrap 0 || die "falló el preflight de la capa $WM; no se modificó la base"
-  elif [[ -n "$WM" && "$APPLY" == 1 ]]; then
-    info "Preflight del WM antes de modificar la base"
-    run_wm_operation bootstrap 0 || die "falló el preflight de la capa $WM; no se modificó la base"
+  prepare_selection
+
+  if (( APPLY == 1 )); then
+    info "Preflight de todas las capas antes de modificar nada"
+    run_selected_layers bootstrap 0 || \
+      die "falló el preflight de la capa $FAILED_LAYER; no se modificó la base"
   fi
 
   if (( PRIVATE == 1 && APPLY == 1 )); then
@@ -1498,12 +1099,14 @@ bootstrap_with_optional_components() {
     run_harness_operation bootstrap 0 || die "falló el preflight de agent-harness; no se modificó la base"
   fi
 
-  bootstrap
-  run_wm_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa $WM"
-  (( APPLY == 0 )) || save_selection_receipt
+  run_selected_layers bootstrap "$APPLY" || die "falló el bootstrap de la capa $FAILED_LAYER"
+  if (( APPLY == 1 && STOW_ENABLED == 1 )); then
+    link_cli_command
+  fi
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
   run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
   run_harness_operation bootstrap "$APPLY" || die "falló el bootstrap de agent-harness"
+  (( APPLY == 0 )) || save_selection_receipt
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
     local -a sys_flags=()
@@ -1523,26 +1126,20 @@ bootstrap_with_optional_components() {
 }
 
 doctor_with_optional_components() {
-  local result=0
+  local result=0 current_layer
   local -a report_items=()
 
-  if doctor; then
-    report_items+=("  ✓ Base (dotfiles): OK")
-  else
-    report_items+=("  ✗ Base (dotfiles): FAIL")
-    result=1
-  fi
-
-  local current_wm
-  for current_wm in "${WMS[@]}"; do
-    if run_layer "$LAYERS_DIR" "wm/$current_wm" doctor "${WM_PROFILES[$current_wm]:-$WM_PROFILE}" 0; then
-      report_items+=("  ✓ Window Manager ($current_wm): OK")
+  prepare_selection
+  for current_layer in "${SELECTED_LAYERS[@]}"; do
+    if run_layer "$LAYERS_DIR" "$current_layer" doctor "$(layer_profile "$current_layer")" 0; then
+      report_items+=("  ✓ $(layer_label "$current_layer"): OK")
     else
-      report_items+=("  ✗ Window Manager ($current_wm): FAIL")
-      error "Doctor: falló la validación de la capa $current_wm"
+      report_items+=("  ✗ $(layer_label "$current_layer"): FAIL")
+      error "Doctor: falló la validación de la capa $current_layer"
       result=1
     fi
   done
+  (( STOW_ENABLED == 0 )) || validate_cli_command
 
   if (( WALLPAPERS == 1 )); then
     if run_wallpapers_operation doctor 0; then
@@ -1594,12 +1191,12 @@ doctor_with_optional_components() {
 }
 
 unlink_with_optional_components() {
-  if (( ${#WMS[@]} > 0 )) && [[ "$APPLY" == 1 ]]; then
-    info "Preflight de unlink del WM antes de modificar la base"
-    run_wm_operation unlink 0 || die "falló el preflight de unlink de la capa $WM; no se modificó la base"
-  elif [[ -n "$WM" && "$APPLY" == 1 ]]; then
-    info "Preflight de unlink del WM antes de modificar la base"
-    run_wm_operation unlink 0 || die "falló el preflight de unlink de la capa $WM; no se modificó la base"
+  prepare_selection
+
+  if (( APPLY == 1 )); then
+    info "Preflight de unlink de todas las capas antes de modificar nada"
+    run_selected_layers unlink 0 reverse || \
+      die "falló el preflight de unlink de la capa $FAILED_LAYER; no se modificó la base"
   fi
 
   if (( PRIVATE == 1 && APPLY == 1 )); then
@@ -1607,8 +1204,8 @@ unlink_with_optional_components() {
     run_private_operation unlink 0 || die "falló el preflight de unlink de la capa privada; no se modificó la base"
   fi
 
-  unlink_dotfiles
-  run_wm_operation unlink "$APPLY" || die "falló el unlink de la capa $WM"
+  run_selected_layers unlink "$APPLY" reverse || die "falló el unlink de la capa $FAILED_LAYER"
+  (( APPLY == 0 )) || unlink_cli_command
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
   run_private_operation unlink "$APPLY" || die "falló el unlink de la capa privada"
   run_harness_operation unlink "$APPLY" || die "falló el unlink de agent-harness"
@@ -1633,9 +1230,14 @@ load_selection_receipt() {
     case "${selection[PROFILE]:-}" in
       core|cli|desktop)
         PROFILE=${selection[PROFILE]}
-        restored+=("perfil $PROFILE")
+        ;;
+      *)
+        # Never install more than this machine recorded.
+        warn "perfil inválido en el recibo de selección: ${selection[PROFILE]:-vacío}; se usa core"
+        PROFILE=core
         ;;
     esac
+    restored+=("perfil $PROFILE")
   fi
   if (( ${#FEATURES[@]} == 0 )); then
     read -r -a entries <<< "${selection[FEATURES]:-}"

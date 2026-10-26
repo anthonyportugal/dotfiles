@@ -267,7 +267,7 @@ EOF
         2) return 0 ;;
       esac
       COMMAND="bootstrap"
-      bootstrap
+      bootstrap_with_optional_components
       return 0
       ;;
     2|3) # Window manager layer (with the base it builds on)

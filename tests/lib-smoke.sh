@@ -250,9 +250,11 @@ OPS_ROOT="$TEST_ROOT/ops-layers"
 OPS_LAYER="$OPS_ROOT/feat"
 OPS_TARGET="$TEST_ROOT/ops-home"
 mkdir -p "$OPS_LAYER/packages/repo" "$OPS_LAYER/packages/stow" "$OPS_LAYER/home/app/.config" "$OPS_TARGET" "$TEST_ROOT/ops-bin"
-printf 'profiles=core\nfeatures=extra-feat\nprune_links=.rcfile\n' > "$OPS_LAYER/layer.conf"
+printf 'profiles=core\nfeatures=extra-feat\nprune_links=.rcfile .foreign\n' > "$OPS_LAYER/layer.conf"
 printf 'pkg-core\n' > "$OPS_LAYER/packages/repo/core.txt"
 printf 'pkg-extra\n' > "$OPS_LAYER/packages/repo/extra-feat.txt"
+mkdir -p "$OPS_LAYER/packages/aur"
+printf 'pkg-extra-aur\n' > "$OPS_LAYER/packages/aur/extra-feat.txt"
 printf 'app\n' > "$OPS_LAYER/packages/stow/core.txt"
 : > "$OPS_LAYER/home/.stow"
 printf 'x\n' > "$OPS_LAYER/home/app/.config/app.conf"
@@ -278,13 +280,16 @@ output=$(layer_run bootstrap 0 2>&1)
 output=$(layer_run bootstrap 0 "FEATURES='extra-feat other-feat'" 2>&1)
 [[ "$output" =~ Paquetes\ repo:\ +pkg-core\ pkg-extra ]] || \
   fail "el plan no incluyó la feature seleccionada: $output"
+[[ "$output" =~ Paquetes\ AUR:\ +pkg-extra-aur ]] || \
+  fail "el plan no incluyó el manifiesto AUR de la feature: $output"
 
-# A dangling root link into the repository is pruned on apply; foreign ones stay.
+# A dangling root link into the repository is pruned on apply; a listed link
+# that points outside the repository stays.
 ln -s "$OPS_ROOT/feat/home/app/.rcfile" "$OPS_TARGET/.rcfile"
 ln -s /nonexistent/elsewhere "$OPS_TARGET/.foreign"
 layer_run bootstrap 1 "SYSTEM_ENABLED=0 STOW_ENABLED=1" >/dev/null 2>&1 || fail "el bootstrap de la capa de prueba falló"
 [[ ! -L "$OPS_TARGET/.rcfile" ]] || fail "prune_links no eliminó el enlace raíz huérfano"
-[[ -L "$OPS_TARGET/.foreign" ]] || fail "prune_links eliminó un enlace ajeno"
+[[ -L "$OPS_TARGET/.foreign" ]] || fail "prune_links eliminó un enlace listado pero ajeno al repositorio"
 [[ -L "$OPS_TARGET/.config/app.conf" ]] || fail "la capa de prueba no enlazó su paquete"
 
 # Target sanity checks are shared by every layer.

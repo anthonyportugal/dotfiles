@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# Reports whether Zsh is the login shell after linking the core layer.
+# Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
+
+set -Eeuo pipefail
+
+# Read by lib/colors.sh as the log prefix.
+# shellcheck disable=SC2034
+PROGRAM_NAME=core
+# shellcheck source=../../../lib/colors.sh
+source "$DOTFILES_LIB/colors.sh"
+# shellcheck source=../../../lib/core.sh
+source "$DOTFILES_LIB/core.sh"
+# shellcheck source=zsh-shell.sh
+source "$LAYER_DIR/hooks/zsh-shell.sh"
+
+report_zsh_activation

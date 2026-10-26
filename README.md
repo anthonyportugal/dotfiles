@@ -88,8 +88,8 @@ Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machin
    (~/.config/...)            (dotfiles-private)            (*.local.*)
 ```
 
-1. **Git Multi-Identity:** `home/git/.config/git/config` loads `~/.config/git/private.gitconfig` (if present) for personal/work emails and signing keys, followed by machine-specific `~/.config/git/local.gitconfig`.
-2. **Shell Environment:** `home/zsh/.zshrc` automatically sources `~/.config/zsh/private.zsh` (if present) for private aliases, environment variables, and work paths, followed by `~/.config/zsh/local.zsh`.
+1. **Git Multi-Identity:** `layers/core/home/git/.config/git/config` loads `~/.config/git/private.gitconfig` (if present) for personal/work emails and signing keys, followed by machine-specific `~/.config/git/local.gitconfig`.
+2. **Shell Environment:** `layers/core/home/zsh/.zshrc` automatically sources `~/.config/zsh/private.zsh` (if present) for private aliases, environment variables, and work paths, followed by `~/.config/zsh/local.zsh`.
 3. **Fail-Closed & Independent:** The absence of the private layer never breaks the public setup. No secrets, credentials, or private keys are ever tracked in public repositories.
 
 ---

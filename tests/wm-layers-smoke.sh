@@ -171,7 +171,8 @@ check_wm_backends() {
   if packages_plan "$wm" desktop "$out-pacman.out" --platform arch --backend pacman; then
     fail "$wm: pacman aceptó un paquete AUR faltante"
   fi
-  grep -q 'pacman sólo gestiona repositorios' "$out-pacman.out" || fail "$wm: pacman no explicó su límite"
+  # The desktop layer the WM requires may already stop pacman, so check the whole run.
+  grep -q 'pacman sólo gestiona repositorios' "$out-pacman.out.full" || fail "$wm: pacman no explicó su límite"
 }
 
 check_wm_backends bspwm 'brave-bin' 'polybar' 'bspwm.*xorg-setxkbmap'
