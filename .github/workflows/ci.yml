@@ -25,7 +25,10 @@ jobs:
 
       - name: Validate syntax (bash -n)
         run: |
-          bash -n bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/*
+          # bash -n only parses its first operand; the rest become arguments.
+          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/*; do
+            bash -n "$file"
+          done
 
       - name: Run ShellCheck
         run: |
