@@ -1,0 +1,397 @@
+#!/usr/bin/env bash
+# Single theme engine shared by every window manager. It parses a palette from
+# themes/palettes/, renders the shared outputs (GTK, Yazi, background,
+# metadata) plus every installed WM template directory, and atomically
+# promotes the result to $XDG_STATE_HOME/dotfiles/theme/current.
+
+set -Eeuo pipefail
+
+PROGRAM_NAME=${0##*/}
+SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}")
+DEFAULT_THEME=catppuccin-mocha-pink
+STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
+CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+THEME_ROOT="$STATE_HOME/dotfiles/theme"
+WM_TEMPLATES_DIR="$DATA_HOME/dotfiles/theme/templates"
+RELOAD_DIR="$DATA_HOME/dotfiles/theme/reload.d"
+PALETTES_DIR=''
+SHARED_TEMPLATES_DIR=''
+THEME_ID=''
+PALETTE=''
+RENDER_TEMP=''
+NAME_PATTERN='^[a-z0-9]+(-[a-z0-9]+)*$'
+
+declare -A COLORS=()
+declare -A EXPECTED=()
+
+fail() {
+  printf '%s: %s\n' "$PROGRAM_NAME" "$*" >&2
+  exit 1
+}
+
+warn() {
+  printf '%s: aviso: %s\n' "$PROGRAM_NAME" "$*" >&2
+}
+
+cleanup_render() {
+  if [[ -n "$RENDER_TEMP" && "$RENDER_TEMP" == "$THEME_ROOT"/.render.* && \
+        -d "$RENDER_TEMP" ]]; then
+    rm -rf -- "$RENDER_TEMP"
+  fi
+}
+trap cleanup_render EXIT
+
+usage() {
+  printf 'Uso: %s render [id]|set <id>|list|current|validate [id]|path\n' "$PROGRAM_NAME"
+}
+
+# The engine is stowed as a link into the checkout; the repository is the
+# first ancestor of the real script that holds themes/palettes.
+locate_repo() {
+  local dir=${SCRIPT_PATH%/*}
+
+  while [[ "$dir" != / ]]; do
+    if [[ -d "$dir/themes/palettes" ]]; then
+      PALETTES_DIR="$dir/themes/palettes"
+      SHARED_TEMPLATES_DIR="$dir/themes/templates"
+      return 0
+    fi
+    dir=${dir%/*}
+    [[ -n "$dir" ]] || dir=/
+  done
+  fail "no se encontró themes/palettes sobre $SCRIPT_PATH"
+}
+
+palette_path() {
+  printf '%s/%s.conf\n' "$PALETTES_DIR" "$1"
+}
+
+theme_exists() {
+  [[ "$1" =~ $NAME_PATTERN && -f "$(palette_path "$1")" ]]
+}
+
+resolve_theme_id() {
+  if [[ -n "${DOTFILES_THEME-}" ]]; then
+    printf '%s\n' "$DOTFILES_THEME"
+    return 0
+  fi
+  local saved=''
+  if [[ -r "$THEME_ROOT/selected" ]]; then
+    saved=$(<"$THEME_ROOT/selected")
+  fi
+  if [[ -n "$saved" ]] && theme_exists "$saved"; then
+    printf '%s\n' "$saved"
+  else
+    printf '%s\n' "$DEFAULT_THEME"
+  fi
+}
+
+declare_schema() {
+  local key
+
+  for key in \
+    schema id family flavour accent_name \
+    rosewater flamingo pink mauve red maroon peach yellow green teal sky \
+    sapphire blue lavender text subtext1 subtext0 overlay2 overlay1 overlay0 \
+    surface2 surface1 surface0 base mantle crust background background_alt \
+    background_deep surface surface_hover foreground foreground_muted accent \
+    urgent warning success; do
+    EXPECTED["$key"]=1
+  done
+}
+
+read_palette() {
+  local line key value
+
+  THEME_ID=$1
+  [[ "$THEME_ID" =~ $NAME_PATTERN ]] || fail "id de tema inseguro: $THEME_ID"
+  PALETTE=$(palette_path "$THEME_ID")
+  [[ -r "$PALETTE" ]] || fail "tema desconocido: $THEME_ID"
+  declare_schema
+  COLORS=()
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -n "$line" && "$line" != \#* ]] || continue
+    [[ "$line" == *=* ]] || fail "línea inválida en la paleta: $line"
+    key=${line%%=*}
+    value=${line#*=}
+    [[ -v "EXPECTED[$key]" ]] || fail "clave desconocida en la paleta: $key"
+    [[ ! -v "COLORS[$key]" ]] || fail "clave duplicada en la paleta: $key"
+    COLORS["$key"]=$value
+  done < "$PALETTE"
+
+  for key in "${!EXPECTED[@]}"; do
+    [[ -v "COLORS[$key]" ]] || fail "falta la clave de paleta: $key"
+  done
+
+  [[ "${COLORS[schema]}" == 1 ]] || fail 'schema de paleta no soportado'
+  [[ "${COLORS[id]}" == "$THEME_ID" ]] || fail 'el id no coincide con el tema solicitado'
+  [[ "${COLORS[family]}" =~ ^[a-z0-9-]+$ ]] || fail 'familia inválida'
+  [[ "${COLORS[flavour]}" =~ ^[a-z0-9-]+$ ]] || fail 'flavour inválido'
+  [[ "${COLORS[accent_name]}" =~ ^[a-z0-9-]+$ ]] || fail 'accent_name inválido'
+
+  for key in "${!COLORS[@]}"; do
+    case "$key" in
+      schema|id|family|flavour|accent_name)
+        ;;
+      *)
+        [[ "${COLORS[$key]}" =~ ^#[0-9a-fA-F]{6}$ ]] || \
+          fail "color inválido para $key"
+        ;;
+    esac
+  done
+}
+
+# Installed WM template directories, one per line, sorted.
+wm_template_dirs() {
+  local dir name
+
+  [[ -d "$WM_TEMPLATES_DIR" ]] || return 0
+  for dir in "$WM_TEMPLATES_DIR"/*/; do
+    [[ -d "$dir" ]] || continue
+    dir=${dir%/}
+    name=${dir##*/}
+    [[ "$name" =~ $NAME_PATTERN && "$name" != yazi ]] || \
+      fail "nombre de plantillas de WM inválido: $name"
+    printf '%s\n' "$dir"
+  done
+}
+
+# Template files below $1, relative to it, one per line, sorted.
+template_files() {
+  [[ -d "$1" ]] || return 0
+  (cd -- "$1" && find -L . -type f -printf '%P\n' | LC_ALL=C sort)
+}
+
+# Replaces {{key}} with the palette value and {{key.raw}} with the value
+# without its leading '#'. Any other {{...}} marker is an error.
+render_template() {
+  local source=$1 destination=$2 content='' key value
+
+  IFS= read -r -d '' content < "$source" || true
+  for key in "${!COLORS[@]}"; do
+    value=${COLORS[$key]}
+    content=${content//"{{$key.raw}}"/"${value#\#}"}
+    content=${content//"{{$key}}"/"$value"}
+  done
+  if [[ "$content" =~ \{\{[^}]*\}\} ]]; then
+    fail "marcador desconocido ${BASH_REMATCH[0]} en $source"
+  fi
+  mkdir -p -- "$(dirname -- "$destination")"
+  printf '%s' "$content" > "$destination"
+}
+
+render_tree() {
+  local source_dir=$1 destination_dir=$2 relative
+
+  while IFS= read -r relative; do
+    [[ -n "$relative" ]] || continue
+    render_template "$source_dir/$relative" "$destination_dir/$relative"
+  done < <(template_files "$source_dir")
+}
+
+render_all() {
+  local destination=$1 dir
+
+  render_tree "$SHARED_TEMPLATES_DIR" "$destination"
+  while IFS= read -r dir; do
+    render_tree "$dir" "$destination/${dir##*/}"
+  done < <(wm_template_dirs)
+  printf '%s\n' "${COLORS[background]}" > "$destination/background"
+  printf '%s\n' 'schema=1' "id=${COLORS[id]}" "family=${COLORS[family]}" \
+    "flavour=${COLORS[flavour]}" "accent_name=${COLORS[accent_name]}" \
+    > "$destination/metadata"
+}
+
+validate_outputs() {
+  local destination=$1 dir relative required
+
+  for required in gtk.css yazi/flavor.toml background metadata; do
+    [[ -s "$destination/$required" ]] || fail "output de tema vacío o ausente: $required"
+  done
+  grep -Fq "${COLORS[accent]}" "$destination/gtk.css" || \
+    fail 'GTK no recibió el acento del tema'
+  grep -Fq "${COLORS[accent]}" "$destination/yazi/flavor.toml" || \
+    fail 'Yazi no recibió el acento del tema'
+  grep -Fxq "id=${COLORS[id]}" "$destination/metadata" || \
+    fail 'metadata de tema inconsistente'
+  while IFS= read -r dir; do
+    while IFS= read -r relative; do
+      [[ -n "$relative" ]] || continue
+      [[ -s "$destination/${dir##*/}/$relative" ]] || \
+        fail "output de tema vacío o ausente: ${dir##*/}/$relative"
+    done < <(template_files "$dir")
+  done < <(wm_template_dirs)
+}
+
+# The revision covers the palette, this engine and every template, including
+# its path, so adding, renaming or editing a template renders a new revision.
+theme_digest() {
+  local dir relative digest
+
+  digest=$(
+    {
+      sha256sum < "$PALETTE"
+      sha256sum < "$SCRIPT_PATH"
+      while IFS= read -r relative; do
+        [[ -n "$relative" ]] || continue
+        printf 'shared/%s ' "$relative"
+        sha256sum < "$SHARED_TEMPLATES_DIR/$relative"
+      done < <(template_files "$SHARED_TEMPLATES_DIR")
+      while IFS= read -r dir; do
+        while IFS= read -r relative; do
+          [[ -n "$relative" ]] || continue
+          printf '%s/%s ' "${dir##*/}" "$relative"
+          sha256sum < "$dir/$relative"
+        done < <(template_files "$dir")
+      done < <(wm_template_dirs)
+    } | sha256sum
+  )
+  printf '%s\n' "${digest:0:12}"
+}
+
+link_yazi_flavor() {
+  local link="$CONFIG_HOME/yazi/flavors/theme.yazi"
+
+  [[ -d "$CONFIG_HOME/yazi" ]] || return 0
+  if [[ -e "$link" && ! -L "$link" ]]; then
+    warn "no se reemplaza $link: no es un enlace simbólico"
+    return 0
+  fi
+  mkdir -p -- "${link%/*}"
+  ln -sfn -- "$THEME_ROOT/current/yazi" "$link"
+}
+
+promote() {
+  local revision=$1 next_link="$THEME_ROOT/.current.$$"
+
+  if [[ -e "$THEME_ROOT/current" && ! -L "$THEME_ROOT/current" ]]; then
+    fail "$THEME_ROOT/current existe y no es un enlace simbólico"
+  fi
+  ln -s -- "$revision" "$next_link"
+  mv -Tf -- "$next_link" "$THEME_ROOT/current"
+  link_yazi_flavor
+}
+
+render_theme() {
+  local revision
+
+  mkdir -p -- "$THEME_ROOT"
+  command -v flock >/dev/null 2>&1 || fail 'flock es necesario para renderizar temas'
+  exec 9>"$THEME_ROOT/render.guard"
+  flock 9
+  revision="${COLORS[id]}-$(theme_digest)"
+
+  if [[ ! -d "$THEME_ROOT/$revision" ]]; then
+    RENDER_TEMP=$(mktemp -d "$THEME_ROOT/.render.XXXXXX")
+    render_all "$RENDER_TEMP"
+    validate_outputs "$RENDER_TEMP"
+    chmod -R u=rwX,go=rX -- "$RENDER_TEMP"
+    mv -- "$RENDER_TEMP" "$THEME_ROOT/$revision"
+    RENDER_TEMP=''
+  else
+    validate_outputs "$THEME_ROOT/$revision"
+  fi
+
+  promote "$revision"
+  printf '%s\n' "$THEME_ROOT/$revision"
+}
+
+gnome_accent() {
+  case "${COLORS[accent_name]}" in
+    blue|sapphire) printf 'blue\n' ;;
+    teal|sky) printf 'teal\n' ;;
+    green) printf 'green\n' ;;
+    yellow) printf 'yellow\n' ;;
+    peach) printf 'orange\n' ;;
+    red|maroon) printf 'red\n' ;;
+    pink|flamingo) printf 'pink\n' ;;
+    mauve|lavender) printf 'purple\n' ;;
+    *) printf 'slate\n' ;;
+  esac
+}
+
+# Live reload after `set`: the GNOME accent, then every WM reload hook. A
+# failing hook only warns; the theme is already promoted.
+reload_live() {
+  local hook
+
+  if command -v gsettings >/dev/null 2>&1; then
+    gsettings set org.gnome.desktop.interface accent-color "$(gnome_accent)" \
+      2>/dev/null || true
+  fi
+  [[ -d "$RELOAD_DIR" ]] || return 0
+  for hook in "$RELOAD_DIR"/*; do
+    [[ -f "$hook" && -x "$hook" ]] || continue
+    DOTFILES_THEME_DIR="$THEME_ROOT/current" "$hook" || \
+      warn "la recarga ${hook##*/} falló"
+  done
+}
+
+set_theme() {
+  theme_exists "$1" || fail "tema desconocido: $1"
+  read_palette "$1"
+  render_theme
+  printf '%s\n' "$1" > "$THEME_ROOT/selected"
+  reload_live
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send --urgency=low --app-name=dotfiles "Tema aplicado" \
+      "$1 (${COLORS[accent_name]}: ${COLORS[accent]})" 2>/dev/null || true
+  fi
+}
+
+list_themes() {
+  local palette
+
+  for palette in "$PALETTES_DIR"/*.conf; do
+    [[ -f "$palette" ]] || continue
+    palette=${palette##*/}
+    printf '%s\n' "${palette%.conf}"
+  done | LC_ALL=C sort
+}
+
+main() {
+  local command=${1-}
+  shift || true
+
+  locate_repo
+  case "$command" in
+    render)
+      (( $# <= 1 )) || { usage >&2; exit 2; }
+      read_palette "${1:-$(resolve_theme_id)}"
+      render_theme
+      ;;
+    set)
+      (( $# == 1 )) || { usage >&2; exit 2; }
+      set_theme "$1"
+      ;;
+    list)
+      list_themes
+      ;;
+    current)
+      read_palette "$(resolve_theme_id)"
+      printf '%s (acento: %s, %s)\n' "$THEME_ID" "${COLORS[accent_name]}" "${COLORS[accent]}"
+      ;;
+    validate)
+      (( $# <= 1 )) || { usage >&2; exit 2; }
+      read_palette "${1:-$(resolve_theme_id)}"
+      printf 'OK: %s\n' "$PALETTE"
+      ;;
+    path)
+      if [[ ! -d "$THEME_ROOT/current" ]]; then
+        read_palette "$(resolve_theme_id)"
+        render_theme >/dev/null
+      fi
+      printf '%s\n' "$THEME_ROOT/current"
+      ;;
+    -h|--help|help)
+      usage
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

@@ -30,11 +30,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Catppuccin palette (window manager layers)
+## Catppuccin palette
 
-`layers/wm/bspwm/themes/*/palette.conf` and `layers/wm/mangowm/themes/*/palette.conf`
-contain color values from the Catppuccin Mocha palette, used as data by the
-layer theme renderers. No GTK theme archive or application port is vendored.
+`themes/palettes/*.conf`, `layers/wm/bspwm/themes/*/palette.conf` and
+`layers/wm/mangowm/themes/*/palette.conf` contain color values from the
+Catppuccin Mocha palette, used as data by the theme renderers. No GTK theme archive or application port is vendored.
 
 - Project: https://github.com/catppuccin/catppuccin
 - License: MIT

@@ -76,6 +76,7 @@ Configurations are structured into small packages managed with [GNU Stow](https:
 | **`foot`** | Lightweight Wayland terminal emulator with Catppuccin Mocha theme | `desktop` |
 | **`alacritty`** | Cross-platform terminal emulator with Catppuccin Mocha theme | `desktop` |
 | **`xdg-defaults`** | GTK 3/4 `prefer-dark` settings, default mimeapps, and session hooks | `desktop` |
+| **`theme`** | `dotfiles-theme`, the single theme engine shared by every window manager (see [`themes/README.md`](themes/README.md)) | `desktop` |
 
 ---
 

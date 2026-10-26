@@ -1,3 +1,4 @@
 alacritty
 foot
 xdg-defaults
+theme

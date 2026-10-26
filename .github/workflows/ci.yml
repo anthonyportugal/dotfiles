@@ -26,13 +26,13 @@ jobs:
       - name: Validate syntax (bash -n)
         run: |
           # bash -n only parses its first operand; the rest become arguments.
-          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh; do
+          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh layers/desktop/home/theme/.local/bin/dotfiles-theme; do
             bash -n "$file"
           done
 
       - name: Run ShellCheck
         run: |
-          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh
+          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh layers/desktop/home/theme/.local/bin/dotfiles-theme
 
       - name: Scan for secrets
         run: |

@@ -76,6 +76,7 @@ Las configuraciones están divididas en pequeños paquetes gestionados con [GNU 
 | **`foot`** | Emulador de terminal Wayland ligero con tema Catppuccin Mocha | `desktop` |
 | **`alacritty`** | Emulador de terminal multiplataforma con tema Catppuccin Mocha | `desktop` |
 | **`xdg-defaults`** | Ajustes GTK 3/4 `prefer-dark`, asociaciones mimeapps y hooks de sesión | `desktop` |
+| **`theme`** | `dotfiles-theme`, el único motor de temas que comparten todos los gestores de ventanas (ver [`themes/README.md`](themes/README.md)) | `desktop` |
 
 ---
 
