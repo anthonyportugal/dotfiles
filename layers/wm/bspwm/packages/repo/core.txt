@@ -1,5 +1,4 @@
 bspwm
-stow
 sxhkd
 util-linux
 xorg-server

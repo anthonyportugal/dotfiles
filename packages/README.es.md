@@ -2,9 +2,10 @@
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Estos archivos declaran la intención de instalación del repositorio base. Son
-datos de entrada para `bin/dotfiles`; no son scripts y no deben ejecutarse
-directamente.
+Cada capa declara su intención de instalación en `layers/<capa>/packages/`, y
+`package-backends.txt` en este directorio guarda el orden de backends que comparten
+todas las capas. Son entradas declarativas para `bin/dotfiles`; no son scripts
+ejecutables ni deben ejecutarse directamente.
 
 ## Formato
 
@@ -29,9 +30,9 @@ Las fuentes que no son equivalentes se mantienen separadas:
 - `aur/`: fallback explícito, nunca mezclado con paquetes de repositorio;
 - `external/`: fuentes externas a pacman/AUR; actualmente no hay ninguna en base.
 
-Para el navegador Brave, CachyOS usa `cachyos/desktop.txt` (paquete binario
+Para el navegador Brave, CachyOS usa `layers/desktop/packages/cachyos/desktop.txt` (paquete binario
 nativo). En Arch Linux genérico, el resolver comprueba primero `core`, `extra`
-y `multilib`, y sólo entonces recurre a `aur/desktop-fallback.txt`. Las dos
+y `multilib`, y sólo entonces recurre a `layers/desktop/packages/aur/desktop-fallback.txt`. Las dos
 entradas representan alternativas del mismo paquete, no dos instalaciones
 concurrentes.
 
@@ -41,10 +42,10 @@ Los perfiles son acumulativos:
 
 | Perfil / feature | Hereda | Paquetes del sistema | Paquetes Stow |
 | --- | --- | --- | --- |
-| `core` | — | `repo/core.txt` | `stow/core.txt` |
-| `cli` | `core` | `repo/cli.txt` | `stow/cli.txt` |
-| `desktop` | `cli` | `repo/desktop.txt` más la fuente elegida para Brave | `stow/desktop.txt` |
-| `yazi-extras` | feature opt-in sobre `cli` o `desktop` | `repo/yazi-extras.txt` | ninguno |
+| `core` | — | `layers/core/packages/repo/core.txt` | `layers/core/packages/stow/core.txt` |
+| `cli` | `core` | `layers/cli/packages/repo/cli.txt` | `layers/cli/packages/stow/cli.txt` |
+| `desktop` | `cli` | `layers/desktop/packages/repo/desktop.txt` más la fuente elegida para Brave | `layers/desktop/packages/stow/desktop.txt` |
+| `yazi-extras` | feature opt-in sobre `cli` o `desktop` | `layers/cli/packages/repo/yazi-extras.txt` | ninguno |
 
 ### Detalle de perfiles
 
@@ -93,9 +94,9 @@ Los adaptadores respetan las capacidades reales de cada herramienta:
 - **pacman:** Sólo resuelve repositorios oficiales/binarios, abortando en preflight
   si se requiere un paquete AUR sin instalar.
 
-## Contrato con repositorios de Window Managers
+## Contrato con las capas de Window Managers
 
-Cada repositorio de WM o compositor (`dotfiles-mangowm`, `dotfiles-bspwm`) declara
-autónomamente sus propias dependencias y paquetes Stow, incluso si repite un paquete
-solicitado por la base. La idempotencia del gestor de paquetes de Arch resuelve
-la concurrencia sin que ningún repositorio inspeccione manifiestos ajenos.
+Las capas de gestores de ventanas (`layers/wm/<nombre>`) declaran `requires=desktop`
+en su `layer.conf`: elegir una aplica siempre antes las capas base `core`, `cli` y
+`desktop`. Por eso una capa de WM declara sólo lo que necesita su propia sesión y
+no repite paquetes que ya instalan las capas base.

@@ -1,2 +1,0 @@
-# CachyOS binary package. All other desktop entries use repo/desktop.txt.
-brave-bin

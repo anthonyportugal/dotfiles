@@ -22,7 +22,7 @@ Both profiles select the single Stow package `bspwm`. The default profile is `de
 
 Resolution respects the ecosystem's standard priority:
 
-1. CachyOS repositories (e.g., `brave-bin` via `packages/cachyos/desktop.txt`);
+1. CachyOS repositories (`cachyos/`, none needed by this layer today);
 2. Official Arch Linux repositories (`repo/`);
 3. AUR (`aur/`) only when an appropriate official binary package does not exist.
 
@@ -54,3 +54,8 @@ if an AUR package is missing.
 Manifests are completely autonomous. They may repeat utilities also declared by
 the base repository; package manager idempotency deduplicates installation
 cleanly without cross-repository manifest inspections.
+
+## Shared packages
+
+The layer requires `desktop`, so terminals, file manager, media player, fonts
+and the browser come from the base layers and are not repeated here.

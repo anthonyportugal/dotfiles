@@ -29,6 +29,21 @@ command -v stow >/dev/null 2>&1 || fail "GNU Stow es necesario para este smoke t
 [[ -d "$TEST_TMP_PARENT" ]] || fail "no existe el directorio temporal: $TEST_TMP_PARENT"
 TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-wm-layers-smoke.XXXXXX")
 
+# WM layers require desktop, so they must not repeat what core, cli and desktop
+# already install. Optional base features (yazi-extras) are not counted: a WM
+# may need those packages without the feature.
+manifest_entries() {
+  cat -- "$@" | grep -v '^[[:space:]]*#' | grep -v '^[[:space:]]*$' | sort -u || true
+}
+mapfile -t base_manifests < <(find "$REPO_ROOT"/layers/{core,cli,desktop}/packages \
+  \( -path '*/repo/*.txt' -o -path '*/cachyos/*.txt' -o -name '*-fallback.txt' \) ! -name 'yazi-extras.txt')
+base_packages=$(manifest_entries "${base_manifests[@]}")
+for manifest in "$REPO_ROOT"/layers/wm/*/packages/{repo,aur,cachyos,external}/*.txt; do
+  [[ -f "$manifest" ]] || continue
+  repeated=$(manifest_entries "$manifest" | comm -12 - <(printf '%s\n' "$base_packages"))
+  [[ -z "$repeated" ]] || fail "${manifest#"$REPO_ROOT"/} repite paquetes de las capas base: ${repeated//$'\n'/ }"
+done
+
 # Prints the part of output file $1 that belongs to the plan of layer $2.
 layer_section() {
   awk -v header="Plan de la capa $2" '
@@ -175,7 +190,7 @@ check_wm_backends() {
   grep -q 'pacman sólo gestiona repositorios' "$out-pacman.out.full" || fail "$wm: pacman no explicó su límite"
 }
 
-check_wm_backends bspwm 'brave-bin' 'polybar' 'bspwm.*xorg-setxkbmap'
+check_wm_backends bspwm 'i3lock-color' 'polybar' 'bspwm.*xorg-setxkbmap'
 check_wm_backends mangowm 'swaylock-effects.*wlogout' 'mangowm.*brightnessctl.*wf-recorder' 'mangowm.*swaylock-effects'
 
 printf 'OK: capas de WM validadas a través de bin/dotfiles (recibos, perfiles, colisiones, unlink y backends)\n'

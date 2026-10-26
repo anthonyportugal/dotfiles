@@ -1,11 +1,9 @@
-foot
 fuzzel
 mako
 mangowm
 pipewire
 pipewire-pulse
 polkit-gnome
-stow
 swaybg
 swayidle
 util-linux

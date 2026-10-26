@@ -22,7 +22,7 @@ Ambos perfiles seleccionan el único paquete Stow `bspwm`. El perfil predetermin
 
 La resolución respeta la prioridad estándar del ecosistema:
 
-1. Repositorios de CachyOS (e.g., `brave-bin` en `packages/cachyos/desktop.txt`);
+1. Repositorios de CachyOS (`cachyos/`, ninguno necesario hoy para esta capa);
 2. Repositorios oficiales de Arch Linux (`repo/`);
 3. AUR (`aur/`) cuando no existe un paquete binario oficial equivalente.
 
@@ -45,3 +45,8 @@ La detección automática intenta Shelly sólo en CachyOS y continúa con `paru`
 Los manifiestos son completamente autónomos. Pueden declarar utilidades que
 también solicita la base; el gestor de paquetes deduplica la instalación de forma
 idempotente y este repositorio no consulta manifiestos externos.
+
+## Paquetes compartidos
+
+La capa requiere `desktop`, así que terminales, gestor de archivos, reproductor,
+fuentes y navegador vienen de las capas base y no se repiten aquí.

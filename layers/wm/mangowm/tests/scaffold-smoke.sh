@@ -77,7 +77,8 @@ assert_manifest_line "$REPO_ROOT/packages/cachyos/core.txt" swaylock-effects
 assert_manifest_line "$REPO_ROOT/packages/cachyos/desktop.txt" wlogout
 assert_manifest_line "$REPO_ROOT/packages/aur/core-fallback.txt" swaylock-effects
 assert_manifest_line "$REPO_ROOT/packages/aur/desktop-fallback.txt" wlogout
-assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" foot
+# foot comes from the desktop layer every WM layer requires.
+assert_manifest_line "$MONOREPO_ROOT/layers/desktop/packages/repo/desktop.txt" foot
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" fuzzel
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swayidle
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" waybar

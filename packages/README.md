@@ -2,9 +2,10 @@
 
 *Read this in other languages:* [Español](README.es.md)
 
-These files declare the installation requirements for the base repository. They
-serve as declarative inputs for `bin/dotfiles`; they are not executable scripts
-and must not be run directly.
+Each layer declares its installation requirements under
+`layers/<layer>/packages/`, and `package-backends.txt` in this directory holds the
+backend order every layer shares. They are declarative inputs for `bin/dotfiles`;
+they are not executable scripts and must not be run directly.
 
 ## Format
 
@@ -28,9 +29,9 @@ Distinct package sources are maintained separately:
 - `aur/`: Explicit fallback source, never mixed with binary repository packages;
 - `external/`: Sources outside pacman/AUR; none are currently declared in base.
 
-For the Brave browser, CachyOS utilizes `cachyos/desktop.txt` (native optimized
+For the Brave browser, CachyOS utilizes `layers/desktop/packages/cachyos/desktop.txt` (native optimized
 binary). On generic Arch Linux, the resolver checks `core`, `extra`, and
-`multilib` first, falling back to `aur/desktop-fallback.txt` only when absent.
+`multilib` first, falling back to `layers/desktop/packages/aur/desktop-fallback.txt` only when absent.
 Both entries represent alternative sources for the same package, not duplicate
 installations.
 
@@ -40,10 +41,10 @@ Profiles are cumulative:
 
 | Profile / Feature | Inherits | System Packages | Stow Packages |
 | --- | --- | --- | --- |
-| `core` | — | `repo/core.txt` | `stow/core.txt` |
-| `cli` | `core` | `repo/cli.txt` | `stow/cli.txt` |
-| `desktop` | `cli` | `repo/desktop.txt` plus selected Brave source | `stow/desktop.txt` |
-| `yazi-extras` | Opt-in feature over `cli` or `desktop` | `repo/yazi-extras.txt` | None |
+| `core` | — | `layers/core/packages/repo/core.txt` | `layers/core/packages/stow/core.txt` |
+| `cli` | `core` | `layers/cli/packages/repo/cli.txt` | `layers/cli/packages/stow/cli.txt` |
+| `desktop` | `cli` | `layers/desktop/packages/repo/desktop.txt` plus selected Brave source | `layers/desktop/packages/stow/desktop.txt` |
+| `yazi-extras` | Opt-in feature over `cli` or `desktop` | `layers/cli/packages/repo/yazi-extras.txt` | None |
 
 ### Profile Details
 
@@ -92,9 +93,9 @@ Adapters respect each tool's native capabilities:
 - **pacman:** Resolves official binary repositories only, failing during preflight
   if an unmet AUR package is detected.
 
-## Contract with Window Manager Repositories
+## Contract with Window Manager Layers
 
-Each Window Manager or compositor repository (`dotfiles-mangowm`, `dotfiles-bspwm`)
-autonomously declares its own dependencies and Stow packages, even when repeating
-packages requested by base. The package manager's idempotency deduplicates
-installations seamlessly without cross-repository manifest inspections.
+Window manager layers (`layers/wm/<name>`) declare `requires=desktop` in their
+`layer.conf`: choosing one always applies the base `core`, `cli` and `desktop`
+layers first. A WM layer therefore declares only what its own session needs and
+does not repeat packages the base layers already install.
