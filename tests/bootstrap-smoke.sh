@@ -178,18 +178,26 @@ grep -q 'Plan de la capa wm/mangowm' "$TEST_ROOT/wm-both.out" || fail "--wm both
 grep -q 'Plan de la capa wm/bspwm' "$TEST_ROOT/wm-both.out" || fail "--wm both no incluyó BSPWM"
 
 # A failure inside a layer operation must stop it, even when nothing checks
-# that command explicitly (here the WM receipt cannot be written).
-ERREXIT_TARGET="$TEST_ROOT/errexit target"
-mkdir -p "$ERREXIT_TARGET/.local/state/dotfiles"
-chmod 555 "$ERREXIT_TARGET/.local/state/dotfiles"
-if "$DOTFILES" bootstrap --profile core --stow-only --target "$ERREXIT_TARGET" \
-    --wm bspwm --apply > "$TEST_ROOT/wm-errexit.out" 2>&1; then
+# that command explicitly (here the WM receipt cannot be written). Root ignores
+# directory permissions, so the check only runs as a regular user.
+if (( EUID != 0 )); then
+  ERREXIT_TARGET="$TEST_ROOT/errexit target"
+  mkdir -p "$ERREXIT_TARGET/.local/state/dotfiles"
+  chmod 555 "$ERREXIT_TARGET/.local/state/dotfiles"
+  if "$DOTFILES" bootstrap --profile core --stow-only --target "$ERREXIT_TARGET" \
+      --wm bspwm --apply > "$TEST_ROOT/wm-errexit.out" 2>&1; then
+    chmod 755 "$ERREXIT_TARGET/.local/state/dotfiles"
+    fail "bootstrap terminó bien aunque no pudo escribir el recibo de la capa"
+  fi
   chmod 755 "$ERREXIT_TARGET/.local/state/dotfiles"
-  fail "bootstrap terminó bien aunque no pudo escribir el recibo de la capa"
-fi
-chmod 755 "$ERREXIT_TARGET/.local/state/dotfiles"
-if grep -q 'Bootstrap de la capa wm/bspwm completado' "$TEST_ROOT/wm-errexit.out"; then
-  fail "la capa informó éxito después de un fallo no comprobado"
+  # The layer must have reached its apply step, so the failure came from it.
+  grep -q 'Aplicando enlaces GNU Stow' "$TEST_ROOT/wm-errexit.out" || \
+    fail "el bootstrap falló antes de que la capa llegara a aplicar"
+  [[ -L "$ERREXIT_TARGET/.config/bspwm/bspwmrc" ]] || \
+    fail "la capa no enlazó antes del fallo del recibo"
+  if grep -q 'Bootstrap de la capa wm/bspwm completado' "$TEST_ROOT/wm-errexit.out"; then
+    fail "la capa informó éxito después de un fallo no comprobado"
+  fi
 fi
 
 # Si el preflight de la capa falla, la base no debe llegar a crear ningún enlace.

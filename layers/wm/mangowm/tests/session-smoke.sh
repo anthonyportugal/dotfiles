@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
-MANGO="$REPO_ROOT/bin/mango"
+DOTFILES="$REPO_ROOT/../../../bin/dotfiles"
 TEST_ROOT=''
 LOCK_PID=''
 
@@ -39,7 +39,7 @@ mkdir -p "$TARGET" "$STATE" "$RUNTIME" "$FAKE_BIN" "$MEDIA_ROOT"
 : > "$LOG"
 : > "$SERVICE_STATE"
 
-"$MANGO" bootstrap --profile desktop \
+"$DOTFILES" bootstrap --profile core --wm mangowm --wm-profile desktop \
   --stow-only --target "$TARGET" --apply >/dev/null 2>&1
 
 for managed_path in \
@@ -221,9 +221,9 @@ grep -Fqx "bind=SUPER,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo Super+W para seleccionar wallpaper'
 
-"$MANGO" doctor --profile desktop \
+"$DOTFILES" doctor --profile core --wm mangowm --wm-profile desktop \
   --stow-only --target "$TARGET" >/dev/null 2>&1
-"$MANGO" unlink --profile desktop \
+"$DOTFILES" unlink --profile core --wm mangowm --wm-profile desktop \
   --stow-only --target "$TARGET" --apply >/dev/null 2>&1
 [[ ! -e "$TARGET/.config/mango/config.conf" ]] || fail 'unlink dejó enlaces de sesión'
 

@@ -26,13 +26,13 @@ jobs:
       - name: Validate syntax (bash -n)
         run: |
           # bash -n only parses its first operand; the rest become arguments.
-          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/wm/*/hooks/*; do
+          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh; do
             bash -n "$file"
           done
 
       - name: Run ShellCheck
         run: |
-          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/wm/*/hooks/*
+          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh
 
       - name: Scan for secrets
         run: |
@@ -62,10 +62,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install dependencies (stow, zsh)
+      - name: Install dependencies (stow, zsh, jq, shellcheck)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq stow zsh
+          sudo apt-get install -y -qq stow zsh jq shellcheck
 
       - name: Validate Zsh configuration syntax (zsh -n)
         run: |
@@ -75,5 +75,5 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          chmod +x tests/*.sh bin/dotfiles install.sh
+          chmod +x tests/*.sh layers/wm/*/tests/*.sh bin/dotfiles install.sh
           ./tests/smoke.sh

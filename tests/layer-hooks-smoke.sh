@@ -98,6 +98,11 @@ output=$(run_hook "$copy" validate bootstrap 2>&1) && fail "validate de mangowm 
 [[ "$output" == *"desactivar blur"* ]] || fail "validate de mangowm falló por otra causa: $output"
 run_hook "$copy" validate unlink >/dev/null 2>&1 || fail "unlink de mangowm quedó bloqueado por la configuración"
 
+copy=$(copy_layer mangowm)
+printf 'unexpected=1\n' >> "$copy/home/mango/.config/mango/config.conf"
+output=$(run_hook "$copy" validate bootstrap 2>&1) && fail "validate de mangowm aceptó una directiva fuera del entrypoint"
+[[ "$output" == *"directiva fuera del entrypoint modular"* ]] || fail "validate de mangowm falló por otra causa: $output"
+
 # mangowm: post-link renders the theme under the target's XDG state.
 layer="$REPO_ROOT/layers/wm/mangowm"
 [[ -x "$layer/hooks/post-link" ]] || fail "falta el hook ejecutable layers/wm/mangowm/hooks/post-link"

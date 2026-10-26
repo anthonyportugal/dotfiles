@@ -62,7 +62,8 @@ _layer_setup() {
   MISSING_REPO_PACKAGES=()
   MISSING_AUR_PACKAGES=()
 
-  if read_receipt "$LAYER_RECEIPT" layer_receipt; then
+  # The receipt only matters when no backend was requested explicitly.
+  if [[ "$BACKEND_REQUEST" == auto ]] && read_receipt "$LAYER_RECEIPT" layer_receipt; then
     restore_saved_backend "${layer_receipt[BACKEND]:-}"
   fi
 }
