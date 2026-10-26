@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+export XDG_CURRENT_DESKTOP=mango
+export XDG_SESSION_DESKTOP=mango
+export XDG_SESSION_TYPE=wayland
+
+start_unit() {
+  local name=$1
+  shift
+
+  if systemctl --user --quiet is-active "$name.service"; then
+    return 0
+  fi
+  systemctl --user reset-failed "$name.service" >/dev/null 2>&1 || true
+  systemd-run --user --quiet --collect --unit="$name" \
+    --property=Restart=on-failure \
+    --property=RestartSec=1s \
+    -- "$@"
+}
+
+if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+  dbus-update-activation-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE \
+    XDG_CONFIG_HOME XDG_STATE_HOME GTK_THEME \
+    GDK_BACKEND QT_QPA_PLATFORM QT_WAYLAND_DISABLE_WINDOWDECORATION \
+    MOZ_ENABLE_WAYLAND ELECTRON_OZONE_PLATFORM_HINT SDL_VIDEODRIVER
+fi
+
+theme_dir=$(mangowm_theme_dir)
+runtime_dir=$(mangowm_runtime_dir)
+
+# La preferencia GTK global pertenece al repositorio base. Este contrato
+# opcional mantiene MangoWM instalable por separado y vuelve a aplicar el
+# default de sesión sólo cuando el entrypoint público está disponible.
+if [[ -x "$HOME/.local/lib/dotfiles/session-preferences" ]]; then
+  if ! "$HOME/.local/lib/dotfiles/session-preferences" apply; then
+    printf '%s\n' \
+      'mangowm: no se pudo aplicar el modo oscuro; ejecute dotfiles doctor' >&2
+  fi
+fi
+
+start_unit mangowm-mako mako --config "$theme_dir/mako.conf"
+start_unit mangowm-swayidle swayidle -w -C "$XDG_CONFIG_HOME/swayidle/config"
+if command -v wayland-pipewire-idle-inhibit >/dev/null 2>&1; then
+  start_unit mangowm-idle-inhibit wayland-pipewire-idle-inhibit
+fi
+
+if [[ -x "$HOME/.local/lib/mangowm/wallpaper" ]]; then
+  "$HOME/.local/lib/mangowm/wallpaper" restore
+else
+  start_unit mangowm-swaybg swaybg -c "$(<"$theme_dir/background")"
+fi
+
+if [[ -r "$XDG_CONFIG_HOME/waybar/config.json" ]] && command -v waybar >/dev/null 2>&1; then
+  start_unit mangowm-waybar waybar \
+    --config "$XDG_CONFIG_HOME/waybar/config.json" \
+    --style "$theme_dir/waybar.css"
+fi
+
+polkit_agent=/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+if [[ -x "$polkit_agent" ]]; then
+  start_unit mangowm-polkit "$polkit_agent"
+else
+  mangowm_notify critical 'Polkit no disponible' \
+    'No se encontró el agente de polkit-gnome; las acciones privilegiadas pueden fallar.'
+fi
+
+if [[ -x "$HOME/.local/lib/mangowm/night-light" ]]; then
+  "$HOME/.local/lib/mangowm/night-light" restore
+fi
+
+if [[ -x "$HOME/.local/lib/mangowm/monitors" ]]; then
+  "$HOME/.local/lib/mangowm/monitors" apply >/dev/null 2>&1 || true
+  start_unit mangowm-monitors "$HOME/.local/lib/mangowm/monitors" watch
+fi
+
+printf '%s\n' "$$" > "$runtime_dir/session-start.pid"

@@ -1,0 +1,15 @@
+blueman
+brightnessctl
+gammastep
+grim
+imagemagick
+libnotify
+playerctl
+satty
+slurp
+ttf-jetbrains-mono
+ttf-nerd-fonts-symbols-mono
+waybar
+wf-recorder
+xdg-user-dirs
+xwayland-satellite

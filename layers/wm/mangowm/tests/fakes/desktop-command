@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+name=${0##*/}
+: "${MANGOWM_TEST_LOG:?MANGOWM_TEST_LOG no está definida}"
+printf -v command_line '%q ' "$name" "$@"
+printf '%s\n' "$command_line" >> "$MANGOWM_TEST_LOG"
+
+case "$name" in
+  pgrep)
+    exit 1
+    ;;
+  pkill)
+    exit 0
+    ;;
+  mmsg)
+    case "${1-}" in
+      get)
+        case "${2-}" in
+          keyboardlayout)
+            printf 'us\n'
+            ;;
+          all-monitors)
+            printf '{"monitors":[{"name":"eDP-1","active":true,"width":1920,"height":1080}]}\n'
+            ;;
+          *)
+            ;;
+        esac
+        ;;
+      *)
+        ;;
+    esac
+    ;;
+  powerprofilesctl)
+    case "${1-}" in
+      get)
+        printf 'balanced\n'
+        ;;
+      list)
+        printf '* balanced:\n    CpuDriver: placeholder\n'
+        ;;
+      *)
+        ;;
+    esac
+    ;;
+  slurp)
+    if [[ " $* " == *" -f "* ]]; then
+      printf '100 100\n'
+    elif [[ " $* " == *" -p "* ]]; then
+      printf '100,100 1x1\n'
+    else
+      printf '10,20 300x200\n'
+    fi
+    ;;
+  grim)
+    out_file="${!#}"
+    if [[ "$out_file" != "-" && "$out_file" != grim && -n "$out_file" && "$out_file" != -* ]]; then
+      command touch "$out_file"
+    else
+      printf 'P6\n1 1\n255\n\313\246\367'
+    fi
+    ;;
+  magick)
+    printf 'cba6f7\n'
+    ;;
+  satty|wl-copy)
+    command cat >/dev/null
+    ;;
+  xdg-user-dir)
+    printf '%s/%s\n' "${MANGOWM_TEST_MEDIA_ROOT:?}" "$1"
+    ;;
+  *)
+    ;;
+esac

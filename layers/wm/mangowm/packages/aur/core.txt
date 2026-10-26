@@ -1,0 +1,1 @@
+# Generic Arch AUR packages for core profile without binary repository alternatives.

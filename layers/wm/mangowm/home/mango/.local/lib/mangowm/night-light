@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+temp="${MANGOWM_NIGHT_TEMPERATURE:-3500}"
+command_name="${1:-toggle}"
+
+runtime_dir=$(mangowm_runtime_dir)
+state_file="$runtime_dir/night-light.state"
+
+is_enabled() {
+  [[ -f "$state_file" ]] && [[ "$(<"$state_file")" == "on" ]]
+}
+
+refresh_waybar() {
+  pkill -RTMIN+9 waybar 2>/dev/null || true
+}
+
+status_json() {
+  if is_enabled; then
+    printf '{"text":"󰖔","tooltip":"Luz nocturna: Activada (%s K)\\n\\nClic para desactivar","class":"on"}\n' "$temp"
+  else
+    printf '{"text":"󰖔","tooltip":"Luz nocturna: Desactivada\\n\\nClic para activar","class":"off"}\n'
+  fi
+}
+
+enable() {
+  mangowm_require gammastep
+  pkill -9 -x gammastep 2>/dev/null || true
+  sleep 0.05
+  gammastep -O "$temp" >/dev/null 2>&1 &
+  printf 'on\n' > "$state_file"
+  mangowm_notify low 'Luz nocturna activada' "${temp} K"
+  refresh_waybar
+}
+
+disable() {
+  pkill -x gammastep 2>/dev/null || true
+  rm -f "$state_file"
+  mangowm_notify low 'Luz nocturna desactivada'
+  refresh_waybar
+}
+
+case "$command_name" in
+  on)
+    enable
+    ;;
+  off)
+    disable
+    ;;
+  toggle)
+    if is_enabled; then
+      disable
+    else
+      enable
+    fi
+    ;;
+  status|waybar)
+    status_json
+    ;;
+  restore)
+    rm -f "$state_file"
+    pkill -x gammastep 2>/dev/null || true
+    ;;
+  *)
+    printf 'Uso: %s toggle|on|off|status|restore\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

@@ -1,0 +1,24 @@
+{
+  "label": "logout",
+  "action": "$HOME/.local/lib/mangowm/logout",
+  "text": "Logout",
+  "keybind": "e"
+}
+{
+  "label": "reboot",
+  "action": "systemctl reboot",
+  "text": "Reboot",
+  "keybind": "r"
+}
+{
+  "label": "suspend",
+  "action": "systemctl suspend",
+  "text": "Suspend",
+  "keybind": "u"
+}
+{
+  "label": "shutdown",
+  "action": "systemctl poweroff",
+  "text": "Shutdown",
+  "keybind": "s"
+}

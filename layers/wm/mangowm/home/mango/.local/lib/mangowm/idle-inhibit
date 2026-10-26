@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+runtime_dir=$(mangowm_runtime_dir)
+state_file="$runtime_dir/idle-inhibit.state"
+
+is_inhibited() {
+  if [[ -f "$state_file" ]]; then
+    [[ "$(<"$state_file")" == "on" ]]
+    return $?
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    if systemctl --user is-active --quiet mangowm-swayidle 2>/dev/null; then
+      return 1
+    else
+      return 0
+    fi
+  fi
+  return 1
+}
+
+refresh_waybar() {
+  pkill -RTMIN+11 waybar 2>/dev/null || true
+}
+
+inhibit() {
+  systemctl --user stop mangowm-swayidle 2>/dev/null || true
+  printf 'on\n' > "$state_file"
+  mangowm_notify normal "Inhibidor de Reposo" "󰅶 Modo presentación activo (pantalla siempre encendida)"
+  refresh_waybar
+}
+
+resume() {
+  rm -f "$state_file"
+  if ! systemctl --user start mangowm-swayidle 2>/dev/null; then
+    local config="${XDG_CONFIG_HOME:-$HOME/.config}/swayidle/config"
+    if command -v systemd-run >/dev/null 2>&1 && command -v swayidle >/dev/null 2>&1 && [[ -r "$config" ]]; then
+      systemd-run --user --quiet --collect --unit=mangowm-swayidle \
+        --property=Restart=on-failure \
+        --property=RestartSec=1s \
+        -- swayidle -w -C "$config" 2>/dev/null || true
+    fi
+  fi
+  mangowm_notify normal "Reposo Automático" "󰾪 Modo ahorro activo"
+  refresh_waybar
+}
+
+toggle() {
+  if is_inhibited; then
+    resume
+  else
+    inhibit
+  fi
+}
+
+status() {
+  if is_inhibited; then
+    printf 'inhibited\n'
+  else
+    printf 'active\n'
+  fi
+}
+
+status_json() {
+  if is_inhibited; then
+    printf '{"text":"󰅶","tooltip":"Modo presentación: pantalla siempre activa\\n\\nClic para desactivar","class":"activated"}\n'
+  else
+    printf '{"text":"󰾪","tooltip":"Modo ahorro: reposo automático\\n\\nClic para activar","class":"deactivated"}\n'
+  fi
+}
+
+case "${1:-toggle}" in
+  toggle)
+    toggle
+    ;;
+  status)
+    status
+    ;;
+  waybar|status-json)
+    status_json
+    ;;
+  *)
+    printf 'Uso: %s toggle|status|waybar\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

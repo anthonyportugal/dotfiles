@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require foot
+theme_dir=$(mangowm_theme_dir)
+exec foot --config="$theme_dir/foot.ini" "$@"

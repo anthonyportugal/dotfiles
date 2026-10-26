@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require grim
+mangowm_require magick
+mangowm_require slurp
+mangowm_require wl-copy
+
+# Create temporary buffer for clean screenshot before any overlay is drawn
+tmp_shot=$(mktemp -p "${XDG_RUNTIME_DIR:-/tmp}" mangowm-picker-XXXXXX.png)
+trap 'rm -f "$tmp_shot"' EXIT
+
+# Capture clean display frame before slurp renders its selection overlay
+if ! grim "$tmp_shot" 2>/dev/null; then
+  exit 1
+fi
+
+# Prompt user to select coordinates (Esc cancels cleanly)
+if ! point=$(slurp -p 2>/dev/null); then
+  exit 0
+fi
+[[ -n "$point" ]] || exit 0
+
+coord="${point%% *}"
+x="${coord%%,*}"
+y="${coord##*,}"
+
+# Extract pixel color at (x,y) from pre-captured frame
+if ! hex_raw=$(magick "$tmp_shot" -crop "1x1+${x}+${y}" -format "%[hex:p{0,0}]" info: 2>/dev/null); then
+  exit 1
+fi
+
+hex_digits="${hex_raw:0:6}"
+hex_color="#${hex_digits,,}"
+
+if [[ ! "$hex_color" =~ ^#[0-9a-f]{6}$ ]]; then
+  exit 1
+fi
+
+printf '%s' "$hex_color" | wl-copy --type text/plain
+mangowm_notify low 'Color copiado' "Color $hex_color copiado al portapapeles."
+printf '%s\n' "$hex_color"

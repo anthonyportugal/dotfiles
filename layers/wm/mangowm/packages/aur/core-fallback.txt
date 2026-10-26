@@ -1,0 +1,2 @@
+# Use only when swaylock-effects is absent from configured Arch binary repositories.
+swaylock-effects

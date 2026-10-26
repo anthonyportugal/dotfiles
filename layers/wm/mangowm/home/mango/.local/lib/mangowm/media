@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require playerctl
+case "${1-}" in
+  play-pause|next|previous|stop)
+    exec playerctl "$1"
+    ;;
+  *)
+    printf 'Uso: %s play-pause|next|previous|stop\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

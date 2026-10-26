@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+UNIT=mangowm-recording.service
+
+is_active() {
+  systemctl --user --quiet is-active "$UNIT" 2>/dev/null || pgrep -u "$UID" -x wf-recorder >/dev/null 2>&1
+}
+
+notify_waybar() {
+  pkill -RTMIN+10 waybar 2>/dev/null || true
+}
+
+recordings_dir() {
+  local videos_dir
+
+  if command -v xdg-user-dir >/dev/null 2>&1; then
+    videos_dir=$(xdg-user-dir VIDEOS)
+  else
+    videos_dir="$HOME/Videos"
+  fi
+  [[ -n "$videos_dir" ]] || videos_dir="$HOME/Videos"
+  printf '%s\n' "$videos_dir/Recordings"
+}
+
+get_active_output() {
+  local output=""
+  if command -v mmsg >/dev/null 2>&1; then
+    output=$(python3 -c '
+import json, subprocess
+try:
+    raw = subprocess.check_output(["mmsg", "get", "all-monitors"], text=True)
+    monitors = json.loads(raw).get("monitors", [])
+    active = next((m for m in monitors if m.get("active")), monitors[0] if monitors else None)
+    if active and active.get("name"):
+        print(active["name"])
+except Exception:
+    pass
+' 2>/dev/null || true)
+  fi
+  if [[ -z "$output" ]] && command -v wf-recorder >/dev/null 2>&1; then
+    output=$(wf-recorder -L 2>/dev/null | awk '/^[0-9]+\. Name: / { print $3; exit }' || true)
+  fi
+  printf '%s\n' "$output"
+}
+
+cleanup_audio() {
+  local modules_file
+  modules_file="$(mangowm_runtime_dir)/recording.audio_modules"
+  if [[ -r "$modules_file" ]]; then
+    while read -r mod_id; do
+      if [[ "$mod_id" =~ ^[0-9]+$ ]] && command -v pactl >/dev/null 2>&1; then
+        pactl unload-module "$mod_id" 2>/dev/null || true
+      fi
+    done < "$modules_file"
+    rm -f -- "$modules_file"
+  fi
+}
+
+start_recording() {
+  local mode=${1:-fullscreen}
+  local audio=${2:-none}
+  local destination_dir destination geometry destination_file mode_file
+  local -a recorder=(wf-recorder)
+
+  is_active && {
+    mangowm_notify normal 'Grabación activa' 'Detén la grabación actual antes de iniciar otra.'
+    return 0
+  }
+  mangowm_require wf-recorder
+  if [[ "$mode" == region ]]; then
+    mangowm_require slurp
+    if ! geometry=$(slurp); then
+      return 0
+    fi
+    [[ -n "$geometry" ]] || return 0
+    recorder+=(-g "$geometry")
+  else
+    local active_output
+    active_output=$(get_active_output)
+    if [[ -n "$active_output" ]]; then
+      recorder+=(-o "$active_output")
+    fi
+  fi
+
+  cleanup_audio
+
+  case "$audio" in
+    mic)
+      recorder+=(-a)
+      ;;
+    desktop)
+      local default_sink=""
+      if command -v pactl >/dev/null 2>&1; then
+        default_sink=$(pactl get-default-sink 2>/dev/null || true)
+      fi
+      if [[ -n "$default_sink" ]]; then
+        recorder+=("-a${default_sink}.monitor")
+      else
+        recorder+=(-a)
+      fi
+      ;;
+    both)
+      if command -v pactl >/dev/null 2>&1; then
+        local null_id="" loop1_id="" loop2_id="" def_sink="" def_source="" modules_file
+        def_sink=$(pactl get-default-sink 2>/dev/null || true)
+        def_source=$(pactl get-default-source 2>/dev/null || true)
+        null_id=$(pactl load-module module-null-sink sink_name=mangowm_rec_mix sink_properties=device.description="MangoWM-Record-Mix" 2>/dev/null || true)
+        if [[ -n "$null_id" ]]; then
+          modules_file="$(mangowm_runtime_dir)/recording.audio_modules"
+          printf '%s\n' "$null_id" > "$modules_file"
+          if [[ -n "$def_sink" ]]; then
+            loop1_id=$(pactl load-module module-loopback source="${def_sink}.monitor" sink=mangowm_rec_mix latency_msec=20 2>/dev/null || true)
+            [[ -n "$loop1_id" ]] && printf '%s\n' "$loop1_id" >> "$modules_file"
+          fi
+          if [[ -n "$def_source" ]]; then
+            loop2_id=$(pactl load-module module-loopback source="$def_source" sink=mangowm_rec_mix latency_msec=20 2>/dev/null || true)
+            [[ -n "$loop2_id" ]] && printf '%s\n' "$loop2_id" >> "$modules_file"
+          fi
+          recorder+=("-amangowm_rec_mix.monitor")
+        else
+          recorder+=(-a)
+        fi
+      else
+        recorder+=(-a)
+      fi
+      ;;
+    none|"")
+      ;;
+  esac
+
+  destination_dir=$(recordings_dir)
+  mkdir -p -- "$destination_dir"
+  destination="$destination_dir/$(date +'%Y-%m-%d_%H-%M-%S').mp4"
+  recorder+=(-f "$destination")
+
+  destination_file="$(mangowm_runtime_dir)/recording.destination"
+  printf '%s\n' "$destination" > "$destination_file"
+  mode_file="$(mangowm_runtime_dir)/recording.mode"
+  printf '%s\n' "$mode" > "$mode_file"
+
+  systemctl --user reset-failed "$UNIT" >/dev/null 2>&1 || true
+  systemd-run --user --quiet --collect --unit=mangowm-recording \
+    --property=KillSignal=SIGINT -- "${recorder[@]}"
+  notify_waybar
+
+  local audio_note=""
+  case "$audio" in
+    mic) audio_note=" (con micrófono)" ;;
+    desktop) audio_note=" (con audio del sistema)" ;;
+    both) audio_note=" (con micrófono y audio del sistema)" ;;
+  esac
+  mangowm_notify low 'Grabación iniciada' "$destination$audio_note"
+}
+
+stop_recording() {
+  local destination_file mode_file
+  destination_file="$(mangowm_runtime_dir)/recording.destination"
+  mode_file="$(mangowm_runtime_dir)/recording.mode"
+
+  cleanup_audio
+
+  if ! is_active; then
+    rm -f -- "$destination_file" "$mode_file"
+    notify_waybar
+    mangowm_notify low 'Grabación inactiva'
+    return 0
+  fi
+
+  if systemctl --user --quiet is-active "$UNIT" 2>/dev/null; then
+    systemctl --user stop "$UNIT" 2>/dev/null || true
+  fi
+
+  if pgrep -u "$UID" -x wf-recorder >/dev/null 2>&1; then
+    pkill -u "$UID" -INT -x wf-recorder 2>/dev/null || true
+    for _ in {1..20}; do
+      pgrep -u "$UID" -x wf-recorder >/dev/null 2>&1 || break
+      sleep 0.05
+    done
+    pkill -u "$UID" -KILL -x wf-recorder 2>/dev/null || true
+  fi
+
+  notify_waybar
+
+  local saved_msg='wf-recorder finalizó correctamente.'
+  if [[ -r "$destination_file" ]]; then
+    saved_msg="Guardado en: $(<"$destination_file")"
+    rm -f -- "$destination_file"
+  fi
+  rm -f -- "$mode_file"
+  mangowm_notify low 'Grabación guardada' "$saved_msg"
+}
+
+waybar_status() {
+  if is_active; then
+    printf '{"text":"󰻃 REC","class":"recording","tooltip":"Grabación de pantalla activa\\nClic para detener"}\n'
+  else
+    printf '{"text":"","class":"idle"}\n'
+  fi
+}
+
+menu() {
+  if is_active; then
+    stop_recording
+  fi
+  mangowm_require fuzzel
+  local theme_dir
+  theme_dir="$(mangowm_theme_dir)"
+  local choice
+  choice=$(printf '%s\n' \
+    "⏺️   Pantalla completa (Mudo)" \
+    "🎙️   Pantalla completa + Micrófono" \
+    "🔊   Pantalla completa + Audio PC" \
+    "🎙️🔊 Pantalla completa + Micrófono y Audio PC" \
+    "✂️   Región de pantalla (Mudo)" \
+    "🎙️   Región de pantalla + Micrófono" \
+    "🔊   Región de pantalla + Audio PC" \
+    "🎙️🔊 Región de pantalla + Micrófono y Audio PC" | \
+    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+      --prompt="Grabador de Pantalla ❯ " --lines=8 --width=46 || true)
+
+  case "$choice" in
+    *"Pantalla completa + Micrófono y Audio PC"*)
+      start_recording fullscreen both
+      ;;
+    *"Pantalla completa + Micrófono"*)
+      start_recording fullscreen mic
+      ;;
+    *"Pantalla completa + Audio PC"*)
+      start_recording fullscreen desktop
+      ;;
+    *"Pantalla completa"*)
+      start_recording fullscreen none
+      ;;
+    *"Región de pantalla + Micrófono y Audio PC"*)
+      start_recording region both
+      ;;
+    *"Región de pantalla + Micrófono"*)
+      start_recording region mic
+      ;;
+    *"Región de pantalla + Audio PC"*)
+      start_recording region desktop
+      ;;
+    *"Región de pantalla"*)
+      start_recording region none
+      ;;
+  esac
+}
+
+toggle_region() {
+  local mode=${1:-none}
+  if is_active; then
+    local mode_file prev_mode=""
+    mode_file="$(mangowm_runtime_dir)/recording.mode"
+    [[ -r "$mode_file" ]] && prev_mode=$(<"$mode_file")
+    stop_recording
+    if [[ "$prev_mode" != region ]]; then
+      start_recording region "$mode"
+    fi
+  else
+    start_recording region "$mode"
+  fi
+}
+
+case "${1:-toggle}" in
+  start)
+    start_recording fullscreen "${2:-none}"
+    ;;
+  start-region)
+    start_recording region "${2:-none}"
+    ;;
+  stop)
+    stop_recording
+    ;;
+  toggle)
+    if is_active; then
+      stop_recording
+    else
+      start_recording fullscreen "${2:-none}"
+    fi
+    ;;
+  toggle-region)
+    toggle_region "${2:-none}"
+    ;;
+  status)
+    if is_active; then printf 'recording\n'; else printf 'stopped\n'; fi
+    ;;
+  waybar)
+    waybar_status
+    ;;
+  menu)
+    menu
+    ;;
+  *)
+    printf 'Uso: %s start|start-region|stop|toggle|toggle-region|status|waybar|menu\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

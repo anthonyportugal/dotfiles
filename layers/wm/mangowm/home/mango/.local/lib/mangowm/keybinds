@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require fuzzel
+theme_dir=$(mangowm_theme_dir)
+
+keybindings=(
+  "   Super + Enter                 Terminal Foot (Tiling)"
+  "   Super + Shift + Enter         Terminal Foot (Ventana Flotante)"
+  "󰍉   Super + D                     Lanzador de Aplicaciones (Fuzzel)"
+  "📁  Super + E                     Explorador de Archivos (Thunar Flotante)"
+  "🌐  Super + B                     Navegador Web (Firefox / Zen / Chromium)"
+  "󰖔   Super + N                     Alternar Luz Nocturna (On / Off)"
+  "⚡  Super + Shift + P             Menú de Perfil de Energía"
+  "🖼️   Super + W                     Selector de Wallpapers"
+  "🎨  Super + Alt + T               Selector de Tema / Acento de Color"
+  "📶  Super + Shift + W             Menú de Redes Wi-Fi"
+  "📸  Super + S / Print             Captura de Pantalla Completa"
+  "📸  Super + Shift + S             Captura de Pantalla con Anotación (Satty)"
+  "🎯  Super + P                     Selector de Color de Pantalla"
+  "⏺️   Super + R                     Grabar Pantalla Completa (wf-recorder)"
+  "⏺️   Super + Shift + R             Grabar Región de Pantalla (wf-recorder)"
+  "🎙️   Super + Alt + R               Menú de Grabación (Opciones de Audio)"
+  "🔒  Super + L                     Bloquear Pantalla (Swaylock)"
+  "🚪  Super + X                     Menú de Salida / Apagado (wlogout)"
+  "🔄  Super + Escape                Recargar Configuración de MangoWM"
+  "🚪  Super + Shift + Escape        Salir de la Sesión de MangoWM"
+  "❌  Super + C                     Cerrar Ventana Activa"
+  "🪟  Super + Space                 Alternar Ventana Flotante"
+  "🪟  Super + F                     Alternar Pantalla Completa"
+  "🪟  Super + T                     Cambiar Layout (Dwindle / Tiling)"
+  "⌨️   Alt + Space                   Cambiar Distribución de Teclado (US / ES)"
+  "🪟  Super + Flechas               Mover Foco de Ventana"
+  "🪟  Super + Shift + Flechas       Intercambiar Posición de Ventana"
+  "🪟  Super + 1 .. 9                Cambiar a Espacio de Trabajo 1-9"
+  "🪟  Super + Shift + 1 .. 9        Mover Ventana al Espacio 1-9"
+  "🖱️   Super + Clic Izquierdo        Mover Ventana Flotante"
+  "🖱️   Super + Clic Derecho          Redimensionar Ventana Flotante"
+  "🔆  Teclas Fn / Super+Shift+↑↓    Subir / Bajar Brillo de Pantalla"
+  "🔊  Teclas Multimedia             Subir / Bajar / Mutear Volumen"
+  "🔊  Super + V / Clic Der. Volumen  Menú de Dispositivos de Audio (Salidas / Micrófonos)"
+  "❓  Super + ?                     Ver esta Guía de Atajos de Teclado"
+)
+
+printf '%s\n' "${keybindings[@]}" | \
+  fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
+    --prompt="Atajos de Teclado ❯ " --lines=15 --width=58 || true
