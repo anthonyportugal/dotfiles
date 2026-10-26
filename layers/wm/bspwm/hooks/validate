@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# Validates the bspwm layer before it is linked, checked or unlinked.
+# Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
+
+set -Eeuo pipefail
+
+# Read by lib/colors.sh as the log prefix.
+# shellcheck disable=SC2034
+PROGRAM_NAME=bspwm
+# shellcheck source=../../../../lib/colors.sh
+source "$DOTFILES_LIB/colors.sh"
+# shellcheck source=../../../../lib/core.sh
+source "$DOTFILES_LIB/core.sh"
+# shellcheck source=../../../../lib/layers.sh
+source "$DOTFILES_LIB/layers.sh"
+
+STOW_DIR="$LAYER_DIR/home"
+# Resolving the packages validates the profile and the manifests; the checks
+# below then inspect the single bspwm package directly.
+# shellcheck disable=SC2034
+declare -a STOW_PACKAGES=()
+read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
+
+validate_stow_scope() {
+  local package_root="$STOW_DIR/bspwm"
+  local config_parent="$package_root/.config"
+  local owned_root="$config_parent/bspwm"
+  local source_path unexpected_path=''
+
+  while IFS= read -r -d '' source_path; do
+    case "$source_path" in
+      "$config_parent"|"$owned_root"|"$owned_root"/*)
+        ;;
+      *)
+        unexpected_path=$source_path
+        break
+        ;;
+    esac
+  done < <(find "$package_root" -mindepth 1 -print0)
+
+  if [[ -n "$unexpected_path" ]]; then
+    error "contenido fuera del ownership de bspwm: ${unexpected_path#"$package_root"/}"
+    return 1
+  fi
+
+  info "Ownership Stow validado: sólo .config/bspwm"
+  return 0
+}
+
+validate_session_sources() {
+  local config_root="$STOW_DIR/bspwm/.config/bspwm"
+  local config_path
+  local result=0
+  local checked=0
+  local -a config_paths=("$config_root/bspwmrc")
+
+  while IFS= read -r -d '' config_path; do
+    config_paths+=("$config_path")
+  done < <(find "$config_root/scripts" -type f -print0)
+
+  for config_path in "${config_paths[@]}"; do
+    if ! bash -n "$config_path"; then
+      error "sintaxis Bash inválida: $config_path"
+      result=1
+    fi
+    if [[ ! -x "$config_path" ]]; then
+      error "el entrypoint de sesión no es ejecutable: $config_path"
+      result=1
+    fi
+    checked=$(( checked + 1 ))
+  done
+
+  if command_exists polybar; then
+    if ! BSPWM_POLYBAR_CENTER='date tray' \
+      BSPWM_POLYBAR_RIGHT='pulseaudio memory filesystem xkeyboard' \
+      polybar --config="$config_root/themes/catppuccin/polybar/config.ini" \
+        --dump=background main >/dev/null; then
+      error "Polybar no pudo analizar su configuración"
+      result=1
+    fi
+  fi
+
+  if command_exists rofi; then
+    local rofi_theme
+    for rofi_theme in launcher powermenu confirm; do
+      if ! rofi -no-config \
+        -theme "$config_root/themes/catppuccin/rofi/$rofi_theme.rasi" \
+        -dump-theme >/dev/null 2>&1; then
+        error "Rofi no pudo analizar el tema $rofi_theme.rasi"
+        result=1
+      fi
+    done
+  fi
+
+  (( result == 0 )) && info "Fuentes de sesión validadas ($checked scripts Bash)"
+  return "$result"
+}
+
+validate_portability() {
+  local config_root="$STOW_DIR/bspwm/.config/bspwm"
+  local matches
+
+  matches=$(grep -RInE \
+    '/etc/skel|/usr/share/archcraft|DP-[0-9]|HDMI-[0-9]|BAT[0-9]|amdgpu_bl[0-9]|enp[0-9]' \
+    "$config_root" || true)
+  if [[ -n "$matches" ]]; then
+    error "se encontraron dependencias Archcraft o nombres de hardware fijos"
+    printf '%s\n' "$matches" >&2
+    return 1
+  fi
+  info "Portabilidad validada: sin rutas Archcraft ni hardware conocido codificado"
+  return 0
+}
+
+# Unlinking only needs ownership; a broken config must not block its removal.
+validate_stow_scope || exit 1
+[[ "$OPERATION" != unlink ]] || exit 0
+
+result=0
+validate_session_sources || result=1
+validate_portability || result=1
+exit "$result"

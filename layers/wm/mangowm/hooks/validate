@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# Validates the mangowm layer before it is linked, checked or unlinked.
+# Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
+
+set -Eeuo pipefail
+
+# Read by lib/colors.sh as the log prefix.
+# shellcheck disable=SC2034
+PROGRAM_NAME=mangowm
+# shellcheck source=../../../../lib/colors.sh
+source "$DOTFILES_LIB/colors.sh"
+# shellcheck source=../../../../lib/core.sh
+source "$DOTFILES_LIB/core.sh"
+# shellcheck source=../../../../lib/layers.sh
+source "$DOTFILES_LIB/layers.sh"
+
+STOW_DIR="$LAYER_DIR/home"
+declare -a STOW_PACKAGES=()
+read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
+
+validate_stow_scope() {
+  local package_name package_root source_path relative_path
+  local unexpected_path=''
+
+  for package_name in "${STOW_PACKAGES[@]}"; do
+    package_root="$STOW_DIR/$package_name"
+    while IFS= read -r -d '' source_path; do
+      relative_path=${source_path#"$package_root"/}
+      case "$package_name:$relative_path" in
+        mango:.config|mango:.config/mango|mango:.config/mango/*|\
+        mango:.config/swayidle|mango:.config/swayidle/*|\
+        mango:.config/xdg-desktop-portal|\
+        mango:.config/xdg-desktop-portal/mango-portals.conf|\
+        mango:.config/waybar|mango:.config/waybar/*|\
+        mango:.config/wlogout|mango:.config/wlogout/*|\
+        mango:.local|mango:.local/bin|mango:.local/bin/mango-theme|\
+        mango:.local/bin/mangowm-session|mango:.local/lib|\
+        mango:.local/lib/mangowm|mango:.local/lib/mangowm/*)
+          ;;
+        *)
+          unexpected_path=$source_path
+          break
+          ;;
+      esac
+    done < <(find "$package_root" -mindepth 1 -print0)
+
+    if [[ -n "$unexpected_path" ]]; then
+      error "contenido fuera del ownership de MangoWM: ${unexpected_path#"$package_root"/}"
+      return 1
+    fi
+  done
+
+  info "Ownership Stow validado para sesión, perfil y features seleccionadas"
+  return 0
+}
+
+validate_mango_config() {
+  local config_path="$STOW_DIR/mango/.config/mango/config.conf"
+  local local_override="$STOW_DIR/mango/.config/mango/config.local.conf"
+  local required_file
+  local result=0
+
+  array_contains STOW_PACKAGES mango || return 0
+  [[ -f "$config_path" ]] || {
+    error "falta la configuración mínima de MangoWM: $config_path"
+    return 1
+  }
+  [[ ! -e "$local_override" ]] || {
+    error "el override local no debe versionarse dentro del paquete Stow"
+    return 1
+  }
+
+  if ! awk '
+    /^[[:space:]]*($|#)/ { next }
+    /^(source|source-optional)=[^[:space:]]+$/ { next }
+    { exit 1 }
+  ' "$config_path"; then
+    error "config.conf contiene una directiva fuera del entrypoint modular"
+    result=1
+  fi
+
+  for required_file in 10-session 20-input 30-layout 40-bindings; do
+    grep -Fxq "source=./conf.d/$required_file.conf" "$config_path" || {
+      error "config.conf no carga $required_file.conf"
+      result=1
+    }
+    [[ -s "$STOW_DIR/mango/.config/mango/conf.d/$required_file.conf" ]] || {
+      error "falta el módulo requerido $required_file.conf"
+      result=1
+    }
+  done
+  grep -Fxq 'source-optional=./config.local.conf' "$config_path" || {
+    error "config.conf debe cargar el override local de forma opcional"
+    result=1
+  }
+  grep -Fxq 'blur=0' "$STOW_DIR/mango/.config/mango/conf.d/30-layout.conf" || {
+    error "el layout debe desactivar blur por defecto"
+    result=1
+  }
+  grep -Fxq 'blur_optimized=1' "$STOW_DIR/mango/.config/mango/conf.d/30-layout.conf" || {
+    error "el layout debe conservar blur_optimized"
+    result=1
+  }
+
+  (( result == 0 )) && info "Configuración modular de MangoWM validada"
+  return "$result"
+}
+
+validate_portability() {
+  local package_name matches=''
+
+  for package_name in "${STOW_PACKAGES[@]}"; do
+    matches+=$(grep -RInE \
+      '/etc/skel|/usr/share/archcraft|DP-[0-9]|HDMI-[0-9]|BAT[0-9]|amdgpu_bl[0-9]|enp[0-9]' \
+      "$STOW_DIR/$package_name" || true)
+  done
+  if [[ -n "$matches" ]]; then
+    error "se encontraron dependencias Archcraft o nombres de hardware fijos"
+    printf '%s\n' "$matches" >&2
+    return 1
+  fi
+  info "Portabilidad validada: sin rutas Archcraft ni hardware conocido codificado"
+  return 0
+}
+
+validate_theme_source() {
+  local renderer="$STOW_DIR/mango/.local/bin/mango-theme"
+
+  array_contains STOW_PACKAGES mango || return 0
+  [[ -f "$renderer" ]] || {
+    error "falta el renderer de tema: $renderer"
+    return 1
+  }
+  bash "$renderer" validate >/dev/null || {
+    error "la paleta o el renderer de tema no son válidos"
+    return 1
+  }
+  info "Paleta y renderer de tema validados"
+}
+
+# Unlinking only needs ownership; a broken config must not block its removal.
+validate_stow_scope || exit 1
+[[ "$OPERATION" != unlink ]] || exit 0
+
+result=0
+validate_mango_config || result=1
+validate_theme_source || result=1
+validate_portability || result=1
+exit "$result"
