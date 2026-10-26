@@ -2,7 +2,8 @@
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Estos archivos son datos de entrada para `bin/mango`. El entrypoint valida cada
+Estos archivos son datos de entrada para el motor de capas (`bin/dotfiles --wm
+mangowm`, ver `lib/layer_ops.sh`). El motor valida cada
 línea, rechaza duplicados y conserva la procedencia antes de construir cualquier
 comando de instalación.
 

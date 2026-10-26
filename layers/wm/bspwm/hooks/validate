@@ -28,6 +28,10 @@ validate_stow_scope() {
   local owned_root="$config_parent/bspwm"
   local source_path unexpected_path=''
 
+  [[ -d "$owned_root" ]] || {
+    error "falta el paquete Stow de bspwm: $owned_root"
+    return 1
+  }
   while IFS= read -r -d '' source_path; do
     case "$source_path" in
       "$config_parent"|"$owned_root"|"$owned_root"/*)
@@ -55,6 +59,10 @@ validate_session_sources() {
   local checked=0
   local -a config_paths=("$config_root/bspwmrc")
 
+  [[ -d "$config_root/scripts" ]] || {
+    error "falta el directorio de scripts de sesión: $config_root/scripts"
+    return 1
+  }
   while IFS= read -r -d '' config_path; do
     config_paths+=("$config_path")
   done < <(find "$config_root/scripts" -type f -print0)

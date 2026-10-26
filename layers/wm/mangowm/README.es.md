@@ -1,7 +1,7 @@
 # MangoWM Dotfiles
 
 <p align="center">
-  <a href="https://github.com/anthonyportugal/dotfiles-mangowm/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-mangowm/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
+  <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
@@ -9,22 +9,18 @@
   <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
   <a href="https://mangowm.github.io/showcase/"><img src="https://img.shields.io/badge/Showcase-MangoWM-orange?style=flat-square&logo=github" alt="Showcase de MangoWM"></a>
   <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Tema-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Tema"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-blue.svg?style=flat-square" alt="Licencia"></a>
+  <a href="../../../LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-blue.svg?style=flat-square" alt="Licencia"></a>
 </p>
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor dinámico principal, destacada oficialmente en el [Showcase de MangoWM](https://mangowm.github.io/showcase/), y estilizada con la paleta **Catppuccin Mocha** (compatible con sus 14 acentos intercambiables). Funciona de manera totalmente independiente o compuesta dentro del ecosistema modular de dotfiles.
-
-<p align="center">
-  <img src="assets/screenshot.webp" alt="Vista previa del escritorio MangoWM" width="100%">
-</p>
+Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux** utilizando [MangoWM](https://github.com/mangowm/mango) como compositor dinámico principal, destacada oficialmente en el [Showcase de MangoWM](https://mangowm.github.io/showcase/), y estilizada con la paleta **Catppuccin Mocha** (compatible con sus 14 acentos intercambiables). Es una capa del monorepo de dotfiles.
 
 > [!TIP]
-> 🧩 **Ecosistema Modular de Dotfiles:**  
-> [Base y CLI](https://github.com/anthonyportugal/dotfiles) • **MangoWM (Wayland) [Actual]** • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Sistema](https://github.com/anthonyportugal/dotfiles-system)
-> 
-> Este repositorio proporciona un entorno de escritorio Wayland autónomo y listo para producción, integrándose limpiamente con el ecosistema de dotfiles base.
+> 🧩 **Capa del monorepo de dotfiles:**
+> [Base y CLI](../../../README.es.md) • [BSPWM (X11)](../bspwm/README.es.md) • **MangoWM (Wayland) [Actual]**
+>
+> Esta es una capa del monorepo de dotfiles. Se instala con `bin/dotfiles --wm mangowm` del repositorio.
 
 ---
 
@@ -93,68 +89,32 @@ La configuración de MangoWM está organizada en perfiles acumulativos administr
 
 ---
 
-## 🚀 Instalación y Perfiles
+## 🚀 Instalación
 
-La CLI incluida `./bin/mango` gestiona la instalación de paquetes, enlaces simbólicos y tematización dinámica con seguridad dry-run integrada.
-
-### 1. Asistente Interactivo de Configuración (Recomendado)
-
-Ejecuta el asistente interactivo para configurar tu perfil, alcance de instalación y seleccionar entre los 14 colores de acento Catppuccin Mocha:
+Este gestor de ventanas es una capa del monorepo de dotfiles (`layers/wm/mangowm`).
+No tiene CLI propia: el `bin/dotfiles` del repositorio la instala con el motor
+compartido, junto con la base sobre la que se apoya.
 
 ```bash
-# Lanzar el asistente interactivo (por defecto en inglés)
-./bin/mango setup
-
-# O lanzar directamente en español
-./bin/mango setup --lang es
+./bin/dotfiles setup                                   # asistente guiado
+./bin/dotfiles bootstrap --wm mangowm --apply             # base + MangoWM
+./bin/dotfiles bootstrap --wm mangowm --wm-profile core --apply
+./bin/dotfiles doctor --wm mangowm
+./bin/dotfiles unlink --wm mangowm --apply
 ```
 
-### 2. Despliegue Manual por Línea de Comandos
+`sync` y `update` re-aplican la selección guardada en cada máquina, así que la
+capa sigue instalada sin volver a pasar `--wm`.
 
-Si prefieres la ejecución mediante scripts o comandos no interactivos, utiliza `bootstrap`:
+### Contrato de la capa
 
-- **Experiencia de Escritorio Completa:**
-  ```bash
-  ./bin/mango bootstrap --profile desktop --apply
-  ```
-- **Sesión Core Minimalista (Solo Gestor de Ventanas):**
-  ```bash
-  ./bin/mango bootstrap --profile core --apply
-  ```
-
-### 3. Comandos Canónicos de la CLI
-
-- **Asistente de Configuración Guiada (`setup`):** Configura el perfil, alcance y color de acento de forma interactiva:
-  ```bash
-  ./bin/mango setup            # Inglés por defecto
-  ./bin/mango setup --lang es  # Interfaz en español
-  ```
-- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow y verifica paquetes sin tocar Git:
-  ```bash
-  ./bin/mango sync
-  ```
-- **Actualización Remota (`update`):** Descarga las últimas actualizaciones de Git vía fast-forward; solicita confirmación antes de sincronizar si hay cambios:
-  ```bash
-  ./bin/mango update
-  ./bin/mango update -y
-  ```
-- **Diagnósticos (`doctor`):** Inspecciona dependencias, validez de configuración y enlaces simbólicos:
-  ```bash
-  ./bin/mango doctor
-  ```
-- **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos de GNU Stow del sistema:
-  ```bash
-  ./bin/mango unlink --apply
-  ```
-
----
-
-## 🔗 Integración con Dotfiles Base
-
-Aunque este repositorio funciona de manera **100% independiente**, se integra limpiamente con el ecosistema de dotfiles:
-
-- 🌐 **Repositorio Base:** [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles)
-- **Ecosistema Compartido:** Al instalarse junto con el repositorio base, MangoWM sincroniza las preferencias de modo oscuro global, alias de shell compartidos, configuraciones de Neovim y variables de tema GTK a través de `$HOME/.local/lib/dotfiles/session-preferences`.
+- `layer.conf`: perfiles (`core desktop`), nombre del recibo y directorios en
+  los que se podan enlaces huérfanos.
+- `packages/`: manifiestos `repo`, `aur`, `aur/*-fallback` y `cachyos` por perfil.
+- `home/`: paquetes de GNU Stow.
+- `hooks/validate`: comprobaciones de ownership, sintaxis y portabilidad antes
+  de enlazar (el unlink sólo comprueba ownership).
+- `hooks/post-link`: renderiza el tema inicial en el XDG state del destino.
 
 ---
 
@@ -225,7 +185,8 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
 
 ## 🧪 Pruebas y Verificación
 
-Ejecuta la suite de smoke tests local para verificar enlaces, manifiestos y la sesión:
+Ejecuta la suite del repositorio desde la raíz del monorepo. Recorre esta capa
+a través de `bin/dotfiles` y ejecuta sus pruebas de sesión:
 
 ```bash
 ./tests/smoke.sh
@@ -242,4 +203,4 @@ Diseñado y mantenido por [Anthony Portugal](https://anthonyportugal.github.io/e
 ## 📄 Licencia
 
 El código original y la configuración se distribuyen bajo la [Licencia MIT](LICENSE).
-Las paletas de colores de Catppuccin y avisos de terceros se detallan en `THIRD_PARTY_NOTICES.md`.
+Las paletas de colores de Catppuccin y avisos de terceros se detallan en el [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md) del repositorio.

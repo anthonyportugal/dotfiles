@@ -2,7 +2,8 @@
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Estos archivos son datos de entrada para `bin/bspwm`; no son scripts. Usan un
+Estos archivos son datos de entrada para el motor de capas (`bin/dotfiles --wm
+bspwm`, ver `lib/layer_ops.sh`); no son scripts. Usan un
 nombre de paquete por línea, omiten líneas vacías y comentarios, y no fijan
 versiones de una distribución rolling.
 

@@ -85,6 +85,12 @@ run_hook "$copy" validate bootstrap >/dev/null 2>&1 && fail "validate de bspwm a
 run_hook "$copy" validate doctor >/dev/null 2>&1 && fail "doctor de bspwm aceptó un bspwmrc con sintaxis inválida"
 run_hook "$copy" validate unlink >/dev/null 2>&1 || fail "unlink de bspwm quedó bloqueado por un bspwmrc inválido"
 
+# bspwm: a missing scripts directory fails loudly instead of being skipped.
+copy=$(copy_layer bspwm)
+rm -rf "$copy/home/bspwm/.config/bspwm/scripts"
+output=$(run_hook "$copy" validate bootstrap 2>&1) && fail "validate de bspwm aceptó una sesión sin scripts"
+[[ "$output" == *"falta el directorio de scripts de sesión"* ]] || fail "validate de bspwm falló por otra causa: $output"
+
 # bspwm: hardcoded hardware names are rejected.
 copy=$(copy_layer bspwm)
 printf '# xrandr --output HDMI-1\n' >> "$copy/home/bspwm/.config/bspwm/sxhkdrc"

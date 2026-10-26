@@ -11,7 +11,7 @@ else
   REPO_ROOT=""
   search_dir="$SCRIPT_DIR"
   while [[ "$search_dir" != "/" && -n "$search_dir" ]]; do
-    if [[ -d "$search_dir/themes" && -f "$search_dir/bin/bspwm" ]]; then
+    if [[ -d "$search_dir/themes" && -f "$search_dir/layer.conf" ]]; then
       REPO_ROOT="$search_dir"
       break
     fi

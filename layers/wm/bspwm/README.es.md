@@ -1,29 +1,25 @@
 # BSPWM Dotfiles
 
 <p align="center">
-  <a href="https://github.com/anthonyportugal/dotfiles-bspwm/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-bspwm/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
+  <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://www.x.org"><img src="https://img.shields.io/badge/Display-X11-red?style=flat-square&logo=xorg&logoColor=white" alt="X11"></a>
   <a href="https://github.com/baskerville/bspwm"><img src="https://img.shields.io/badge/WM-BSPWM-black?style=flat-square" alt="BSPWM"></a>
   <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <a href="../../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
 *Leer esto en otros idiomas:* [English](README.md)
 
-Sesión de escritorio X11 autónoma, modular y minimalista optimizada para **Arch Linux** basada en [BSPWM](https://github.com/baskerville/bspwm) y estilizada con la paleta **Catppuccin Mocha** (compatible con 14 acentos intercambiables en caliente). Funciona de manera totalmente independiente o compuesta dentro del ecosistema modular de dotfiles.
-
-<p align="center">
-  <img src="assets/screenshot.webp" alt="Vista previa del escritorio BSPWM" width="100%">
-</p>
+Sesión de escritorio X11 autónoma, modular y minimalista optimizada para **Arch Linux** basada en [BSPWM](https://github.com/baskerville/bspwm) y estilizada con la paleta **Catppuccin Mocha** (compatible con 14 acentos intercambiables en caliente). Es una capa del monorepo de dotfiles.
 
 > [!TIP]
-> 🧩 **Ecosistema Modular de Dotfiles:**  
-> [Base y CLI](https://github.com/anthonyportugal/dotfiles) • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • **BSPWM (X11) [Actual]** • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Sistema](https://github.com/anthonyportugal/dotfiles-system)
-> 
-> Este repositorio proporciona un entorno de escritorio X11 autónomo y listo para producción, integrándose limpiamente con el ecosistema de dotfiles base.
+> 🧩 **Capa del monorepo de dotfiles:**
+> [Base y CLI](../../../README.es.md) • [MangoWM (Wayland)](../mangowm/README.es.md) • **BSPWM (X11) [Actual]**
+>
+> Esta es una capa del monorepo de dotfiles. Se instala con `bin/dotfiles --wm bspwm` del repositorio.
 
 ---
 
@@ -91,76 +87,31 @@ La configuración de BSPWM está estructurada en perfiles acumulativos administr
 
 ---
 
-## 🚀 Instalación y Guía Rápida
+## 🚀 Instalación
 
-La CLI incluida `./bin/bspwm` gestiona la instalación de paquetes y los enlaces simbólicos de GNU Stow con seguridad dry-run integrada.
-
-### 1. Instalación Standalone (Recomendada)
-
-```bash
-mkdir -p "$HOME/.dotfiles/wm"
-git clone https://github.com/anthonyportugal/dotfiles-bspwm.git "$HOME/.dotfiles/wm/bspwm"
-cd "$HOME/.dotfiles/wm/bspwm"
-```
-
-### 2. Despliegue del Entorno
-
-#### Opción A: Asistente Interactivo de Configuración (Recomendado)
-
-Ejecuta el asistente interactivo para configurar tu perfil y el alcance de instalación:
+Este gestor de ventanas es una capa del monorepo de dotfiles (`layers/wm/bspwm`).
+No tiene CLI propia: el `bin/dotfiles` del repositorio la instala con el motor
+compartido, junto con la base sobre la que se apoya.
 
 ```bash
-# Lanzar el asistente interactivo (por defecto en inglés)
-./bin/bspwm setup
-
-# O lanzar directamente en español
-./bin/bspwm setup --lang es
+./bin/dotfiles setup                                   # asistente guiado
+./bin/dotfiles bootstrap --wm bspwm --apply             # base + BSPWM
+./bin/dotfiles bootstrap --wm bspwm --wm-profile core --apply
+./bin/dotfiles doctor --wm bspwm
+./bin/dotfiles unlink --wm bspwm --apply
 ```
 
-#### Opción B: Despliegue Manual por Línea de Comandos
+`sync` y `update` re-aplican la selección guardada en cada máquina, así que la
+capa sigue instalada sin volver a pasar `--wm`.
 
-- **Experiencia de Escritorio Completa (Recomendada):**
-  ```bash
-  ./bin/bspwm bootstrap --profile desktop --apply
-  ```
-- **Sesión Core Minimalista (Solo Gestor de Ventanas):**
-  ```bash
-  ./bin/bspwm bootstrap --profile core --apply
-  ```
+### Contrato de la capa
 
-### 3. Comandos Canónicos de la CLI
-
-- **Asistente de Configuración Guiada (`setup`):** Configura el perfil y alcance de forma interactiva:
-  ```bash
-  ./bin/bspwm setup            # Inglés por defecto
-  ./bin/bspwm setup --lang es  # Interfaz en español
-  ```
-- **Sincronización Local (`sync`):** Re-aplica los enlaces simbólicos de GNU Stow y verifica paquetes sin tocar Git:
-  ```bash
-  ./bin/bspwm sync
-  ```
-- **Actualización Remota (`update`):** Descarga las últimas actualizaciones de Git vía fast-forward; solicita confirmación antes de sincronizar si hay cambios:
-  ```bash
-  ./bin/bspwm update
-  ./bin/bspwm update -y
-  ```
-- **Diagnósticos (`doctor`):** Inspecciona dependencias, validez de configuración y enlaces simbólicos:
-  ```bash
-  ./bin/bspwm doctor
-  ```
-- **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos de GNU Stow del sistema:
-  ```bash
-  ./bin/bspwm unlink --apply
-  ```
-
----
-
-## 🔗 Integración con Dotfiles Base
-
-Aunque este repositorio funciona de forma **100% independiente**, se integra limpiamente con el ecosistema de dotfiles:
-
-- 🌐 **Repositorio Base:** [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles)
-- **Ecosistema Compartido:** Al instalarse junto con el repositorio base, las configuraciones de terminal Alacritty, Zsh, Neovim y preferencias GTK se comparten entre sesiones X11 y Wayland sin duplicación.
+- `layer.conf`: perfiles (`core desktop`), nombre del recibo y directorios en
+  los que se podan enlaces huérfanos.
+- `packages/`: manifiestos `repo`, `aur`, `aur/*-fallback` y `cachyos` por perfil.
+- `home/`: paquetes de GNU Stow.
+- `hooks/validate`: comprobaciones de ownership, sintaxis y portabilidad antes
+  de enlazar (el unlink sólo comprueba ownership).
 
 ---
 
@@ -234,7 +185,8 @@ El escritorio está estilizado con **Catppuccin Mocha**, soportando las **14 pal
 
 ## 🧪 Pruebas y Verificación
 
-Ejecuta la suite de smoke tests local para verificar enlaces simbólicos, sintaxis de scripts y la sesión:
+Ejecuta la suite del repositorio desde la raíz del monorepo. Recorre esta capa
+a través de `bin/dotfiles` y ejecuta sus pruebas de sesión:
 
 ```bash
 ./tests/smoke.sh
@@ -251,4 +203,4 @@ Diseñado y mantenido por [Anthony Portugal](https://anthonyportugal.github.io/e
 ## 📄 Licencia
 
 El código original y la configuración se distribuyen bajo la [Licencia MIT](LICENSE).
-La paleta Catppuccin y avisos de terceros se detallan en `THIRD_PARTY_NOTICES.md`.
+La paleta Catppuccin y avisos de terceros se detallan en el [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md) del repositorio.

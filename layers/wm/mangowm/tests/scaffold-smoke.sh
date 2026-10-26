@@ -67,7 +67,8 @@ for manifest in \
   "$REPO_ROOT"/packages/aur/{core,desktop}-fallback.txt; do
   check_manifest "$manifest"
 done
-check_backend_order "$REPO_ROOT/packages/package-backends.txt"
+# The backend order is shared by every layer and lives at the repository root.
+check_backend_order "$REPO_ROOT/../../../packages/package-backends.txt"
 
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" mangowm
 assert_manifest_line "$REPO_ROOT/packages/cachyos/core.txt" swaylock-effects
@@ -90,14 +91,16 @@ if grep -ERq '^(mangowc-git|mangowm-git|hyprlock|hypridle|rofi|wofi|cliphist|wl-
 fi
 
 [[ -f "$REPO_ROOT/home/.stow" ]] || fail "falta el marcador home/.stow"
-[[ -x "$REPO_ROOT/bin/mango" ]] || fail "bin/mango no es ejecutable"
+[[ -f "$REPO_ROOT/layer.conf" ]] || fail "falta layer.conf"
+[[ -x "$REPO_ROOT/hooks/validate" ]] || fail "hooks/validate no es ejecutable"
+[[ -x "$REPO_ROOT/hooks/post-link" ]] || fail "hooks/post-link no es ejecutable"
 [[ -f "$REPO_ROOT/home/mango/.config/mango/config.conf" ]] || \
   fail "falta el entrypoint modular de MangoWM"
 [[ -f "$REPO_ROOT/home/mango/.config/waybar/config.json" ]] || \
   fail "falta Waybar en el perfil desktop"
 [[ -x "$REPO_ROOT/home/mango/.local/bin/mango-theme" ]] || \
   fail "falta el renderer de tema"
-[[ -f "$REPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
+[[ -f "$REPO_ROOT/../../../THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
 [[ -f "$REPO_ROOT/themes/templates/yazi-flavor.toml" ]] || \
   fail "falta el template de tema para yazi"

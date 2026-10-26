@@ -198,6 +198,8 @@ if (( EUID != 0 )); then
   if grep -q 'Bootstrap de la capa wm/bspwm completado' "$TEST_ROOT/wm-errexit.out"; then
     fail "la capa informó éxito después de un fallo no comprobado"
   fi
+else
+  printf 'SKIP: la prueba de errexit de capas necesita un usuario sin privilegios de root\n'
 fi
 
 # Si el preflight de la capa falla, la base no debe llegar a crear ningún enlace.

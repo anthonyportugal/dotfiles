@@ -2,7 +2,8 @@
 
 *Read this in other languages:* [Español](README.es.md)
 
-These files serve as declarative inputs for `bin/bspwm`; they are not executable
+These files serve as declarative inputs for the layer engine (`bin/dotfiles --wm
+bspwm`, see `lib/layer_ops.sh`); they are not executable
 scripts. They use one package name per line, omit blank lines and comments, and
 avoid pinning rolling-release package versions.
 

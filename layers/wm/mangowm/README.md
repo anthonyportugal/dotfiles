@@ -1,7 +1,7 @@
 # MangoWM Dotfiles
 
 <p align="center">
-  <a href="https://github.com/anthonyportugal/dotfiles-mangowm/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-mangowm/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
+  <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
@@ -9,22 +9,18 @@
   <a href="https://github.com/mangowm/mango"><img src="https://img.shields.io/badge/WM-MangoWM-orange?style=flat-square" alt="MangoWM"></a>
   <a href="https://mangowm.github.io/showcase/"><img src="https://img.shields.io/badge/Showcase-MangoWM-orange?style=flat-square&logo=github" alt="MangoWM Showcase"></a>
   <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <a href="../../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
 *Read this in other languages:* [Español](README.es.md)
 
-Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, officially featured in the [MangoWM Showcase](https://mangowm.github.io/showcase/), and styled with the **Catppuccin Mocha** palette (supporting all 14 hot-swappable accents). It functions completely standalone or composed with the primary modular dotfiles ecosystem.
-
-<p align="center">
-  <img src="assets/screenshot.webp" alt="MangoWM Desktop Preview" width="100%">
-</p>
+Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** using [MangoWM](https://github.com/mangowm/mango) as the primary dynamic tiling compositor, officially featured in the [MangoWM Showcase](https://mangowm.github.io/showcase/), and styled with the **Catppuccin Mocha** palette (supporting all 14 hot-swappable accents). It is a layer of the dotfiles monorepo.
 
 > [!TIP]
-> 🧩 **Modular Dotfiles Ecosystem:**  
-> [Base & CLI](https://github.com/anthonyportugal/dotfiles) • **MangoWM (Wayland) [Current]** • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • [System](https://github.com/anthonyportugal/dotfiles-system)
-> 
-> This repository provides a standalone, production-ready Wayland desktop environment and seamlessly integrates with the base dotfiles ecosystem.
+> 🧩 **Dotfiles monorepo layer:**
+> [Base & CLI](../../../README.md) • [BSPWM (X11)](../bspwm/README.md) • **MangoWM (Wayland) [Current]**
+>
+> This is a layer of the dotfiles monorepo. It is installed with the repository's `bin/dotfiles --wm mangowm`.
 
 ---
 
@@ -93,68 +89,32 @@ The MangoWM configuration is organized into cumulative profiles managed with [GN
 
 ---
 
-## 🚀 Installation & Profiles
+## 🚀 Installation
 
-The included `./bin/mango` CLI handles package installation, configuration symlinking, and dynamic theming with built-in dry-run safety.
-
-### 1. Interactive Setup Wizard (Recommended)
-
-Run the interactive setup wizard to configure your profile, installation scope, and choose from all 14 Catppuccin Mocha accent colors:
+This window manager is a layer of the dotfiles monorepo (`layers/wm/mangowm`). It
+has no CLI of its own: the repository's `bin/dotfiles` installs it with the
+shared engine, together with the base it builds on.
 
 ```bash
-# Launch interactive wizard (default: English)
-./bin/mango setup
-
-# Or launch directly in Spanish
-./bin/mango setup --lang es
+./bin/dotfiles setup                                   # guided wizard
+./bin/dotfiles bootstrap --wm mangowm --apply             # base + MangoWM
+./bin/dotfiles bootstrap --wm mangowm --wm-profile core --apply
+./bin/dotfiles doctor --wm mangowm
+./bin/dotfiles unlink --wm mangowm --apply
 ```
 
-### 2. Manual Command-Line Bootstrap
+`sync` and `update` re-apply the selection saved on each machine, so the layer
+stays installed without passing `--wm` again.
 
-If you prefer scripted or non-interactive deployment, use `bootstrap`:
+### Layer contract
 
-- **Full Desktop Experience:**
-  ```bash
-  ./bin/mango bootstrap --profile desktop --apply
-  ```
-- **Minimal Core Session (Window Manager Only):**
-  ```bash
-  ./bin/mango bootstrap --profile core --apply
-  ```
-
-### 3. Canonical CLI Commands
-
-- **Interactive Guided Setup (`setup`):** Configures profile, scope, and accent theme interactively:
-  ```bash
-  ./bin/mango setup            # English by default
-  ./bin/mango setup --lang es  # Spanish interface
-  ```
-- **Local Synchronization (`sync`):** Re-applies GNU Stow symlinks and package checks without touching Git:
-  ```bash
-  ./bin/mango sync
-  ```
-- **Remote Update (`update`):** Pulls latest commits from Git via fast-forward; prompts before syncing if changes exist:
-  ```bash
-  ./bin/mango update
-  ./bin/mango update -y
-  ```
-- **Diagnostics (`doctor`):** Inspects dependencies, configuration validity, and symlinks:
-  ```bash
-  ./bin/mango doctor
-  ```
-- **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks from the system:
-  ```bash
-  ./bin/mango unlink --apply
-  ```
-
----
-
-## 🔗 Integration with Base Dotfiles
-
-While this repository operates **100% standalone**, it seamlessly integrates with the primary modular dotfiles ecosystem:
-
-- 🌐 **Primary Repository:** [anthonyportugal/dotfiles](https://github.com/anthonyportugal/dotfiles)
-- **Shared Ecosystem:** When installed alongside the base repository, MangoWM automatically syncs global dark-mode preferences, shared shell aliases, Neovim configs, and GTK theme tokens via `$HOME/.local/lib/dotfiles/session-preferences`.
+- `layer.conf`: profiles (`core desktop`), receipt name and the directories
+  whose orphan links are pruned.
+- `packages/`: `repo`, `aur`, `aur/*-fallback` and `cachyos` manifests per profile.
+- `home/`: GNU Stow packages.
+- `hooks/validate`: ownership, syntax and portability checks run before
+  linking (unlink only checks ownership).
+- `hooks/post-link`: renders the initial theme under the target's XDG state.
 
 ---
 
@@ -225,7 +185,8 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 
 ## 🧪 Testing & Verification
 
-Run the automated test suite locally to verify links, package manifests, and session integrity:
+Run the repository suite from the monorepo root. It drives this layer through
+`bin/dotfiles` and runs its session tests:
 
 ```bash
 ./tests/smoke.sh
@@ -242,4 +203,4 @@ Architected and maintained by [Anthony Portugal](https://anthonyportugal.github.
 ## 📄 License
 
 Original code and configurations are licensed under the [MIT License](LICENSE).
-Catppuccin color palettes and third-party notices are attributed in `THIRD_PARTY_NOTICES.md`.
+Catppuccin color palettes and third-party notices are attributed in the repository's [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md).

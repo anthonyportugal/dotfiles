@@ -2,8 +2,8 @@
 
 *Read this in other languages:* [Español](README.es.md)
 
-These files serve as declarative inputs for `bin/mango`. The entrypoint validates
-each line, rejects duplicate entries, and preserves package provenance before
+These files serve as declarative inputs for the layer engine (`bin/dotfiles
+--wm mangowm`, see `lib/layer_ops.sh`). The engine validates each line, rejects duplicate entries, and preserves package provenance before
 constructing any package manager commands.
 
 Each non-empty, non-comment line contains one package name. Rolling-release
