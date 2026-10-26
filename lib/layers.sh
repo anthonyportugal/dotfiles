@@ -19,7 +19,7 @@ unset _layers_source
 
 # Both lists are read through array_contains by name.
 # shellcheck disable=SC2034
-LAYER_CONF_KEYS=(requires profiles receipt prune_dirs)
+LAYER_CONF_KEYS=(requires profiles receipt features prune_dirs prune_links)
 # shellcheck disable=SC2034
 LAYER_HOOK_PHASES=(validate post-link)
 LAYER_NAME_PATTERN='^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$'
@@ -40,9 +40,9 @@ _lyr_validate_value() {
     case "$_lyr_key" in
       requires)
         [[ "$_lyr_word" =~ $LAYER_NAME_PATTERN ]] ;;
-      profiles|receipt)
+      profiles|receipt|features)
         [[ "$_lyr_word" =~ $LAYER_WORD_PATTERN ]] ;;
-      prune_dirs)
+      prune_dirs|prune_links)
         # Relative to TARGET_DIR and never climbing out of it.
         [[ "$_lyr_word" =~ $LAYER_PATH_PATTERN && "/$_lyr_word/" != */../* && "/$_lyr_word/" != */./* ]] ;;
     esac || die "valor inválido para $_lyr_key en $_lyr_file: $_lyr_word"

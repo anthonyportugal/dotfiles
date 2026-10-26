@@ -4,7 +4,7 @@
 # run_layer executes the operation in a fresh process (lib/run-layer.sh), so
 # the layer's package, Stow and prune settings never leak into the caller's
 # plan and errexit always applies. Reads the caller's TARGET_DIR,
-# PLATFORM_REQUEST, BACKEND_REQUEST, SYSTEM_ENABLED, STOW_ENABLED,
+# PLATFORM_REQUEST, BACKEND_REQUEST, SYSTEM_ENABLED, STOW_ENABLED, FEATURES,
 # PACKAGE_BACKENDS_FILE and REPO_ROOT. Requires lib/colors.sh, lib/core.sh,
 # lib/packages.sh, lib/links.sh, lib/receipts.sh and lib/layers.sh.
 #
@@ -27,6 +27,7 @@ run_layer() {
   TARGET_DIR="$TARGET_DIR" PLATFORM_REQUEST="$PLATFORM_REQUEST" \
     BACKEND_REQUEST="$BACKEND_REQUEST" SYSTEM_ENABLED="$SYSTEM_ENABLED" \
     STOW_ENABLED="$STOW_ENABLED" PACKAGE_BACKENDS_FILE="${PACKAGE_BACKENDS_FILE:-}" \
+    FEATURES="${FEATURES[*]-}" \
     REPO_ROOT="$REPO_ROOT" DOTFILES_LANG="${DOTFILES_LANG:-en}" PROGRAM_NAME="$PROGRAM_NAME" \
     "$BASH" "$DOTFILES_LIB_DIR/run-layer.sh" \
     "$layers_root" "$layer_name" "$operation" "$layer_profile" "$apply_mode"
@@ -51,7 +52,17 @@ _layer_setup() {
   PACKAGES_DIR="$LAYER_DIR/packages"
   STOW_DIR="$LAYER_DIR/home"
   read -r -a PRUNE_SEARCH_DIRS <<< "${layer_conf[prune_dirs]:-}"
-  PRUNE_ROOT_LINKS=()
+  read -r -a PRUNE_ROOT_LINKS <<< "${layer_conf[prune_links]:-}"
+
+  # Only the selected features this layer declares contribute manifests.
+  local -a declared_features=() selected_features=()
+  local feature
+  read -r -a declared_features <<< "${layer_conf[features]:-}"
+  read -r -a selected_features <<< "${FEATURES:-}"
+  LAYER_FEATURES=()
+  for feature in "${selected_features[@]}"; do
+    array_contains declared_features "$feature" && append_unique LAYER_FEATURES "$feature"
+  done
 
   REPO_PACKAGES=()
   AUR_PACKAGES=()
@@ -68,12 +79,13 @@ _layer_setup() {
   fi
 }
 
-# Same tier rules as the base profile: repo/<tier>.txt, cachyos/<tier>.txt on
-# CachyOS or aur/<tier>-fallback.txt elsewhere, aur/<tier>.txt and
-# external/<tier>.txt. Every manifest is optional for a layer.
+# Per tier: repo/<tier>.txt, cachyos/<tier>.txt on CachyOS or
+# aur/<tier>-fallback.txt elsewhere, aur/<tier>.txt and external/<tier>.txt.
+# Selected features add repo/, aur/ and external/<feature>.txt. Every
+# manifest is optional for a layer.
 layer_resolve_system_packages() {
   local -a tiers=() fallback_packages=()
-  local tier package_name
+  local tier package_name feature
 
   layer_profile_tiers "$LAYER_DIR" "$PROFILE" tiers
   for tier in "${tiers[@]}"; do
@@ -97,6 +109,15 @@ layer_resolve_system_packages() {
     [[ ! -f "$PACKAGES_DIR/external/$tier.txt" ]] || \
       append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/$tier.txt"
   done
+
+  for feature in "${LAYER_FEATURES[@]}"; do
+    [[ ! -f "$PACKAGES_DIR/repo/$feature.txt" ]] || \
+      append_manifest_unique REPO_PACKAGES "$PACKAGES_DIR/repo/$feature.txt"
+    [[ ! -f "$PACKAGES_DIR/aur/$feature.txt" ]] || \
+      append_manifest_unique AUR_PACKAGES "$PACKAGES_DIR/aur/$feature.txt"
+    [[ ! -f "$PACKAGES_DIR/external/$feature.txt" ]] || \
+      append_manifest_unique EXTERNAL_PACKAGES "$PACKAGES_DIR/external/$feature.txt"
+  done
 }
 
 layer_prepare() {
@@ -114,6 +135,15 @@ layer_prepare() {
   fi
   if (( STOW_ENABLED == 1 )); then
     [[ -f "$STOW_DIR/.stow" ]] || die "falta el marcador $STOW_DIR/.stow"
+    TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
+    [[ -d "$TARGET_DIR" ]] || die "el target no es un directorio existente: $TARGET_DIR"
+    [[ "$TARGET_DIR" != "/" ]] || die "se rechaza usar / como target de Stow"
+    if (( APPLY == 1 )); then
+      [[ -w "$TARGET_DIR" ]] || die "el target no es escribible: $TARGET_DIR"
+      if (( EUID == 0 )) && [[ -n "${SUDO_USER-}" ]]; then
+        die "no ejecute el bootstrap completo con sudo; el script eleva sólo el package manager"
+      fi
+    fi
     read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
   fi
 }
@@ -133,6 +163,7 @@ layer_print_plan() {
   printf '  %-24s %s\n' 'Operación:' "$OPERATION"
   printf '  %-24s %s\n' 'Modo:' "$execution_mode"
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
+  (( ${#LAYER_FEATURES[@]} == 0 )) || print_array "Features" LAYER_FEATURES
   if (( SYSTEM_ENABLED == 1 )); then
     printf '  %-24s %s\n' 'Plataforma:' "$PLATFORM"
     printf '  %-24s %s\n' 'Backend:' "$BACKEND"

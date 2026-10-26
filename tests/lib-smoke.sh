@@ -25,7 +25,7 @@ trap cleanup EXIT
 [[ -d "$TEST_TMP_PARENT" ]] || fail "no existe el directorio temporal: $TEST_TMP_PARENT"
 TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-lib-smoke.XXXXXX")
 
-for module in colors core packages links receipts layers; do
+for module in colors core packages links receipts layers layer_ops; do
   [[ -f "$REPO_ROOT/lib/$module.sh" ]] || fail "falta el módulo lib/$module.sh"
 done
 
@@ -36,7 +36,7 @@ run_engine() {
   env -i HOME="$TEST_ROOT" PATH="${ENGINE_PATH:-/usr/bin:/bin}" DOTFILES_LANG=es \
     REPO_LIB="$REPO_ROOT/lib" "$BASH" -c '
       set -Eeuo pipefail
-      for module in colors core packages links receipts layers; do
+      for module in colors core packages links receipts layers layer_ops; do
         # shellcheck source=/dev/null
         source "$REPO_LIB/$module.sh"
       done
@@ -233,5 +233,65 @@ set -e
 chmod -x "$LAYERS/wm/mango/hooks/post-link"
 expect_fail "no es un archivo ejecutable" "run_layer_hook '$LAYERS/wm/mango' post-link"
 expect_fail "fase de hook desconocida" "run_layer_hook '$LAYERS/wm/mango' unknown-phase"
+
+# --- layers: features= and prune_links= ---------------------------------------
+make_layer feat 'profiles=core\nfeatures=extra-feat\nprune_links=.rcfile .config/app.conf\n'
+output=$(run_engine "declare -A conf=(); read_layer_conf '$LAYERS/feat' conf; printf '%s|%s' \"\${conf[features]}\" \"\${conf[prune_links]}\"")
+[[ "$output" == "extra-feat|.rcfile .config/app.conf" ]] || fail "read_layer_conf no leyó features/prune_links: '$output'"
+for escaping in ../.bashrc /etc/passwd; do
+  make_layer prune-link-escape "prune_links=$escaping\n"
+  expect_fail "valor inválido para prune_links" "declare -A conf=(); read_layer_conf '$LAYERS/prune-link-escape' conf"
+done
+make_layer bad-feature 'features=Bad_Feature\n'
+expect_fail "valor inválido para features" "declare -A conf=(); read_layer_conf '$LAYERS/bad-feature' conf"
+
+# --- layer operations: feature manifests, root links and target checks ---------
+OPS_ROOT="$TEST_ROOT/ops-layers"
+OPS_LAYER="$OPS_ROOT/feat"
+OPS_TARGET="$TEST_ROOT/ops-home"
+mkdir -p "$OPS_LAYER/packages/repo" "$OPS_LAYER/packages/stow" "$OPS_LAYER/home/app/.config" "$OPS_TARGET" "$TEST_ROOT/ops-bin"
+printf 'profiles=core\nfeatures=extra-feat\nprune_links=.rcfile\n' > "$OPS_LAYER/layer.conf"
+printf 'pkg-core\n' > "$OPS_LAYER/packages/repo/core.txt"
+printf 'pkg-extra\n' > "$OPS_LAYER/packages/repo/extra-feat.txt"
+printf 'app\n' > "$OPS_LAYER/packages/stow/core.txt"
+: > "$OPS_LAYER/home/.stow"
+printf 'x\n' > "$OPS_LAYER/home/app/.config/app.conf"
+printf 'paru\n' > "$TEST_ROOT/ops-backends.txt"
+ln -s /usr/bin/false "$TEST_ROOT/ops-bin/pacman"
+ln -s /usr/bin/true "$TEST_ROOT/ops-bin/paru"
+
+# layer_run OPERATION APPLY [VAR=value...]: runs the fixture layer through run_layer.
+layer_run() {
+  local operation=$1 apply=$2
+  shift 2
+  ENGINE_PATH="$TEST_ROOT/ops-bin:/usr/bin:/bin" run_engine "
+    TARGET_DIR='$OPS_TARGET' PLATFORM_REQUEST=arch BACKEND_REQUEST=auto
+    SYSTEM_ENABLED=1 STOW_ENABLED=0 FEATURES='' PACKAGE_BACKENDS_FILE='$TEST_ROOT/ops-backends.txt'
+    REPO_ROOT='$OPS_ROOT' PROGRAM_NAME=test
+    $*
+    run_layer '$OPS_ROOT' feat $operation core $apply"
+}
+
+output=$(layer_run bootstrap 0 2>&1)
+[[ "$output" == *"pkg-core"* && "$output" != *"pkg-extra"* ]] || \
+  fail "el plan incluyó una feature no seleccionada: $output"
+output=$(layer_run bootstrap 0 "FEATURES='extra-feat other-feat'" 2>&1)
+[[ "$output" =~ Paquetes\ repo:\ +pkg-core\ pkg-extra ]] || \
+  fail "el plan no incluyó la feature seleccionada: $output"
+
+# A dangling root link into the repository is pruned on apply; foreign ones stay.
+ln -s "$OPS_ROOT/feat/home/app/.rcfile" "$OPS_TARGET/.rcfile"
+ln -s /nonexistent/elsewhere "$OPS_TARGET/.foreign"
+layer_run bootstrap 1 "SYSTEM_ENABLED=0 STOW_ENABLED=1" >/dev/null 2>&1 || fail "el bootstrap de la capa de prueba falló"
+[[ ! -L "$OPS_TARGET/.rcfile" ]] || fail "prune_links no eliminó el enlace raíz huérfano"
+[[ -L "$OPS_TARGET/.foreign" ]] || fail "prune_links eliminó un enlace ajeno"
+[[ -L "$OPS_TARGET/.config/app.conf" ]] || fail "la capa de prueba no enlazó su paquete"
+
+# Target sanity checks are shared by every layer.
+output=$(layer_run bootstrap 0 "STOW_ENABLED=1 SYSTEM_ENABLED=0 TARGET_DIR=/" 2>&1) && fail "una capa aceptó / como target"
+[[ "$output" == *"se rechaza usar / como target"* ]] || fail "el rechazo de / no fue accionable: $output"
+output=$(layer_run bootstrap 0 "STOW_ENABLED=1 SYSTEM_ENABLED=0 TARGET_DIR='$TEST_ROOT/missing'" 2>&1) && \
+  fail "una capa aceptó un target inexistente"
+[[ "$output" == *"no es un directorio existente"* ]] || fail "el rechazo del target inexistente no fue accionable: $output"
 
 printf 'OK: motor compartido de lib/ validado (manifiestos, backends, recibos, prune y capas)\n'
