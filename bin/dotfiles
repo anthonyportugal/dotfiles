@@ -1165,7 +1165,9 @@ doctor_with_optional_components() {
       result=1
     fi
   done
-  (( STOW_ENABLED == 0 )) || validate_cli_command
+  if (( STOW_ENABLED == 1 )); then
+    validate_cli_command || result=1
+  fi
 
   if (( WALLPAPERS == 1 )); then
     if run_wallpapers_operation doctor 0; then
