@@ -202,5 +202,5 @@ Architected and maintained by [Anthony Portugal](https://anthonyportugal.github.
 
 ## 📄 License
 
-Original code and configuration are licensed under the [MIT License](LICENSE).
+Original code and configuration are licensed under the [MIT License](../../../LICENSE).
 Catppuccin color schemes and third-party notices are attributed in the repository's [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md).

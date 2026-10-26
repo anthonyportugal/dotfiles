@@ -202,5 +202,5 @@ Diseñado y mantenido por [Anthony Portugal](https://anthonyportugal.github.io/e
 
 ## 📄 Licencia
 
-El código original y la configuración se distribuyen bajo la [Licencia MIT](LICENSE).
+El código original y la configuración se distribuyen bajo la [Licencia MIT](../../../LICENSE).
 La paleta Catppuccin y avisos de terceros se detallan en el [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md) del repositorio.

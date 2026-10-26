@@ -4,6 +4,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
+# The layer lives at layers/wm/mangowm inside the monorepo.
+MONOREPO_ROOT=$(cd -- "$REPO_ROOT/../../.." && pwd -P)
 PALETTE="$REPO_ROOT/themes/catppuccin-mocha-pink/palette.conf"
 
 fail() {
@@ -68,7 +70,7 @@ for manifest in \
   check_manifest "$manifest"
 done
 # The backend order is shared by every layer and lives at the repository root.
-check_backend_order "$REPO_ROOT/../../../packages/package-backends.txt"
+check_backend_order "$MONOREPO_ROOT/packages/package-backends.txt"
 
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" mangowm
 assert_manifest_line "$REPO_ROOT/packages/cachyos/core.txt" swaylock-effects
@@ -100,7 +102,7 @@ fi
   fail "falta Waybar en el perfil desktop"
 [[ -x "$REPO_ROOT/home/mango/.local/bin/mango-theme" ]] || \
   fail "falta el renderer de tema"
-[[ -f "$REPO_ROOT/../../../THIRD_PARTY_NOTICES.md" ]] || \
+[[ -f "$MONOREPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
 [[ -f "$REPO_ROOT/themes/templates/yazi-flavor.toml" ]] || \
   fail "falta el template de tema para yazi"
