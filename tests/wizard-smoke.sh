@@ -154,8 +154,8 @@ DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" \
 DOTFILES_PRIVATE_TEST_LOG="$PRIVATE_LOG" \
 DOTFILES_HARNESS_TEST_LOG="$HARNESS_LOG" \
 "$DOTFILES" sync --profile cli --stow-only --target "$CANON_HOME" > "$TEST_ROOT/sync-explicit.out"
-grep -q 'Selección restaurada del recibo: perfil cli' "$TEST_ROOT/sync-explicit.out" || \
-  fail "Sync ignoró el --profile explícito frente al recibo"
+grep -q 'Selección restaurada del recibo: WMs bspwm$' "$TEST_ROOT/sync-explicit.out" || \
+  fail "Sync no informó sólo los valores tomados del recibo"
 [[ -L "$CANON_HOME/.config/bat/config" ]] || fail "Sync no aplicó el perfil cli explícito"
 grep -qx 'PROFILE="cli"' "$CANON_HOME/.local/state/dotfiles/dotfiles.receipt" || \
   fail "Sync no actualizó el recibo de selección con el perfil aplicado"
@@ -174,12 +174,17 @@ outside_relative=$(realpath --relative-to="$REPO_ROOT/layers/wm" "$OUTSIDE_LAYER
   printf 'COMPONENT="dotfiles"\n'
   printf 'PROFILE="core"\n'
   printf 'WMS="%s ../wm/mangowm bspwm"\n' "$outside_relative"
+  printf 'FEATURES="yazi-extras ../evil"\n'
 } > "$TAMPER_HOME/.local/state/dotfiles/dotfiles.receipt"
 "$DOTFILES" sync --stow-only --target "$TAMPER_HOME" > "$TEST_ROOT/tamper.out" 2>&1 || \
   fail "Sync falló con un recibo manipulado en vez de ignorar las entradas inválidas"
 [[ ! -e "$TEST_ROOT/outside-hook-ran" ]] || fail "Sync ejecutó un hook de fuera de layers/wm/ desde el recibo"
 grep -q 'se ignora un WM inválido en el recibo de selección' "$TEST_ROOT/tamper.out" || \
   fail "Sync no avisó de las entradas inválidas del recibo"
+grep -q 'se ignora una feature inválida en el recibo de selección: ../evil' "$TEST_ROOT/tamper.out" || \
+  fail "Sync aceptó una feature inválida desde el recibo"
+grep -q 'Selección restaurada del recibo: perfil core, features yazi-extras, WMs bspwm' "$TEST_ROOT/tamper.out" || \
+  fail "Sync no restauró las entradas válidas del recibo manipulado"
 [[ -L "$TAMPER_HOME/.config/bspwm/bspwmrc" ]] || fail "Sync descartó también el WM válido del recibo"
 [[ ! -e "$TAMPER_HOME/.config/mango" ]] || fail "Sync aceptó un WM con ruta relativa desde el recibo"
 

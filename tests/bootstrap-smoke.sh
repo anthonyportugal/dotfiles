@@ -177,6 +177,21 @@ grep -q 'Dry-run de unlink de la capa wm/bspwm completado' "$TEST_ROOT/wm-unlink
 grep -q 'Plan de la capa wm/mangowm' "$TEST_ROOT/wm-both.out" || fail "--wm both no incluyó MangoWM"
 grep -q 'Plan de la capa wm/bspwm' "$TEST_ROOT/wm-both.out" || fail "--wm both no incluyó BSPWM"
 
+# A failure inside a layer operation must stop it, even when nothing checks
+# that command explicitly (here the WM receipt cannot be written).
+ERREXIT_TARGET="$TEST_ROOT/errexit target"
+mkdir -p "$ERREXIT_TARGET/.local/state/dotfiles"
+chmod 555 "$ERREXIT_TARGET/.local/state/dotfiles"
+if "$DOTFILES" bootstrap --profile core --stow-only --target "$ERREXIT_TARGET" \
+    --wm bspwm --apply > "$TEST_ROOT/wm-errexit.out" 2>&1; then
+  chmod 755 "$ERREXIT_TARGET/.local/state/dotfiles"
+  fail "bootstrap terminó bien aunque no pudo escribir el recibo de la capa"
+fi
+chmod 755 "$ERREXIT_TARGET/.local/state/dotfiles"
+if grep -q 'Bootstrap de la capa wm/bspwm completado' "$TEST_ROOT/wm-errexit.out"; then
+  fail "la capa informó éxito después de un fallo no comprobado"
+fi
+
 # Si el preflight de la capa falla, la base no debe llegar a crear ningún enlace.
 mkdir -p "$WM_FAILURE_TARGET/.config/bspwm"
 printf 'local\n' > "$WM_FAILURE_TARGET/.config/bspwm/bspwmrc"

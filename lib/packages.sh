@@ -89,6 +89,21 @@ detect_backend() {
   die "no se encontró ningún backend de paquetes soportado"
 }
 
+# Reuses a backend saved in a receipt when none was requested explicitly and
+# it is still a supported, installed backend.
+restore_saved_backend() {
+  local saved_backend=$1
+
+  [[ "$BACKEND_REQUEST" == auto ]] || return 0
+  case "$saved_backend" in
+    shelly|paru|yay|pacman)
+      if command_exists "$saved_backend"; then
+        BACKEND_REQUEST=$saved_backend
+      fi
+      ;;
+  esac
+}
+
 package_is_installed() {
   pacman -Qq "$1" >/dev/null 2>&1
 }

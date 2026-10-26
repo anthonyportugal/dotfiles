@@ -55,6 +55,9 @@ PLATFORM=""
 BACKEND=""
 
 declare -a FEATURES=()
+# Read through array_contains by name.
+# shellcheck disable=SC2034
+SUPPORTED_FEATURES=(yazi-extras)
 declare -a REPO_PACKAGES=()
 declare -a AUR_PACKAGES=()
 declare -a EXTERNAL_PACKAGES=()
@@ -598,14 +601,8 @@ validate_features() {
   local -a unique_features=()
 
   for feature in "${FEATURES[@]}"; do
-    case "$feature" in
-      yazi-extras)
-        append_unique unique_features "$feature"
-        ;;
-      *)
-        usage_error "feature no soportado: $feature"
-        ;;
-    esac
+    array_contains SUPPORTED_FEATURES "$feature" || usage_error "feature no soportado: $feature"
+    append_unique unique_features "$feature"
   done
   FEATURES=("${unique_features[@]}")
 }
@@ -1611,11 +1608,13 @@ unlink_with_optional_components() {
   fi
 
   unlink_dotfiles
-  (( APPLY == 0 )) || rm -f -- "$(receipt_path dotfiles)"
   run_wm_operation unlink "$APPLY" || die "falló el unlink de la capa $WM"
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
   run_private_operation unlink "$APPLY" || die "falló el unlink de la capa privada"
   run_harness_operation unlink "$APPLY" || die "falló el unlink de agent-harness"
+  # Only once every component is gone, so a failed unlink can be retried
+  # with the same saved selection.
+  (( APPLY == 0 )) || rm -f -- "$(receipt_path dotfiles)"
 }
 
 # Records what this machine selected so sync/update re-apply it without flags.
@@ -1627,19 +1626,27 @@ save_selection_receipt() {
 load_selection_receipt() {
   local -A selection=()
   local entry
-  local -a entries=()
+  local -a entries=() restored=()
 
   read_receipt dotfiles selection || return 0
   if (( PROFILE_EXPLICIT == 0 )); then
     case "${selection[PROFILE]:-}" in
-      core|cli|desktop) PROFILE=${selection[PROFILE]} ;;
+      core|cli|desktop)
+        PROFILE=${selection[PROFILE]}
+        restored+=("perfil $PROFILE")
+        ;;
     esac
   fi
   if (( ${#FEATURES[@]} == 0 )); then
     read -r -a entries <<< "${selection[FEATURES]:-}"
     for entry in "${entries[@]}"; do
-      append_unique FEATURES "$entry"
+      if array_contains SUPPORTED_FEATURES "$entry"; then
+        append_unique FEATURES "$entry"
+      else
+        warn "se ignora una feature inválida en el recibo de selección: $entry"
+      fi
     done
+    (( ${#FEATURES[@]} == 0 )) || restored+=("features ${FEATURES[*]}")
   fi
   if (( ${#WMS[@]} == 0 )); then
     read -r -a entries <<< "${selection[WMS]:-}"
@@ -1650,15 +1657,14 @@ load_selection_receipt() {
         warn "se ignora un WM inválido en el recibo de selección: $entry"
       fi
     done
+    (( ${#WMS[@]} == 0 )) || restored+=("WMs ${WMS[*]}")
   fi
-  if [[ "$BACKEND_REQUEST" == auto ]]; then
-    case "${selection[BACKEND]:-}" in
-      shelly|paru|yay|pacman)
-        command_exists "${selection[BACKEND]}" && BACKEND_REQUEST=${selection[BACKEND]}
-        ;;
-    esac
+  restore_saved_backend "${selection[BACKEND]:-}"
+  if (( ${#restored[@]} > 0 )); then
+    local summary
+    printf -v summary '%s, ' "${restored[@]}"
+    info "Selección restaurada del recibo: ${summary%, }"
   fi
-  info "Selección restaurada del recibo: perfil $PROFILE${WMS[*]:+, WMs ${WMS[*]}}"
 }
 
 sync_environment() {

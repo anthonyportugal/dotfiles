@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # lib/layer_ops.sh - Bootstrap, doctor and unlink for one declarative layer.
 #
-# run_layer executes the operation in a subshell, so the layer's package,
-# Stow and prune settings never leak into the caller's plan. Reads the
-# caller's TARGET_DIR, PLATFORM_REQUEST, BACKEND_REQUEST, SYSTEM_ENABLED,
-# STOW_ENABLED and COMMAND. Requires lib/colors.sh, lib/core.sh,
+# run_layer executes the operation in a fresh process (lib/run-layer.sh), so
+# the layer's package, Stow and prune settings never leak into the caller's
+# plan and errexit always applies. Reads the caller's TARGET_DIR,
+# PLATFORM_REQUEST, BACKEND_REQUEST, SYSTEM_ENABLED, STOW_ENABLED,
+# PACKAGE_BACKENDS_FILE and REPO_ROOT. Requires lib/colors.sh, lib/core.sh,
 # lib/packages.sh, lib/links.sh, lib/receipts.sh and lib/layers.sh.
 #
 # shellcheck shell=bash
@@ -23,14 +24,16 @@ run_layer() {
     *) die "operación de capa desconocida: $operation" ;;
   esac
 
-  (
-    _layer_setup "$layers_root" "$layer_name" "$layer_profile" "$operation" "$apply_mode"
-    "layer_$operation"
-  )
+  TARGET_DIR="$TARGET_DIR" PLATFORM_REQUEST="$PLATFORM_REQUEST" \
+    BACKEND_REQUEST="$BACKEND_REQUEST" SYSTEM_ENABLED="$SYSTEM_ENABLED" \
+    STOW_ENABLED="$STOW_ENABLED" PACKAGE_BACKENDS_FILE="${PACKAGE_BACKENDS_FILE:-}" \
+    REPO_ROOT="$REPO_ROOT" DOTFILES_LANG="${DOTFILES_LANG:-en}" PROGRAM_NAME="$PROGRAM_NAME" \
+    "$BASH" "$DOTFILES_LIB_DIR/run-layer.sh" \
+    "$layers_root" "$layer_name" "$operation" "$layer_profile" "$apply_mode"
 }
 
 # Points the engine globals at layer $2 (profile $3, operation $4, apply mode
-# $5) and restores its saved backend. Only called inside run_layer's subshell.
+# $5) and restores its saved backend. Only called by lib/run-layer.sh.
 # shellcheck disable=SC2034
 _layer_setup() {
   local layers_root=$1
@@ -59,13 +62,8 @@ _layer_setup() {
   MISSING_REPO_PACKAGES=()
   MISSING_AUR_PACKAGES=()
 
-  if [[ "$BACKEND_REQUEST" == auto ]] && read_receipt "$LAYER_RECEIPT" layer_receipt; then
-    local saved_backend=${layer_receipt[BACKEND]:-}
-    case "$saved_backend" in
-      shelly|paru|yay|pacman)
-        command_exists "$saved_backend" && BACKEND_REQUEST=$saved_backend
-        ;;
-    esac
+  if read_receipt "$LAYER_RECEIPT" layer_receipt; then
+    restore_saved_backend "${layer_receipt[BACKEND]:-}"
   fi
 }
 
