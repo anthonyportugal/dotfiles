@@ -160,6 +160,29 @@ grep -q 'Selección restaurada del recibo: perfil cli' "$TEST_ROOT/sync-explicit
 grep -qx 'PROFILE="cli"' "$CANON_HOME/.local/state/dotfiles/dotfiles.receipt" || \
   fail "Sync no actualizó el recibo de selección con el perfil aplicado"
 
+# A tampered selection receipt can never reach a layer outside layers/wm/.
+TAMPER_HOME="$TEST_ROOT/tamper-home"
+OUTSIDE_LAYER="$TEST_ROOT/outside-layer"
+mkdir -p "$TAMPER_HOME/.local/state/dotfiles" "$OUTSIDE_LAYER/home" "$OUTSIDE_LAYER/hooks"
+printf 'profiles=core desktop\nreceipt=outside\n' > "$OUTSIDE_LAYER/layer.conf"
+: > "$OUTSIDE_LAYER/home/.stow"
+printf '#!/bin/sh\ntouch %q\n' "$TEST_ROOT/outside-hook-ran" > "$OUTSIDE_LAYER/hooks/validate"
+chmod +x "$OUTSIDE_LAYER/hooks/validate"
+outside_relative=$(realpath --relative-to="$REPO_ROOT/layers/wm" "$OUTSIDE_LAYER")
+{
+  printf 'RECEIPT_VERSION=1\n'
+  printf 'COMPONENT="dotfiles"\n'
+  printf 'PROFILE="core"\n'
+  printf 'WMS="%s ../wm/mangowm bspwm"\n' "$outside_relative"
+} > "$TAMPER_HOME/.local/state/dotfiles/dotfiles.receipt"
+"$DOTFILES" sync --stow-only --target "$TAMPER_HOME" > "$TEST_ROOT/tamper.out" 2>&1 || \
+  fail "Sync falló con un recibo manipulado en vez de ignorar las entradas inválidas"
+[[ ! -e "$TEST_ROOT/outside-hook-ran" ]] || fail "Sync ejecutó un hook de fuera de layers/wm/ desde el recibo"
+grep -q 'se ignora un WM inválido en el recibo de selección' "$TEST_ROOT/tamper.out" || \
+  fail "Sync no avisó de las entradas inválidas del recibo"
+[[ -L "$TAMPER_HOME/.config/bspwm/bspwmrc" ]] || fail "Sync descartó también el WM válido del recibo"
+[[ ! -e "$TAMPER_HOME/.config/mango" ]] || fail "Sync aceptó un WM con ruta relativa desde el recibo"
+
 # 5. Test update command (checks git repositories)
 mkdir -p "$CANON_HOME/.dotfiles/walls/.git"
 git init -q "$CANON_HOME/.dotfiles/walls"

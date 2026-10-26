@@ -9,6 +9,8 @@ REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 STOW_DIR="$REPO_ROOT/home"
 PACKAGES_DIR="$REPO_ROOT/packages"
 LAYERS_DIR="$REPO_ROOT/layers"
+# A WM name is a single directory under layers/wm/, never a path.
+WM_NAME_PATTERN='^[a-z0-9][a-z0-9_-]*$'
 # Every layer resolves its backend with the same, root-level order.
 PACKAGE_BACKENDS_FILE="$PACKAGES_DIR/package-backends.txt"
 
@@ -333,6 +335,7 @@ parse_args() {
         COMPONENT_EXPLICIT=1
         case "$2" in
           both|all)
+            WM="mangowm"
             append_unique WMS "mangowm"
             append_unique WMS "bspwm"
             ;;
@@ -352,6 +355,7 @@ parse_args() {
         COMPONENT_EXPLICIT=1
         case "$WM" in
           both|all)
+            WM="mangowm"
             append_unique WMS "mangowm"
             append_unique WMS "bspwm"
             ;;
@@ -743,6 +747,7 @@ resolve_wm_layers() {
   (( ${#WMS[@]} > 0 )) || return 0
 
   for current_wm in "${WMS[@]}"; do
+    [[ "$current_wm" =~ $WM_NAME_PATTERN ]] || die "nombre de WM inválido: $current_wm"
     [[ -f "$LAYERS_DIR/wm/$current_wm/layer.conf" ]] || \
       die "entorno de ventanas no soportado: $current_wm (no existe $LAYERS_DIR/wm/$current_wm/layer.conf)"
 
@@ -1639,7 +1644,11 @@ load_selection_receipt() {
   if (( ${#WMS[@]} == 0 )); then
     read -r -a entries <<< "${selection[WMS]:-}"
     for entry in "${entries[@]}"; do
-      [[ -f "$LAYERS_DIR/wm/$entry/layer.conf" ]] && append_unique WMS "$entry"
+      if [[ "$entry" =~ $WM_NAME_PATTERN && -f "$LAYERS_DIR/wm/$entry/layer.conf" ]]; then
+        append_unique WMS "$entry"
+      else
+        warn "se ignora un WM inválido en el recibo de selección: $entry"
+      fi
     done
   fi
   if [[ "$BACKEND_REQUEST" == auto ]]; then

@@ -172,6 +172,11 @@ grep -q 'Dry-run de unlink de la capa wm/bspwm completado' "$TEST_ROOT/wm-unlink
 [[ ! -e "$WM_STATE/bspwm.receipt" ]] || fail "unlink no eliminó el recibo de bspwm"
 [[ ! -e "$WM_STATE/dotfiles.receipt" ]] || fail "unlink no eliminó el recibo de selección"
 
+"$DOTFILES" bootstrap --profile core --stow-only --target "$WM_TARGET" \
+  --wm both > "$TEST_ROOT/wm-both.out" || fail "--wm both fue rechazado"
+grep -q 'Plan de la capa wm/mangowm' "$TEST_ROOT/wm-both.out" || fail "--wm both no incluyó MangoWM"
+grep -q 'Plan de la capa wm/bspwm' "$TEST_ROOT/wm-both.out" || fail "--wm both no incluyó BSPWM"
+
 # Si el preflight de la capa falla, la base no debe llegar a crear ningún enlace.
 mkdir -p "$WM_FAILURE_TARGET/.config/bspwm"
 printf 'local\n' > "$WM_FAILURE_TARGET/.config/bspwm/bspwmrc"
