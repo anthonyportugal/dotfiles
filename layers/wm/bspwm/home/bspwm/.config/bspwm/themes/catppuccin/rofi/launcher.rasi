@@ -1,0 +1,139 @@
+/**
+ * Minimal Catppuccin Mocha Application Launcher for BSPWM
+ * Clean, single-view application launcher inspired by Fuzzel
+ **/
+
+configuration {
+    modi:                       "drun,run,window";
+    show-icons:                 true;
+    display-drun:               "❯";
+    display-run:                "❯";
+    display-window:             "❯";
+    drun-display-format:        "{name}";
+    window-format:              "{c} · {t}";
+}
+
+@import "shared/colors.rasi"
+@import "shared/fonts.rasi"
+
+* {
+    background-color:            transparent;
+    text-color:                  @foreground;
+}
+
+window {
+    transparency:                "real";
+    location:                    center;
+    anchor:                      center;
+    fullscreen:                  false;
+    width:                       500px;
+    border:                      2px;
+    border-color:                @selected;
+    border-radius:               10px;
+    background-color:            @background;
+    cursor:                      "default";
+}
+
+mainbox {
+    spacing:                     8px;
+    padding:                     14px 16px;
+    children:                    [ inputbar, message, listview ];
+}
+
+inputbar {
+    spacing:                     8px;
+    padding:                     8px 12px;
+    border-radius:               8px;
+    background-color:            @background-alt;
+    text-color:                  @foreground;
+    children:                    [ prompt, entry ];
+}
+
+prompt {
+    font:                        inherit;
+    text-color:                  @selected;
+}
+
+entry {
+    placeholder:                 "Search...";
+    placeholder-color:           #6C7086;
+    cursor:                      text;
+}
+
+listview {
+    columns:                     1;
+    lines:                       10;
+    cycle:                       true;
+    dynamic:                     true;
+    scrollbar:                   false;
+    layout:                      vertical;
+    reverse:                     false;
+    fixed-height:                true;
+    fixed-columns:               true;
+    spacing:                     3px;
+}
+
+element {
+    spacing:                     10px;
+    padding:                     6px 10px;
+    border-radius:               6px;
+    cursor:                      pointer;
+}
+
+element normal.normal {
+    background-color:            transparent;
+    text-color:                  @foreground;
+}
+
+element normal.urgent {
+    background-color:            @urgent;
+    text-color:                  @background;
+}
+
+element normal.active {
+    background-color:            @active;
+    text-color:                  @background;
+}
+
+element selected.normal {
+    background-color:            @selected;
+    text-color:                  @background;
+}
+
+element selected.urgent {
+    background-color:            @urgent;
+    text-color:                  @background;
+}
+
+element selected.active {
+    background-color:            @active;
+    text-color:                  @background;
+}
+
+element-icon {
+    size:                        24px;
+    cursor:                      inherit;
+}
+
+element-text {
+    cursor:                      inherit;
+    vertical-align:              0.5;
+    text-color:                  inherit;
+}
+
+message {
+    padding:                     8px 12px;
+    border-radius:               6px;
+    background-color:            @background-alt;
+}
+
+textbox {
+    vertical-align:              0.5;
+}
+
+error-message {
+    padding:                     14px;
+    border-radius:               8px;
+    background-color:            @background;
+    text-color:                  @urgent;
+}

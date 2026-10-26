@@ -1,0 +1,133 @@
+# BSPWM Desktop Keybindings
+# Harmonized with modular dotfiles ecosystem standards.
+
+# Applications
+super + Return
+	bspwm-terminal
+
+super + shift + Return
+	bspwm-terminal --float
+
+super + d
+	bspwm-rofi drun
+
+super + b
+	bspwm-launch browser
+
+super + e
+	bspwm-launch files
+
+# Session & System Utilities
+super + l
+	bspwm-lock
+
+super + x
+	bspwm-rofi power
+
+super + shift + p
+	bspwm-power-profile select
+
+super + n
+	bspwm-nightlight toggle
+
+super + w
+	bspwm-wallpaper select
+
+super + shift + w
+	bspwm-wifi select
+
+super + shift + t
+	bspwm-theme menu
+
+super + shift + i
+	polybar-idle-inhibitor toggle
+
+super + shift + slash
+	bspwm-keybinds
+
+# Screenshots
+super + s
+	bspwm-screenshot full
+
+super + shift + s
+	bspwm-screenshot annotate
+
+Print
+	bspwm-screenshot full
+
+# Color Picker
+super + p
+	bspwm-color-picker
+
+# Screen Recording
+super + r
+	bspwm-recording toggle
+
+super + shift + r
+	bspwm-recording toggle-region
+
+super + alt + r
+	bspwm-recording menu
+
+# Hardware keys degrade cleanly when a capability is absent.
+XF86MonBrightness{Up,Down}
+	bspwm-brightness {up,down}
+
+XF86Audio{RaiseVolume,LowerVolume,Mute,MicMute}
+	bspwm-volume {up,down,mute,mic-mute}
+
+XF86Audio{Next,Prev,Play,Stop}
+	playerctl --player=playerctld {next,previous,play-pause,stop}
+
+# Window Lifecycle & Layouts
+super + c
+	bspc node -c
+
+super + shift + c
+	bspc node -k
+
+super + Escape
+	bspc wm -r; pkill -USR1 -u "$(id -u)" -x sxhkd
+
+super + shift + Escape
+	bspc quit
+
+super + t
+	bspc desktop -l next
+
+super + f
+	bspc node -t '~fullscreen'
+
+super + space
+	bspc node -t '~floating'
+
+# Focus and swap
+super + {_,shift + }{Left,Down,Up,Right}
+	bspc node -{f,s} {west,south,north,east}
+
+super + {1-9}
+	bspc desktop -f '^{1-9}'
+
+super + shift + {1-9}
+	bspc node -d '^{1-9}' --follow
+
+# Monitor Navigation & Migration
+super + {comma,period}
+	bspc monitor -f {prev,next}
+
+super + shift + {comma,period}
+	bspc node -m {prev,next} --follow
+
+# Navigation & History
+alt + Tab
+	bspc node -f next.local
+
+super + Tab
+	bspc node -f last
+
+# Resizing
+super + control + {Left,Right,Up,Down}
+	bspc node -z {left -20 0,right 20 0,top 0 -20,bottom 0 20}
+
+super + alt + {Left,Right,Up,Down}
+	bspc node -z {left 20 0,right -20 0,top 0 20,bottom 0 -20}

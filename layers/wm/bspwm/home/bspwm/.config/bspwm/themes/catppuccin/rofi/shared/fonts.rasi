@@ -1,0 +1,7 @@
+/**
+ * Typography configuration for Rofi themes
+ **/
+
+* {
+    font: "JetBrains Mono 10";
+}
