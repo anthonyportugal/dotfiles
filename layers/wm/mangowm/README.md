@@ -27,7 +27,7 @@ Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** us
 ## ✨ Key Highlights
 
 - 🚀 **Dynamic Wayland Tiling:** Next-generation dynamic tiling compositor with runtime layout switching (*Dwindle, Tile, Grid, Monocle, Scroller*).
-- 🎨 **Atomic Dynamic Theming:** Built-in `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout with 14 hot-swappable Mocha accents.
+- 🎨 **Atomic Dynamic Theming:** MangoWM ships templates for the shared `dotfiles-theme` engine (desktop layer), which renders MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout configs with 14 hot-swappable Mocha accents.
 - 📊 **Tailored Waybar & Notifications:** Sleek status bar with interactive popups, live media controls, network status, battery monitors, and Mako notifications.
 - 💻 **Integrated Laptop & Recording:** Out-of-the-box hardware brightness control (`brightnessctl`) and Wayland screen recording (`wf-recorder`).
 - 🌙 **Eye Comfort & Night Light:** Integrated Gammastep warm color temperature with real-time toggle and status in Waybar.
@@ -56,7 +56,7 @@ The MangoWM configuration is organized into cumulative profiles managed with [GN
 │  │  • Window Manager: MangoWM (Dynamic Tiling Compositor)           │  │
 │  │  • Terminal: Foot (Wayland Native, Catppuccin Theme)             │  │
 │  │  • App Launcher & Portals: Fuzzel, XDG Desktop Portals           │  │
-│  │  • Theme Engine: mango-theme (Dynamic Atomic Compilation)        │  │
+│  │  • Theme: templates for the shared dotfiles-theme engine         │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -65,7 +65,7 @@ The MangoWM configuration is organized into cumulative profiles managed with [GN
 
 | Profile | Stow Package | Contents | Intended Target |
 | :--- | :--- | :--- | :--- |
-| **`core`** | `mango` | Compositor, terminal, launcher, notifications, screen locker, idle daemon, portals, and `mango-theme` engine. | Minimal systems, servers with Wayland, headless setups. |
+| **`core`** | `mango` | Compositor, terminal, launcher, notifications, screen locker, idle daemon, portals, and `mango-theme` menu (theme templates for `dotfiles-theme`). | Minimal systems, servers with Wayland, headless setups. |
 | **`desktop`** | Reuses `mango` | Core + Waybar status bar, Wlogout power menu, Swaybg wallpapers, Gammastep, Satty screenshot editor, WF-Recorder, and brightness controls. | Full desktop workstations, laptops, and VMs. |
 
 ---
@@ -123,7 +123,7 @@ stays installed without passing `--wm` again.
 The desktop is styled with **Catppuccin Mocha**, supporting all **14 official accent palettes** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*) with **Pink (`#f5c2e7`)** configured as the initial default.
 
 - **Interactive Theme Selector:** Press `Super + Alt + T` to switch color palettes in real-time via Fuzzel.
-- **Dynamic Theming CLI (`mango-theme`):**
+- **Theming CLI (`mango-theme`, a front end for `dotfiles-theme`):**
   ```bash
   # Open interactive theme menu
   mango-theme menu
@@ -137,7 +137,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
   # Display current active theme
   mango-theme current
   ```
-- **Atomic Rendering:** The `mango-theme` engine compiles palette tokens into runtime configs for MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout under `$XDG_STATE_HOME/mangowm/theme/current/` with atomic symlink promotion and zero background daemons.
+- **Atomic Rendering:** The layer only contributes templates (`~/.local/share/dotfiles/theme/templates/mangowm/`) and a live reload hook (`reload.d/mangowm`). The shared `dotfiles-theme` engine renders them from `themes/palettes/` into `$XDG_STATE_HOME/dotfiles/theme/current/mangowm/` with atomic symlink promotion and zero background daemons; see `themes/README.md` at the repository root.
 
 ---
 

@@ -6,7 +6,9 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 # The layer lives at layers/wm/mangowm inside the monorepo.
 MONOREPO_ROOT=$(cd -- "$REPO_ROOT/../../.." && pwd -P)
-PALETTE="$REPO_ROOT/../../../themes/palettes/catppuccin-mocha-pink.conf"
+# Palettes are shared by every WM and live at the repository root.
+PALETTE="$MONOREPO_ROOT/themes/palettes/catppuccin-mocha-pink.conf"
+TEMPLATES="$REPO_ROOT/home/mango/.local/share/dotfiles/theme/templates/mangowm"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -105,8 +107,25 @@ fi
   fail "falta el renderer de tema"
 [[ -f "$MONOREPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
-[[ -f "$REPO_ROOT/../../../themes/templates/yazi/flavor.toml" ]] || \
-  fail "falta el template de tema para yazi"
+# MangoWM only contributes templates and a reload hook to the shared engine.
+[[ ! -e "$REPO_ROOT/themes" ]] || \
+  fail "layers/wm/mangowm/themes duplica las paletas compartidas"
+for template in mango.conf foot.ini fuzzel.ini mako.conf swaylock.conf \
+  waybar.css wlogout.css xdg-config/satty/config.toml \
+  icons/{suspend,logout,reboot,shutdown}{,-dark}.svg; do
+  [[ -s "$TEMPLATES/$template" ]] || fail "falta la plantilla mangowm/$template"
+done
+for shared_output in gtk.css yazi background metadata; do
+  [[ ! -e "$TEMPLATES/$shared_output" ]] || \
+    fail "mangowm/$shared_output es un output compartido del motor"
+done
+grep -Fxq 'ignore-empty-password' "$TEMPLATES/swaylock.conf" || \
+  fail "la plantilla de Swaylock permite passwords vacíos"
+[[ -x "$REPO_ROOT/home/mango/.local/share/dotfiles/theme/reload.d/mangowm" ]] || \
+  fail "falta el hook de recarga ejecutable reload.d/mangowm"
+if grep -Fq 'render_waybar' "$REPO_ROOT/home/mango/.local/bin/mango-theme"; then
+  fail "mango-theme sigue renderizando en lugar de delegar en dotfiles-theme"
+fi
 
 declare -A expected_keys=()
 
@@ -169,7 +188,7 @@ check_palette() {
 }
 
 found_palettes=0
-for palette_file in "$REPO_ROOT"/../../../themes/palettes/*.conf; do
+for palette_file in "$MONOREPO_ROOT"/themes/palettes/*.conf; do
   [[ -f "$palette_file" ]] || continue
   check_palette "$palette_file"
   ((found_palettes++)) || true

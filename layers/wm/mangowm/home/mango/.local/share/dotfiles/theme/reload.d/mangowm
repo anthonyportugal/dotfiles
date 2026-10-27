@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Live reload of the MangoWM session after `dotfiles-theme set`. The engine
+# already synced the GNOME accent; this only reloads what reads current/mangowm.
+
+set -uo pipefail
+
+# Waybar reloads its stylesheet on SIGUSR2 without restarting the bar.
+pkill -SIGUSR2 waybar 2>/dev/null || true
+
+if command -v makoctl >/dev/null 2>&1; then
+  makoctl reload 2>/dev/null || true
+fi
+
+if command -v mmsg >/dev/null 2>&1; then
+  mmsg dispatch reload_config >/dev/null 2>&1 || true
+fi

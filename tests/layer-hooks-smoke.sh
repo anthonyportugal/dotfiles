@@ -115,14 +115,21 @@ printf 'unexpected=1\n' >> "$copy/home/mango/.config/mango/config.conf"
 output=$(run_hook "$copy" validate bootstrap 2>&1) && fail "validate de mangowm aceptó una directiva fuera del entrypoint"
 [[ "$output" == *"directiva fuera del entrypoint modular"* ]] || fail "validate de mangowm falló por otra causa: $output"
 
-# mangowm: post-link renders the theme under the target's XDG state.
-layer="$REPO_ROOT/layers/wm/mangowm"
-[[ -x "$layer/hooks/post-link" ]] || fail "falta el hook ejecutable layers/wm/mangowm/hooks/post-link"
-stow --dir="$layer/home" --target="$TARGET" --no-folding mango
-run_hook "$layer" post-link bootstrap >/dev/null || fail "post-link de mangowm falló"
-[[ -L "$TARGET/.local/state/dotfiles/theme/current" ]] || fail "post-link no publicó theme/current"
-[[ -f "$TARGET/.local/state/dotfiles/theme/current/gtk.css" ]] || fail "post-link no renderizó gtk.css"
-stow --dir="$layer/home" --target="$TARGET" --no-folding --delete mango
+# The MangoWM post-link renders its templates with the desktop theme engine under
+# the target's XDG state.
+stow --dir="$REPO_ROOT/layers/desktop/home" --target="$TARGET" --no-folding theme
+for wm in mangowm:mango; do
+  layer="$REPO_ROOT/layers/wm/${wm%%:*}"
+  [[ -x "$layer/hooks/post-link" ]] || fail "falta el hook ejecutable layers/wm/${wm%%:*}/hooks/post-link"
+  stow --dir="$layer/home" --target="$TARGET" --no-folding "${wm#*:}"
+  run_hook "$layer" post-link bootstrap >/dev/null || fail "post-link de ${wm%%:*} falló"
+  [[ -L "$TARGET/.local/state/dotfiles/theme/current" ]] || fail "post-link de ${wm%%:*} no publicó theme/current"
+  [[ -f "$TARGET/.local/state/dotfiles/theme/current/gtk.css" ]] || fail "post-link de ${wm%%:*} no renderizó gtk.css"
+  [[ -n "$(find "$TARGET/.local/state/dotfiles/theme/current/${wm%%:*}" -type f -print -quit 2>/dev/null)" ]] || \
+    fail "post-link de ${wm%%:*} no renderizó sus plantillas"
+  stow --dir="$layer/home" --target="$TARGET" --no-folding --delete "${wm#*:}"
+done
+stow --dir="$REPO_ROOT/layers/desktop/home" --target="$TARGET" --no-folding --delete theme
 [[ "$(git -C "$REPO_ROOT" status --porcelain -- layers)" == "$CHECKOUT_STATE" ]] || fail "los hooks modificaron el checkout"
 
 printf 'OK: hooks de capa de bspwm y mangowm validados\n'

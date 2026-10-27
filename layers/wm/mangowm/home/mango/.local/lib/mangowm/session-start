@@ -32,7 +32,8 @@ if command -v dbus-update-activation-environment >/dev/null 2>&1; then
     MOZ_ENABLE_WAYLAND ELECTRON_OZONE_PLATFORM_HINT SDL_VIDEODRIVER
 fi
 
-theme_dir=$(mangowm_theme_dir)
+theme_root=$(mangowm_theme_root)
+theme_dir="$theme_root/mangowm"
 runtime_dir=$(mangowm_runtime_dir)
 
 # La preferencia GTK global pertenece al repositorio base. Este contrato
@@ -54,7 +55,7 @@ fi
 if [[ -x "$HOME/.local/lib/mangowm/wallpaper" ]]; then
   "$HOME/.local/lib/mangowm/wallpaper" restore
 else
-  start_unit mangowm-swaybg swaybg -c "$(<"$theme_dir/background")"
+  start_unit mangowm-swaybg swaybg -c "$(<"$theme_root/background")"
 fi
 
 if [[ -r "$XDG_CONFIG_HOME/waybar/config.json" ]] && command -v waybar >/dev/null 2>&1; then

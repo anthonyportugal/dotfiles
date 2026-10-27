@@ -27,7 +27,7 @@ Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux
 ## ✨ Características Principales
 
 - 🚀 **Mosaico Wayland Dinámico:** Compositor moderno de última generación con cambio de disposiciones en caliente (*Dwindle, Tile, Grid, Monocle, Scroller*).
-- 🎨 **Tematización Dinámica Atómica:** Motor integrado `mango-theme` que compila la paleta de colores para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout con 14 acentos Mocha intercambiables.
+- 🎨 **Tematización Dinámica Atómica:** MangoWM aporta plantillas al motor compartido `dotfiles-theme` (capa desktop), que genera la configuración de MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout con 14 acentos Mocha intercambiables.
 - 📊 **Waybar y Notificaciones a Medida:** Barra de estado con controles interactivos, reproducción multimedia en vivo, estado de red, batería y notificaciones con Mako.
 - 💻 **Laptop y Grabación Integradas:** Control de brillo por hardware (`brightnessctl`) y grabación fluida de pantalla (`wf-recorder`) listos para usar sin configuración adicional.
 - 🌙 **Confort Visual y Luz Nocturna:** Integración con Gammastep para ajuste de temperatura de color con estado en vivo y conmutable desde Waybar.
@@ -56,7 +56,7 @@ La configuración de MangoWM está organizada en perfiles acumulativos administr
 │  │  • Gestor de Ventanas: MangoWM (Compositor de Mosaico Dinámico)  │  │
 │  │  • Terminal: Foot (Nativo de Wayland, Tema Catppuccin)           │  │
 │  │  • Lanzador y Portales: Fuzzel, Portales XDG Desktop             │  │
-│  │  • Motor de Tema: mango-theme (Compilación Atómica Dinámica)     │  │
+│  │  • Tema: plantillas para el motor compartido dotfiles-theme      │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -65,7 +65,7 @@ La configuración de MangoWM está organizada en perfiles acumulativos administr
 
 | Perfil | Paquete Stow | Contenido | Destino recomendado |
 | :--- | :--- | :--- | :--- |
-| **`core`** | `mango` | Compositor MangoWM, terminal Foot, lanzador Fuzzel, Swaylock, Swayidle, Mako, portales y motor `mango-theme`. | Sistemas mínimos, servidores con Wayland o entornos headless. |
+| **`core`** | `mango` | Compositor MangoWM, terminal Foot, lanzador Fuzzel, Swaylock, Swayidle, Mako, portales y menú `mango-theme` (plantillas de tema para `dotfiles-theme`). | Sistemas mínimos, servidores con Wayland o entornos headless. |
 | **`desktop`** | Reutiliza `mango` | `core` más barra Waybar, menú de energía Wlogout, fondos Swaybg, Gammastep, capturas Satty, grabación WF-Recorder y controles de brillo. | Estaciones de trabajo completas, portátiles y VMs. |
 
 ---
@@ -123,7 +123,7 @@ capa sigue instalada sin volver a pasar `--wm`.
 El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas de acento oficiales** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*), con **Pink (`#f5c2e7`)** configurado como valor inicial predeterminado.
 
 - **Selector Interactivo de Temas:** Presiona `Super + Alt + T` para cambiar la paleta de colores en tiempo real mediante Fuzzel.
-- **CLI de Tematización Dinámica (`mango-theme`):**
+- **CLI de Tematización (`mango-theme`, interfaz de `dotfiles-theme`):**
   ```bash
   # Abrir el menú interactivo de temas
   mango-theme menu
@@ -137,7 +137,7 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
   # Mostrar el tema activo actual
   mango-theme current
   ```
-- **Renderizado Atómico Dinámico:** El script `mango-theme` compila las variables de color y genera los archivos de configuración para MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout bajo `$XDG_STATE_HOME/mangowm/theme/current/` mediante enlaces simbólicos atómicos y sin daemons en segundo plano.
+- **Renderizado Atómico Dinámico:** La capa solo aporta plantillas (`~/.local/share/dotfiles/theme/templates/mangowm/`) y un hook de recarga en vivo (`reload.d/mangowm`). El motor compartido `dotfiles-theme` las renderiza desde `themes/palettes/` bajo `$XDG_STATE_HOME/dotfiles/theme/current/mangowm/` mediante enlaces simbólicos atómicos y sin daemons en segundo plano; ver `themes/README.md` en la raíz del repositorio.
 
 ---
 

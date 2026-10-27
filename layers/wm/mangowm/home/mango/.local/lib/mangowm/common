@@ -13,19 +13,32 @@ mangowm_runtime_dir() {
   printf '%s\n' "$runtime_dir"
 }
 
-mangowm_theme_dir() {
+# Active theme root of the shared engine (desktop layer): shared outputs such
+# as background live here, MangoWM outputs below mangowm/.
+mangowm_theme_root() {
+  local engine="$HOME/.local/bin/dotfiles-theme"
   local current
 
-  current="$(mangowm_state_home)/mangowm/theme/current"
-
-  if [[ ! -d "$current" ]]; then
-    "$HOME/.local/bin/mango-theme" render >/dev/null
-  fi
-  [[ -d "$current" ]] || {
+  current=$("$engine" path) || {
     printf 'mangowm: no se pudo materializar el tema activo\n' >&2
     return 1
   }
+  # A theme rendered before the MangoWM templates were installed lacks them.
+  if [[ ! -d "$current/mangowm" ]]; then
+    "$engine" render >/dev/null || true
+  fi
+  [[ -d "$current/mangowm" ]] || {
+    printf 'mangowm: el tema activo no incluye las plantillas de MangoWM\n' >&2
+    return 1
+  }
   printf '%s\n' "$current"
+}
+
+mangowm_theme_dir() {
+  local root
+
+  root=$(mangowm_theme_root) || return 1
+  printf '%s\n' "$root/mangowm"
 }
 
 mangowm_notify() {

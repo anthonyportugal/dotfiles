@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
-# Renders the initial MangoWM theme under the target's XDG state after linking.
+# Renders the theme with the shared engine (stowed by the desktop layer this
+# layer requires) so the MangoWM templates land under the target's XDG state.
 # Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
 
 set -Eeuo pipefail
@@ -12,14 +13,15 @@ PROGRAM_NAME=mangowm
 source "$DOTFILES_LIB/colors.sh"
 
 render_theme_for_target() {
-  local renderer="$TARGET_DIR/.local/bin/mango-theme"
+  local engine="$TARGET_DIR/.local/bin/dotfiles-theme"
 
-  [[ -x "$renderer" ]] || die "el renderer instalado no es ejecutable: $renderer"
-  info "Renderizando el tema inicial bajo el XDG state del target"
+  [[ -x "$engine" ]] || die "el motor de temas no es ejecutable: $engine"
+  info "Renderizando las plantillas de MangoWM bajo el XDG state del target"
   HOME="$TARGET_DIR" \
     XDG_STATE_HOME="$TARGET_DIR/.local/state" \
+    XDG_DATA_HOME="$TARGET_DIR/.local/share" \
     XDG_CONFIG_HOME="$TARGET_DIR/.config" \
-    "$renderer" render >/dev/null
+    "$engine" render >/dev/null
 }
 
 render_theme_for_target

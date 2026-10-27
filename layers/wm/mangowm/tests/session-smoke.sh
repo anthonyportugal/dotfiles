@@ -42,6 +42,7 @@ MEDIA_ROOT="$TEST_ROOT/media"
 mkdir -p "$TARGET" "$STATE" "$RUNTIME" "$FAKE_BIN" "$MEDIA_ROOT"
 : > "$LOG"
 : > "$SERVICE_STATE"
+HOME_STATE_BEFORE=$(git -C "$REPO_ROOT" status --porcelain --ignored -- home)
 
 "$DOTFILES" bootstrap --profile core --wm mangowm --wm-profile desktop \
   --stow-only --target "$TARGET" --apply >/dev/null 2>&1
@@ -54,6 +55,7 @@ for managed_path in \
   .config/swayidle/config \
   .config/xdg-desktop-portal/mango-portals.conf \
   .local/bin/mango-theme \
+  .local/bin/dotfiles-theme \
   .local/bin/mangowm-session \
   .local/lib/mangowm/brightness \
   .local/lib/mangowm/color-picker \
@@ -63,22 +65,38 @@ for managed_path in \
   [[ -L "$TARGET/$managed_path" ]] || fail "falta el enlace $managed_path"
 done
 
-# El renderer es reproducible, inmutable y sólo escribe en XDG state.
-first_revision=$(HOME="$TARGET" XDG_STATE_HOME="$STATE" \
-  "$TARGET/.local/bin/mango-theme" render)
-first_link=$(readlink -- "$STATE/mangowm/theme/current")
-second_revision=$(HOME="$TARGET" XDG_STATE_HOME="$STATE" \
-  "$TARGET/.local/bin/mango-theme" render)
-second_link=$(readlink -- "$STATE/mangowm/theme/current")
+# The WM only ships templates: they are stowed for the shared engine, and the
+# reload hook is executable.
+for template in mango.conf foot.ini fuzzel.ini mako.conf swaylock.conf \
+  waybar.css wlogout.css icons/logout.svg xdg-config/satty/config.toml; do
+  [[ -f "$TARGET/.local/share/dotfiles/theme/templates/mangowm/$template" ]] || \
+    fail "falta la plantilla mangowm/$template"
+done
+[[ -x "$TARGET/.local/share/dotfiles/theme/reload.d/mangowm" ]] || \
+  fail 'falta el hook de recarga reload.d/mangowm'
+
+# mango-theme forwards to the shared engine: rendering is reproducible,
+# immutable and only writes in XDG state.
+theme_env=(env -u DOTFILES_THEME HOME="$TARGET" XDG_STATE_HOME="$STATE"
+  XDG_DATA_HOME="$TARGET/.local/share" XDG_CONFIG_HOME="$TARGET/.config")
+first_revision=$("${theme_env[@]}" "$TARGET/.local/bin/mango-theme" render)
+first_link=$(readlink -- "$STATE/dotfiles/theme/current")
+second_revision=$("${theme_env[@]}" "$TARGET/.local/bin/mango-theme")
+second_link=$(readlink -- "$STATE/dotfiles/theme/current")
 [[ "$first_revision" == "$second_revision" && "$first_link" == "$second_link" ]] || \
   fail 'el renderer no fue idempotente'
+[[ ! -e "$STATE/mangowm/theme" ]] || fail 'se renderizó en la ruta antigua mangowm/theme'
 [[ ! -e "$REPO_ROOT/.local/state" ]] || fail 'el renderer contaminó el checkout'
+[[ "$(git -C "$REPO_ROOT" status --porcelain --ignored -- home)" == "$HOME_STATE_BEFORE" ]] || \
+  fail 'el renderer escribió dentro del paquete Stow'
 grep -Fxq 'accent_name=pink' "$first_revision/metadata" || \
   fail 'el tema activo no conserva Pink'
-grep -Fxq 'ignore-empty-password' "$first_revision/swaylock.conf" || \
+grep -Fxq 'ignore-empty-password' "$first_revision/mangowm/swaylock.conf" || \
   fail 'Swaylock permite passwords vacíos'
+grep -Fq '#f5c2e7' "$first_revision/mangowm/waybar.css" || \
+  fail 'Waybar no recibió el acento rosa'
 if command -v foot >/dev/null 2>&1; then
-  foot --config="$first_revision/foot.ini" --check-config || \
+  foot --config="$first_revision/mangowm/foot.ini" --check-config || \
     fail 'Foot rechazó el adaptador generado'
 fi
 
@@ -134,6 +152,7 @@ ln -s "$REPO_ROOT/tests/fakes/swaylock" "$FAKE_BIN/swaylock"
 export HOME="$TARGET"
 export XDG_CONFIG_HOME="$TARGET/.config"
 export XDG_STATE_HOME="$STATE"
+export XDG_DATA_HOME="$TARGET/.local/share"
 export XDG_RUNTIME_DIR="$RUNTIME"
 export MANGOWM_TEST_LOG="$LOG"
 export MANGOWM_TEST_SERVICE_STATE="$SERVICE_STATE"

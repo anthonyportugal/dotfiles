@@ -16,6 +16,7 @@ source "$DOTFILES_LIB/core.sh"
 source "$DOTFILES_LIB/layers.sh"
 
 STOW_DIR="$LAYER_DIR/home"
+THEME_CHECK_ID=catppuccin-mocha-pink
 declare -a STOW_PACKAGES=()
 read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
 
@@ -36,7 +37,14 @@ validate_stow_scope() {
         mango:.config/wlogout|mango:.config/wlogout/*|\
         mango:.local|mango:.local/bin|mango:.local/bin/mango-theme|\
         mango:.local/bin/mangowm-session|mango:.local/lib|\
-        mango:.local/lib/mangowm|mango:.local/lib/mangowm/*)
+        mango:.local/lib/mangowm|mango:.local/lib/mangowm/*|\
+        mango:.local/share|mango:.local/share/dotfiles|\
+        mango:.local/share/dotfiles/theme|\
+        mango:.local/share/dotfiles/theme/templates|\
+        mango:.local/share/dotfiles/theme/templates/mangowm|\
+        mango:.local/share/dotfiles/theme/templates/mangowm/*|\
+        mango:.local/share/dotfiles/theme/reload.d|\
+        mango:.local/share/dotfiles/theme/reload.d/mangowm)
           ;;
         *)
           unexpected_path=$source_path
@@ -124,19 +132,46 @@ validate_portability() {
   return 0
 }
 
-validate_theme_source() {
-  local renderer="$STOW_DIR/mango/.local/bin/mango-theme"
+# Renders the MangoWM templates with the repository engine into a throwaway
+# home and checks the invariants the session relies on.
+validate_theme_templates() {
+  local engine="$LAYER_DIR/../../desktop/home/theme/.local/bin/dotfiles-theme"
+  local palette="$LAYER_DIR/../../../themes/palettes/$THEME_CHECK_ID.conf"
+  local templates="$STOW_DIR/mango/.local/share/dotfiles/theme/templates/mangowm"
+  local scratch revision accent result=0
 
   array_contains STOW_PACKAGES mango || return 0
-  [[ -f "$renderer" ]] || {
-    error "falta el renderer de tema: $renderer"
+  [[ -x "$engine" ]] || {
+    error "falta el motor de temas de la capa desktop: $engine"
     return 1
   }
-  bash "$renderer" validate >/dev/null || {
-    error "la paleta o el renderer de tema no son válidos"
+  [[ -d "$templates" ]] || {
+    error "faltan las plantillas de tema: $templates"
     return 1
   }
-  info "Paleta y renderer de tema validados"
+  accent=$(sed -n 's/^accent=//p' "$palette")
+  scratch=$(mktemp -d)
+  mkdir -p "$scratch/.local/share/dotfiles/theme/templates"
+  cp -R -- "$templates" "$scratch/.local/share/dotfiles/theme/templates/"
+  if revision=$(env -u DOTFILES_THEME HOME="$scratch" \
+      XDG_STATE_HOME="$scratch/.local/state" \
+      XDG_DATA_HOME="$scratch/.local/share" \
+      XDG_CONFIG_HOME="$scratch/.config" "$engine" render "$THEME_CHECK_ID"); then
+    grep -Fxq 'ignore-empty-password' "$revision/mangowm/swaylock.conf" || {
+      error "Swaylock no rechaza passwords vacíos"
+      result=1
+    }
+    if [[ -z "$accent" ]] || ! grep -Fq -- "$accent" "$revision/mangowm/waybar.css"; then
+      error "Waybar no recibió el acento del tema"
+      result=1
+    fi
+  else
+    error "las plantillas de tema no renderizan"
+    result=1
+  fi
+  rm -rf -- "$scratch"
+  (( result == 0 )) && info "Plantillas de tema de MangoWM validadas"
+  return "$result"
 }
 
 # Unlinking only needs ownership; a broken config must not block its removal.
@@ -145,6 +180,6 @@ validate_stow_scope || exit 1
 
 result=0
 validate_mango_config || result=1
-validate_theme_source || result=1
+validate_theme_templates || result=1
 validate_portability || result=1
 exit "$result"

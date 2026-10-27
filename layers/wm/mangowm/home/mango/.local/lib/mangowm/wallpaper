@@ -38,8 +38,8 @@ list_wallpapers() {
 
 apply_swaybg() {
   local image=${1-}
-  local theme_dir
-  theme_dir=$(mangowm_theme_dir)
+  local theme_root
+  theme_root=$(mangowm_theme_root)
 
   systemctl --user stop mangowm-swaybg.service >/dev/null 2>&1 || true
   systemctl --user reset-failed mangowm-swaybg.service >/dev/null 2>&1 || true
@@ -49,7 +49,7 @@ apply_swaybg() {
       swaybg -i "$image" -m fill
   else
     systemd-run --user --quiet --collect --unit=mangowm-swaybg -- \
-      swaybg -c "$(<"$theme_dir/background")"
+      swaybg -c "$(<"$theme_root/background")"
   fi
 }
 
