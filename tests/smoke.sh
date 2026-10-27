@@ -13,8 +13,9 @@ printf '\n--> 1/8: Executing shared engine (lib/) smoke tests...\n'
 printf '\n--> 2/8: Executing layer hook smoke tests...\n'
 "$SCRIPT_DIR/layer-hooks-smoke.sh"
 
-printf '\n--> 3/8: Executing shared theme engine smoke tests...\n'
+printf '\n--> 3/8: Executing shared theme engine and mimeapps smoke tests...\n'
 "$SCRIPT_DIR/theme-smoke.sh"
+"$SCRIPT_DIR/mimeapps-smoke.sh"
 
 printf '\n--> 4/8: Executing WM layer smoke tests...\n'
 "$SCRIPT_DIR/wm-layers-smoke.sh"

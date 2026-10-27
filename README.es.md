@@ -75,8 +75,11 @@ Las configuraciones están divididas en pequeños paquetes gestionados con [GNU 
 | **`yazi`** | Explorador de archivos ultrarrápido en terminal con tema Catppuccin Mocha | `cli`, `desktop` |
 | **`foot`** | Emulador de terminal Wayland ligero con tema Catppuccin Mocha | `desktop` |
 | **`alacritty`** | Emulador de terminal multiplataforma con tema Catppuccin Mocha | `desktop` |
-| **`xdg-defaults`** | Ajustes GTK 3/4 `prefer-dark`, asociaciones mimeapps y hooks de sesión | `desktop` |
+| **`xdg-defaults`** | Ajustes GTK 3/4 `prefer-dark` y hooks de sesión | `desktop` |
 | **`theme`** | `dotfiles-theme`, el único motor de temas que comparten todos los gestores de ventanas (ver [`themes/README.md`](themes/README.md)) | `desktop` |
+
+`~/.config/mimeapps.list` se genera, no se enlaza: las aplicaciones escriben en él, así que un enlace les dejaría modificar el checkout. La capa `desktop` mezcla
+[`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) en él en cada apply. Las claves del repo siempre ganan, y se conserva cualquier otra entrada que haya registrado una aplicación. `doctor` avisa cuando una clave del repo se desvió.
 
 ---
 

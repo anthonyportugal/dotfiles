@@ -75,8 +75,11 @@ Configurations are structured into small packages managed with [GNU Stow](https:
 | **`yazi`** | Blazing fast terminal file manager with Catppuccin Mocha theme | `cli`, `desktop` |
 | **`foot`** | Lightweight Wayland terminal emulator with Catppuccin Mocha theme | `desktop` |
 | **`alacritty`** | Cross-platform terminal emulator with Catppuccin Mocha theme | `desktop` |
-| **`xdg-defaults`** | GTK 3/4 `prefer-dark` settings, default mimeapps, and session hooks | `desktop` |
+| **`xdg-defaults`** | GTK 3/4 `prefer-dark` settings and session hooks | `desktop` |
 | **`theme`** | `dotfiles-theme`, the single theme engine shared by every window manager (see [`themes/README.md`](themes/README.md)) | `desktop` |
+
+`~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
+[`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.
 
 ---
 

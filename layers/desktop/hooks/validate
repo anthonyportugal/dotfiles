@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
-# Validates the desktop layer: Alacritty syntax and, in doctor, prefer-dark.
+# Validates the desktop layer: Alacritty syntax and, in doctor, prefer-dark
+# and drift of the generated mimeapps.list.
 # Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
 
 set -Eeuo pipefail
@@ -12,6 +13,8 @@ PROGRAM_NAME=desktop
 source "$DOTFILES_LIB/colors.sh"
 # shellcheck source=../../../lib/core.sh
 source "$DOTFILES_LIB/core.sh"
+# shellcheck source=mimeapps.sh
+source "$LAYER_DIR/hooks/mimeapps.sh"
 
 STOW_DIR="$LAYER_DIR/home"
 
@@ -55,5 +58,6 @@ result=0
 validate_alacritty_syntax || result=1
 if [[ "$OPERATION" == doctor ]]; then
   validate_session_preferences || result=1
+  [[ "$PROFILE" != desktop ]] || check_mimeapps
 fi
 exit "$result"

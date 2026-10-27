@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
-# Renders the shared theme and applies the GTK prefer-dark preference after
-# linking the desktop layer.
+# Renders the shared theme, generates mimeapps.list and applies the GTK
+# prefer-dark preference after linking the desktop layer.
 # Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
 
 set -Eeuo pipefail
@@ -13,6 +13,8 @@ PROGRAM_NAME=desktop
 source "$DOTFILES_LIB/colors.sh"
 # shellcheck source=../../../lib/core.sh
 source "$DOTFILES_LIB/core.sh"
+# shellcheck source=mimeapps.sh
+source "$LAYER_DIR/hooks/mimeapps.sh"
 
 apply_session_preferences() {
   local preferences="$TARGET_DIR/.local/lib/dotfiles/session-preferences"
@@ -52,4 +54,7 @@ render_theme() {
 }
 
 render_theme
+if [[ "$PROFILE" == desktop && "$APPLY" == 1 ]]; then
+  apply_mimeapps "$TARGET_DIR" || die "no se pudo generar mimeapps.list en $TARGET_DIR"
+fi
 apply_session_preferences
