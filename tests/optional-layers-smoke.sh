@@ -116,8 +116,7 @@ output=$(run sync --stow-only --target "$H" 2>&1) || fail "sync falló: $output"
 [[ "$output" == *'Plan de la capa dev'* ]] || fail "sync no restauró la capa dev del recibo: $output"
 [[ -L "$dev_link" ]] || fail "sync no volvió a enlazar la capa dev"
 
-# An explicit --layer on sync overrides the receipt; an empty selection is
-# recorded as such.
+# Overriding another selection field on sync keeps the recorded layers.
 output=$(run sync --stow-only --profile core --target "$H" 2>&1) || fail "sync --profile core falló: $output"
 grep -Fxq 'LAYERS="dev"' "$RECEIPT" || fail "sync sin --layer perdió la capa del recibo: $(<"$RECEIPT")"
 
