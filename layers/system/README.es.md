@@ -34,10 +34,8 @@ Configuraciones modulares, reproducibles y no destructivas a nivel de sistema pa
 ## 🧱 Estructura del Repositorio
 
 ```text
-dotfiles-system/
-├── .github/workflows/ci.yml     # Flujo automatizado de CI con ShellCheck y pruebas
+layers/system/
 ├── install.sh                  # Instalador maestro unificado (flags CLI + menú interactivo)
-├── LICENSE                     # Licencia MIT
 ├── README.md                   # Documentación en Inglés
 ├── README.es.md                # Documentación en Español
 ├── dns/
@@ -71,8 +69,8 @@ dotfiles-system/
 ### 1. Clonar Repositorio
 
 ```bash
-git clone https://github.com/anthonyportugal/dotfiles-system.git
-cd dotfiles-system
+git clone https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles/base
+cd ~/.dotfiles/base/layers/system
 ```
 
 ### 2. Auditoría del Estado del Sistema (Modo Seguro)
@@ -93,27 +91,28 @@ sudo ./install.sh --dry-run
 
 ### 4. Despliegue de Configuraciones
 
-#### Opción A: Instalador Maestro Unificado (Recomendado)
+#### Opción A: `dotfiles system` (Recomendado)
+
+El CLI del monorepo es el punto de entrada de esta capa. Solo escala con `sudo` para el instalador, instala el paquete `ly` con el backend de paquetes compartido y guarda la selección aplicada en `~/.local/state/dotfiles/system.receipt`. `bootstrap`, `sync` y `update` nunca la ejecutan.
 
 ```bash
-# Menú interactivo de selección (por defecto: en)
-sudo ./install.sh
+# Menú interactivo de selección
+dotfiles system setup --lang es
 
-# O menú interactivo explícitamente en español
-sudo ./install.sh --lang es
-
-# O instalación desatendida de todos los componentes
-sudo ./install.sh --all
-
-# Instalación asistida de paquetes ausentes (shelly/paru/yay/pacman)
-sudo ./install.sh --all --install
+# Instalación desatendida de todos los componentes, instalando ly si falta
+dotfiles system setup --all --install
 
 # Seleccionar un acento personalizado de Limine (mauve, pink, blue)
-sudo ./install.sh --all --theme pink
+dotfiles system setup --all --theme pink
 
 # Flags componibles: instalar solo Ly y DNS (sin tocar Limine)
-sudo ./install.sh --ly --dns --provider quad9
+dotfiles system setup --ly --dns --provider quad9
+
+# Auditar sin sudo, con la selección guardada
+dotfiles system doctor
 ```
+
+`sudo ./install.sh` con los mismos flags de componentes sigue funcionando para una ejecución puntual, pero no instala paquetes ni guarda la selección.
 
 #### Opción B: Instalación Modular
 
@@ -133,11 +132,8 @@ Puedes instalar o actualizar componentes de manera individual:
 
 * **Solo Ly Display Manager:**
   ```bash
-  # Desplegar temas
+  # Desplegar temas (los archivos sin cambios no se tocan)
   sudo ./ly/setup.sh
-
-  # O desplegar e instalar automáticamente el paquete si falta
-  sudo ./ly/setup.sh --install
   ```
   *Para habilitar Ly como display manager predeterminado en el arranque:*
   ```bash

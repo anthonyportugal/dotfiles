@@ -34,10 +34,8 @@ Modular, reproducible, and non-destructive system-level configurations and themi
 ## 🧱 Repository Structure
 
 ```text
-dotfiles-system/
-├── .github/workflows/ci.yml     # Automated ShellCheck and test suite CI
+layers/system/
 ├── install.sh                  # Unified master installer (CLI flags + interactive menu)
-├── LICENSE                     # MIT License
 ├── README.md                   # English documentation
 ├── README.es.md                # Spanish documentation
 ├── dns/
@@ -71,8 +69,8 @@ dotfiles-system/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/anthonyportugal/dotfiles-system.git
-cd dotfiles-system
+git clone https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles/base
+cd ~/.dotfiles/base/layers/system
 ```
 
 ### 2. Audit System State (Safe Check)
@@ -93,27 +91,28 @@ sudo ./install.sh --dry-run
 
 ### 4. Deploy Configurations
 
-#### Option A: Unified Master Installer (Recommended)
+#### Option A: `dotfiles system` (Recommended)
+
+The monorepo CLI is the entrypoint of this layer. It escalates with `sudo` only for the installer, installs the `ly` package through the shared package backend, and saves the applied selection in `~/.local/state/dotfiles/system.receipt`. `bootstrap`, `sync` and `update` never run it.
 
 ```bash
-# Interactive selection menu (default: English)
-sudo ./install.sh
+# Interactive selection menu
+dotfiles system setup
 
-# Or interactive menu in Spanish
-sudo ./install.sh --lang es
-
-# Or non-interactive installation of all components
-sudo ./install.sh --all
-
-# Auto-install missing packages (shelly/paru/yay/pacman)
-sudo ./install.sh --all --install
+# Non-interactive installation of all components, installing ly if missing
+dotfiles system setup --all --install
 
 # Select a custom Limine accent (mauve, pink, blue)
-sudo ./install.sh --all --theme pink
+dotfiles system setup --all --theme pink
 
 # Composable flags: install only Ly and DNS (skip Limine)
-sudo ./install.sh --ly --dns --provider quad9
+dotfiles system setup --ly --dns --provider quad9
+
+# Audit without sudo, with the saved selection
+dotfiles system doctor
 ```
+
+`sudo ./install.sh` with the same component flags still works for a single run, but it neither installs packages nor saves the selection.
 
 #### Option B: Modular Installation
 
@@ -133,11 +132,8 @@ You can install or update components individually:
 
 * **Ly Display Manager only:**
   ```bash
-  # Deploy theme files
+  # Deploy theme files (files that did not change are left untouched)
   sudo ./ly/setup.sh
-
-  # Or deploy and automatically install the package if missing
-  sudo ./ly/setup.sh --install
   ```
   *To enable Ly as your system default display manager:*
   ```bash

@@ -162,7 +162,7 @@ You can also orchestrate components directly using explicit flags:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `walls`, `private`, `system`, `agent-harness`; the WM layers live inside `base` under `layers/wm/`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
+- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `walls`, `private`, `agent-harness`; the WM and system layers live inside `base` under `layers/`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y
@@ -176,6 +176,11 @@ You can also orchestrate components directly using explicit flags:
 - **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks from the system:
   ```bash
   ./bin/dotfiles unlink --apply
+  ```
+- **Optional System Layer (`system`):** Applies [`layers/system`](layers/system/README.md) (Ly display manager, Limine theme, DNS-over-TLS) to `/etc` and `/boot` under an explicit `sudo`. It is opt-in: `bootstrap`, `sync` and `update` never run it, and `update` only warns when a pulled change touched it. The applied selection is saved in `~/.local/state/dotfiles/system.receipt`:
+  ```bash
+  ./bin/dotfiles system setup --ly --dns --provider quad9 --install
+  ./bin/dotfiles system doctor
   ```
 
 ---

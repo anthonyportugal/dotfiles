@@ -22,14 +22,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_INI="${SCRIPT_DIR}/config.ini"
 SOURCE_LUA="${SCRIPT_DIR}/config.lua"
 SOURCE_STARTUP="${SCRIPT_DIR}/startup.sh"
-TARGET_DIR="/etc/ly"
+# DOTFILES_LY_TARGET_DIR only lets the test suite deploy into a scratch copy.
+TARGET_DIR="${DOTFILES_LY_TARGET_DIR:-/etc/ly}"
 TARGET_INI="${TARGET_DIR}/config.ini"
 TARGET_LUA="${TARGET_DIR}/config.lua"
 TARGET_STARTUP="${TARGET_DIR}/startup.sh"
 
 DRY_RUN=false
 CHECK_ONLY=false
-AUTO_INSTALL=false
 
 log_info()    { printf "${BLUE}[INFO]${RESET} %s\n" "$*"; }
 log_success() { printf "${GREEN}[OK]${RESET}   %s\n" "$*"; }
@@ -41,7 +41,6 @@ usage() {
 Usage: sudo $(basename "$0") [OPTIONS]
 
 Options:
-  -i, --install     Automatically install Ly package if not detected
   -n, --dry-run     Simulate actions without writing any files
   -c, --check       Audit current Ly configuration and service state
   -h, --help        Show this help message
@@ -51,17 +50,13 @@ Description:
   Deploys config.ini, config.lua, and startup.sh (Linux VT palette injection)
   to ensure full compatibility across official packages (ly-dm / Ly 1.4.1)
   and manual source builds.
-  Supports automated installation via shelly, paru, yay, or pacman.
+  The ly package itself is installed by 'dotfiles system setup --ly --install'.
 USAGE
 }
 
 # Parse command line flags
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -i|--install)
-            AUTO_INSTALL=true
-            shift
-            ;;
         -n|--dry-run)
             DRY_RUN=true
             shift
@@ -99,54 +94,6 @@ if [[ ! -f "${SOURCE_STARTUP}" ]]; then
     log_error "Source startup script not found: ${SOURCE_STARTUP}"
     exit 1
 fi
-
-# Package manager discovery in ecosystem priority: shelly -> paru -> yay -> pacman
-detect_package_manager() {
-    for pm in shelly paru yay pacman; do
-        if command -v "${pm}" >/dev/null 2>&1; then
-            echo "${pm}"
-            return 0
-        fi
-    done
-    return 1
-}
-
-# Install package using detected package manager
-install_ly_package() {
-    local pm
-    pm="$(detect_package_manager || true)"
-
-    if [[ -z "${pm}" ]]; then
-        log_error "No supported package manager found (shelly, paru, yay, pacman)."
-        return 1
-    fi
-
-    log_info "Installing 'ly' package using ${pm}..."
-
-    case "${pm}" in
-        shelly)
-            if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
-                sudo -u "${SUDO_USER}" shelly install standard ly
-            else
-                shelly install standard ly
-            fi
-            ;;
-        paru|yay)
-            if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
-                sudo -u "${SUDO_USER}" "${pm}" -S --needed --repo ly
-            else
-                "${pm}" -S --needed --repo ly
-            fi
-            ;;
-        pacman)
-            if [[ "$(id -u)" -eq 0 ]]; then
-                pacman -S --needed ly
-            else
-                sudo pacman -S --needed ly
-            fi
-            ;;
-    esac
-}
 
 # Multi-path binary discovery (supports ly, ly-dm, manual installs, and package builds)
 find_ly_binary() {
@@ -224,7 +171,6 @@ find_ly_service() {
 
 DETECTED_BIN="$(find_ly_binary || true)"
 DETECTED_SERVICE="$(find_ly_service || true)"
-DETECTED_PM="$(detect_package_manager || true)"
 
 # Check / Audit mode
 if [[ "${CHECK_ONLY}" == true ]]; then
@@ -233,12 +179,6 @@ if [[ "${CHECK_ONLY}" == true ]]; then
         log_success "Ly binary detected: ${DETECTED_BIN}"
     else
         log_warn "Ly binary was not found in common system paths or PATH."
-    fi
-
-    if [[ -n "${DETECTED_PM}" ]]; then
-        log_success "Active package manager: ${DETECTED_PM}"
-    else
-        log_warn "No supported package manager detected."
     fi
 
     if [[ -n "${DETECTED_SERVICE}" ]]; then
@@ -277,36 +217,16 @@ if [[ "${CHECK_ONLY}" == true ]]; then
 fi
 
 # Ensure root privileges
-if [[ "${DRY_RUN}" == false && "$(id -u)" -ne 0 ]]; then
+if [[ "${DRY_RUN}" == false && "$(id -u)" -ne 0 && -z "${DOTFILES_LY_TARGET_DIR:-}" ]]; then
     log_error "This script requires root privileges to modify ${TARGET_DIR}."
     printf "\nPlease run with sudo:\n  sudo %s\n\n" "$0"
     exit 1
 fi
 
-# Handle missing Ly binary
+# Handle missing Ly binary: the configuration is still deployed.
 if [[ -z "${DETECTED_BIN}" ]]; then
     log_warn "Ly binary was not found in system PATH."
-    if [[ -n "${DETECTED_PM}" ]]; then
-        if [[ "${AUTO_INSTALL}" == true ]]; then
-            if [[ "${DRY_RUN}" == true ]]; then
-                log_info "[DRY-RUN] Would install 'ly' package using ${DETECTED_PM}."
-            else
-                install_ly_package
-                DETECTED_BIN="$(find_ly_binary || true)"
-            fi
-        elif [[ "${DRY_RUN}" == true ]]; then
-            log_info "[DRY-RUN] Ly binary is not installed; would prompt for installation via ${DETECTED_PM}."
-        elif [[ -t 0 ]]; then
-            printf '%b' "\n${YELLOW}[PROMPT]${RESET} Ly is not installed. Would you like to install it with ${BOLD}${DETECTED_PM}${RESET}? [y/N]: "
-            read -r reply
-            if [[ "${reply}" =~ ^[yYsS]$ ]]; then
-                install_ly_package
-                DETECTED_BIN="$(find_ly_binary || true)"
-            fi
-        else
-            log_info "Tip: Run with -i or --install to automatically install Ly via ${DETECTED_PM}."
-        fi
-    fi
+    log_info "Install it with: dotfiles system setup --ly --install"
 else
     log_success "Found Ly binary: ${DETECTED_BIN}"
 fi
@@ -314,13 +234,13 @@ fi
 # Handle dry-run mode
 if [[ "${DRY_RUN}" == true ]]; then
     log_info "[DRY-RUN] Target directory: ${TARGET_DIR}"
-    if [[ -f "${TARGET_STARTUP}" ]]; then
+    if [[ -f "${TARGET_STARTUP}" ]] && ! cmp -s "${SOURCE_STARTUP}" "${TARGET_STARTUP}"; then
         log_info "[DRY-RUN] Would create backup: ${TARGET_STARTUP}.bak_$(date +%Y%m%d_%H%M%S)"
     fi
-    if [[ -f "${TARGET_INI}" ]]; then
+    if [[ -f "${TARGET_INI}" ]] && ! cmp -s "${SOURCE_INI}" "${TARGET_INI}"; then
         log_info "[DRY-RUN] Would create backup: ${TARGET_INI}.bak_$(date +%Y%m%d_%H%M%S)"
     fi
-    if [[ -f "${TARGET_LUA}" ]]; then
+    if [[ -f "${TARGET_LUA}" ]] && ! cmp -s "${SOURCE_LUA}" "${TARGET_LUA}"; then
         log_info "[DRY-RUN] Would create backup: ${TARGET_LUA}.bak_$(date +%Y%m%d_%H%M%S)"
     fi
     log_info "[DRY-RUN] Would deploy startup.sh: ${SOURCE_STARTUP} -> ${TARGET_STARTUP} (mode 0755)"
@@ -338,37 +258,30 @@ fi
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
-# Backup existing startup script if present
-if [[ -f "${TARGET_STARTUP}" ]]; then
-    BACKUP_STARTUP="${TARGET_STARTUP}.bak_${TIMESTAMP}"
-    log_info "Backing up existing startup script to: ${BACKUP_STARTUP}"
-    cp -a "${TARGET_STARTUP}" "${BACKUP_STARTUP}"
-    log_success "Backup preserved: ${BACKUP_STARTUP}"
-fi
+# Deploys $1 to $2 with mode $3. An identical target is left untouched; a
+# different one is backed up first, so re-running never piles up backups.
+deploy_file() {
+    local source=$1 target=$2 mode=$3 backup
 
-# Backup existing INI configuration if present
-if [[ -f "${TARGET_INI}" ]]; then
-    BACKUP_INI="${TARGET_INI}.bak_${TIMESTAMP}"
-    log_info "Backing up existing INI configuration to: ${BACKUP_INI}"
-    cp -a "${TARGET_INI}" "${BACKUP_INI}"
-    log_success "Backup preserved: ${BACKUP_INI}"
-fi
+    if [[ -f "${target}" ]] && cmp -s "${source}" "${target}"; then
+        log_success "Unchanged: ${target}"
+        return 0
+    fi
+    if [[ -f "${target}" ]]; then
+        backup="${target}.bak_${TIMESTAMP}"
+        cp -a "${target}" "${backup}"
+        log_success "Backup preserved: ${backup}"
+    fi
+    install -m "${mode}" "${source}" "${target}"
+    log_info "Deployed: ${target}"
+}
 
-# Backup existing Lua configuration if present
-if [[ -f "${TARGET_LUA}" ]]; then
-    BACKUP_LUA="${TARGET_LUA}.bak_${TIMESTAMP}"
-    log_info "Backing up existing Lua configuration to: ${BACKUP_LUA}"
-    cp -a "${TARGET_LUA}" "${BACKUP_LUA}"
-    log_success "Backup preserved: ${BACKUP_LUA}"
-fi
-
-# Deploy files
 log_info "Deploying Catppuccin Mocha TTY startup palette script..."
-install -m 0755 "${SOURCE_STARTUP}" "${TARGET_STARTUP}"
+deploy_file "${SOURCE_STARTUP}" "${TARGET_STARTUP}" 0755
 
 log_info "Deploying Catppuccin Mocha configuration (INI & Lua)..."
-install -m 0644 "${SOURCE_INI}" "${TARGET_INI}"
-install -m 0644 "${SOURCE_LUA}" "${TARGET_LUA}"
+deploy_file "${SOURCE_INI}" "${TARGET_INI}" 0644
+deploy_file "${SOURCE_LUA}" "${TARGET_LUA}" 0644
 
 log_success "Configurations and startup scripts deployed to ${TARGET_DIR}."
 

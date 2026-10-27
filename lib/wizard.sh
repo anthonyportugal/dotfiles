@@ -182,15 +182,13 @@ EOF
   [[ -n "$walls_dir" ]] && walls_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • Walls:    %b\n' "$walls_status"
 
-  local system_dir=""
-  if [[ -d "$REPO_ROOT/../system" ]]; then
-    system_dir="$REPO_ROOT/../system"
-  elif [[ -d "$TARGET_DIR/.dotfiles/system" ]]; then
-    system_dir="$TARGET_DIR/.dotfiles/system"
-  fi
+  # The system layer ships in this repository; show whether it was applied.
   local system_status
-  system_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
-  [[ -n "$system_dir" ]] && system_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
+  local -A system_saved=()
+  system_status="${C_SUBTEXT}[$(_t "Optional, not applied" "Opcional, sin aplicar")]${C_RESET}"
+  if read_receipt system system_saved; then
+    system_status="${C_GREEN}[✓ ${system_saved[SYSTEM_ARGS]:-}]${C_RESET}"
+  fi
   printf '  • System:   %b\n' "$system_status"
 
   local private_dir=""
@@ -294,18 +292,9 @@ EOF
       return 0
       ;;
     4) # System setup
-      local s_path="${system_dir:-$TARGET_DIR/.dotfiles/system}"
-      if [[ ! -d "$s_path" ]]; then
-        wizard_clone_if_missing "dotfiles-system" \
-          "https://github.com/anthonyportugal/dotfiles-system.git" \
-          "git@github.com:anthonyportugal/dotfiles-system.git" \
-          "$s_path" || return 1
-      fi
-      if [[ -f "$s_path/install.sh" ]]; then
-        sudo "$s_path/install.sh" --lang "$DOTFILES_LANG"
-      else
-        error "$(_t "System installer not found in $s_path" "Instalador del sistema no encontrado en $s_path")"
-      fi
+      # A subshell keeps a failing installer from ending the wizard.
+      ( cmd_system setup ) || \
+        warn "$(_t "The system layer was not applied" "La capa system no se aplicó")"
       return 0
       ;;
     5) # Private setup
@@ -413,28 +402,10 @@ EOF
     fi
   fi
 
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 4: System Layer (Ly, Limine & DNS-over-TLS in dotfiles-system)" "Paso 4: Capa del Sistema (Ly, Limine & DNS-over-TLS en dotfiles-system)")" "$C_RESET"
-  local existing_system=""
-  if [[ -d "$REPO_ROOT/../system" ]]; then
-    existing_system="$REPO_ROOT/../system"
-  elif [[ -d "$TARGET_DIR/.dotfiles/system" ]]; then
-    existing_system="$TARGET_DIR/.dotfiles/system"
-  fi
-
-  if [[ -n "$existing_system" ]]; then
-    if prompt_yes_no "$(_t "System layer detected at $(prettify_path "$existing_system"). Run its installer wizard now? (sudo)" "Capa del sistema detectada en $(prettify_path "$existing_system"). ¿Ejecutar su asistente ahora? (sudo)")" Y; then
-      sudo "$existing_system/install.sh" --lang "$DOTFILES_LANG" || true
-    fi
-  else
-    if prompt_yes_no "$(_t "Clone and run system installer (anthonyportugal/dotfiles-system)?" "¿Clonar y ejecutar instalador del sistema (anthonyportugal/dotfiles-system)?")" Y; then
-      local system_dest="$TARGET_DIR/.dotfiles/system"
-      if wizard_clone_if_missing "dotfiles-system" \
-        "https://github.com/anthonyportugal/dotfiles-system.git" \
-        "git@github.com:anthonyportugal/dotfiles-system.git" \
-        "$system_dest"; then
-        sudo "$system_dest/install.sh" --lang "$DOTFILES_LANG" || true
-      fi
-    fi
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 4: Optional System Layer (Ly, Limine & DNS-over-TLS, needs sudo)" "Paso 4: Capa de Sistema Opcional (Ly, Limine y DNS-over-TLS, requiere sudo)")" "$C_RESET"
+  if prompt_yes_no "$(_t "Run the system layer installer now? (sudo; also later with 'dotfiles system')" "¿Ejecutar ahora el instalador de la capa system? (sudo; también luego con 'dotfiles system')")" N; then
+    ( cmd_system setup ) || \
+      warn "$(_t "The system layer was not applied" "La capa system no se aplicó")"
   fi
 
   PRIVATE=0

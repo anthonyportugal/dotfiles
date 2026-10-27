@@ -34,7 +34,6 @@ PROVIDER_NAME="quad9"
 CUSTOM_ENDPOINTS=""
 DRY_RUN=false
 CHECK_ONLY=false
-AUTO_INSTALL=false
 
 # shellcheck disable=SC2034
 setup_colors() {
@@ -98,7 +97,6 @@ Opciones de Configuración:
   -p, --provider <nombre> Proveedor DoT: quad9 (default), cloudflare, cloudflare-security, adguard, mullvad, custom
   --custom <endpoints>    Endpoints DoT personalizados (ej. "45.90.28.0#your-id.dns.nextdns.io")
   -t, --theme <nombre>    Acento de tema para Limine: mauve (default), pink, blue
-  -i, --install           Instala automáticamente el paquete Ly si no existe (shelly/paru/yay/pacman)
   -n, --dry-run           Simula instalaciones sin escribir en disco
   -c, --check             Audita el estado actual de Ly, Limine y DNS-over-TLS
   --lang <en|es>          Idioma de la interfaz interactiva (default: en)
@@ -126,7 +124,6 @@ Configuration Options:
   -p, --provider <name>   DNS-over-TLS provider: quad9 (default), cloudflare, cloudflare-security, adguard, mullvad, custom
   --custom <endpoints>    Custom DoT endpoints (e.g. "45.90.28.0#your-id.dns.nextdns.io")
   -t, --theme <name>      Theme accent for Limine: mauve (default), pink, blue
-  -i, --install           Automatically install Ly package if not present (shelly/paru/yay/pacman)
   -n, --dry-run           Simulate installations without writing to disk
   -c, --check             Audit current state of Ly, Limine, and DNS-over-TLS
   --lang <en|es>          Language for interactive menu (default: en)
@@ -184,8 +181,8 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -i|--install)
-            AUTO_INSTALL=true
-            shift
+            log_error "--install moved to 'dotfiles system setup --ly --install'"
+            exit 1
             ;;
         -n|--dry-run)
             DRY_RUN=true
@@ -300,9 +297,6 @@ if [[ "${INSTALL_LY}" == false && "${INSTALL_LIMINE}" == false && "${INSTALL_DNS
     exit 0
 fi
 
-# Ensure scripts exist and are executable
-chmod +x "${LY_SETUP}" "${LIMINE_SETUP}" "${DNS_SETUP}"
-
 LY_FLAGS=()
 LIMINE_FLAGS=()
 DNS_FLAGS=()
@@ -311,10 +305,6 @@ if [[ "${DRY_RUN}" == true ]]; then
     LY_FLAGS+=("--dry-run")
     LIMINE_FLAGS+=("--dry-run")
     DNS_FLAGS+=("--dry-run")
-fi
-
-if [[ "${AUTO_INSTALL}" == true ]]; then
-    LY_FLAGS+=("--install")
 fi
 
 LIMINE_FLAGS+=("--theme" "${THEME_NAME}")

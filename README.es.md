@@ -162,7 +162,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles sync
   ```
-- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, `private`, `system`, `agent-harness`; las capas de WM viven dentro de `base` en `layers/wm/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
+- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, `private`, `agent-harness`; las capas de WM y de sistema viven dentro de `base` en `layers/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y
@@ -176,6 +176,11 @@ También puedes orquestar los componentes directamente mediante flags explícito
 - **Desvincular / Limpiar (`unlink`):** Retira de forma segura los enlaces simbólicos de GNU Stow del sistema:
   ```bash
   ./bin/dotfiles unlink --apply
+  ```
+- **Capa de Sistema Opcional (`system`):** Aplica [`layers/system`](layers/system/README.es.md) (display manager Ly, tema de Limine, DNS-over-TLS) en `/etc` y `/boot` con `sudo` explícito. Es opcional: `bootstrap`, `sync` y `update` nunca la ejecutan, y `update` solo avisa cuando un cambio descargado la tocó. La selección aplicada se guarda en `~/.local/state/dotfiles/system.receipt`:
+  ```bash
+  ./bin/dotfiles system setup --ly --dns --provider quad9 --install
+  ./bin/dotfiles system doctor
   ```
 
 ---

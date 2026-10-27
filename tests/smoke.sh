@@ -29,6 +29,7 @@ printf '\n--> 6/9: Executing WM session smoke tests...\n'
 
 printf '\n--> 7/9: Executing system layer smoke tests...\n'
 "$REPO_ROOT/layers/system/tests/smoke.sh"
+"$SCRIPT_DIR/system-smoke.sh"
 
 printf '\n--> 8/9: Executing bootstrap smoke tests...\n'
 "$SCRIPT_DIR/bootstrap-smoke.sh"

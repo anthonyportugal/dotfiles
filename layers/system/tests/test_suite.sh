@@ -195,6 +195,33 @@ else
     fail "DNS installer --check flag failed"
 fi
 
+# Ly deploys into a scratch target and only backs up a file that changes.
+LY_TARGET="$(mktemp -d)"
+ly_deploy() {
+    DOTFILES_LY_TARGET_DIR="${LY_TARGET}" "${REPO_DIR}/ly/setup.sh" < /dev/null > /dev/null 2>&1
+}
+ly_backups() {
+    find "${LY_TARGET}" -name '*.bak_*' | wc -l
+}
+if ly_deploy && cmp -s "${REPO_DIR}/ly/config.ini" "${LY_TARGET}/config.ini" && [[ "$(ly_backups)" -eq 0 ]]; then
+    pass "Ly deploys its configuration into an empty target without backups"
+else
+    fail "Ly did not deploy cleanly into an empty target"
+fi
+if ly_deploy && [[ "$(ly_backups)" -eq 0 ]]; then
+    pass "Ly re-deploy of unchanged files creates no backups"
+else
+    fail "Ly re-deploy created $(ly_backups) backup(s) for unchanged files"
+fi
+printf 'edited=1\n' >> "${LY_TARGET}/config.ini"
+if ly_deploy && [[ "$(find "${LY_TARGET}" -name 'config.ini.bak_*' | wc -l)" -eq 1 && "$(ly_backups)" -eq 1 ]] \
+    && cmp -s "${REPO_DIR}/ly/config.ini" "${LY_TARGET}/config.ini"; then
+    pass "Ly backs up and restores only the changed file"
+else
+    fail "Ly did not back up exactly the changed file"
+fi
+rm -rf "${LY_TARGET}"
+
 # --check names the provider from its DNS= servers, not its FallbackDNS.
 DNS_AUDIT_DIR="$(mktemp -d)"
 for entry in quad9:Quad9 cloudflare:"Cloudflare Standard" cloudflare-security:"Cloudflare Security" \

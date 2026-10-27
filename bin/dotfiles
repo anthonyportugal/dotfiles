@@ -17,6 +17,7 @@ COMMAND=""
 PROFILE="desktop"
 PROFILE_EXPLICIT=0
 BACKEND_REQUEST="auto"
+SYSTEM_ARGS=()
 PLATFORM_REQUEST="auto"
 TARGET_DIR=${HOME:?HOME no está definida}
 APPLY=0
@@ -106,6 +107,9 @@ source "$LIB_DIR/completions.sh"
 # shellcheck source=../lib/wizard.sh
 source "$LIB_DIR/wizard.sh"
 
+# shellcheck source=../lib/system.sh
+source "$LIB_DIR/system.sh"
+
 
 # Adds a --wm value to WMS: a layer name under layers/wm/, "all"/"both" for
 # every WM layer, or the "mango" alias.
@@ -139,6 +143,7 @@ Uso:
   $PROGRAM_NAME update [opciones]
   $PROGRAM_NAME doctor [opciones]
   $PROGRAM_NAME unlink [opciones]
+  $PROGRAM_NAME system [setup|doctor] [opciones]
   $PROGRAM_NAME help
 
 Comandos:
@@ -147,6 +152,8 @@ Comandos:
   update      Descarga actualizaciones (fast-forward) y re-aplica la selección guardada.
   doctor      Comprueba dependencias, sintaxis y enlaces sin modificar nada.
   unlink      Retira únicamente los enlaces Stow del sistema.
+  system      Capa opcional de sistema (Ly, Limine, DNS-over-TLS) con sudo explícito;
+              nunca la ejecutan bootstrap, sync ni update. Ver '$PROGRAM_NAME system help'.
 
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
@@ -181,6 +188,7 @@ Usage:
   $PROGRAM_NAME update [options]
   $PROGRAM_NAME doctor [options]
   $PROGRAM_NAME unlink [options]
+  $PROGRAM_NAME system [setup|doctor] [options]
   $PROGRAM_NAME help
 
 Commands:
@@ -189,6 +197,8 @@ Commands:
   update      Pulls updates (fast-forward) and re-applies the saved selection.
   doctor      Verifies dependencies, syntax, and symlinks without modifying anything.
   unlink      Removes GNU Stow symlinks from the system.
+  system      Optional system layer (Ly, Limine, DNS-over-TLS) under an explicit sudo;
+              bootstrap, sync and update never run it. See '$PROGRAM_NAME system help'.
 
 Options:
   --profile core|cli|desktop       Cumulative profile (default: desktop).
@@ -269,6 +279,11 @@ parse_args() {
       ;;
     completion)
       COMPLETION_SHELL=${1:-zsh}
+      return 0
+      ;;
+    system)
+      # The system layer parses its own options (see lib/system.sh).
+      SYSTEM_ARGS=("$@")
       return 0
       ;;
     help|-h|--help)
@@ -1319,6 +1334,18 @@ sync_environment() {
   success "$(_t "Local resynchronization completed successfully." "Re-sincronización local completada exitosamente.")"
 }
 
+# The system layer is never applied by update: when the pulled range changed
+# it and this machine applied it before, only say how to re-apply it.
+notify_system_layer_update() {
+  local range=$1
+  local -A saved=()
+
+  [[ -n "$range" ]] || return 0
+  read_receipt system saved || return 0
+  git -C "$REPO_ROOT" diff --quiet "$range" -- layers/system && return 0
+  warn "$(_t "The system layer changed; update does not apply it. Re-apply it with" "La capa system cambió; update no la aplica. Vuelva a aplicarla con"): dotfiles system setup ${saved[SYSTEM_ARGS]:-}"
+}
+
 update_from_remote() {
   info "$(_t "Checking local repositories in $TARGET_DIR/.dotfiles/..." "Comprobando repositorios locales en $TARGET_DIR/.dotfiles/...")"
   command_exists git || die "$(_t "git is required to update from remote repositories" "git es necesario para actualizar desde repositorios remotos")"
@@ -1329,7 +1356,6 @@ update_from_remote() {
   local candidate
   for candidate in \
     "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
-    "$REPO_ROOT/../system" "$TARGET_DIR/.dotfiles/system" \
     "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private" \
     "$REPO_ROOT/../agent-harness" "$TARGET_DIR/.dotfiles/agent-harness"; do
     if [[ -d "$candidate/.git" ]]; then
@@ -1340,7 +1366,7 @@ update_from_remote() {
   done
 
   local -a updated_repos=()
-  local repo
+  local repo system_range=""
   for repo in "${repos_to_update[@]}"; do
     local repo_name=${repo##*/}
     info "$(_t "Verifying Git status in" "Verificando estado de Git en") $repo_name ($repo)..."
@@ -1359,6 +1385,7 @@ update_from_remote() {
         if [[ -n "$head_before" && -n "$head_after" && "$head_before" != "$head_after" ]]; then
           info "$repo_name: $(_t "updated" "actualizado") (${head_before:0:7}..${head_after:0:7})"
           updated_repos+=("$repo_name")
+          [[ "$repo" != "$REPO_ROOT" ]] || system_range="$head_before..$head_after"
         else
           info "$repo_name: $(_t "already up to date" "ya está al día")"
         fi
@@ -1370,6 +1397,7 @@ update_from_remote() {
     success "$(_t "All repositories are already up to date. No synchronization needed." "Todos los repositorios ya están al día. No se requiere sincronización.")"
     return 0
   fi
+  notify_system_layer_update "$system_range"
 
   info "$(_t "Updated repositories:" "Repositorios con novedades:") ${updated_repos[*]}"
   local do_sync=1
@@ -1443,6 +1471,9 @@ main() {
       ;;
     completion)
       cmd_completion
+      ;;
+    system)
+      cmd_system "${SYSTEM_ARGS[@]}"
       ;;
   esac
 }
