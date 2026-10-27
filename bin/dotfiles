@@ -42,9 +42,6 @@ NO_OVERLAY=0
 OVERLAY_READY=0
 declare -a OVERLAY_LAYERS=()
 
-HARNESS=0
-HARNESS_PATH=""
-HARNESS_ENTRYPOINT=""
 COMPLETION_SHELL="zsh"
 BASE_ONLY=0
 ALL_COMPONENTS=0
@@ -176,8 +173,6 @@ Opciones:
   --wm-profile core|desktop        Perfil de los WMs (default: desktop o el del recibo).
   --base-only                      Ejecuta diagnósticos únicamente para el repositorio base.
   --all                            Diagnostica o sincroniza todos los componentes disponibles.
-  --agent-harness                  Integrar agent-harness (cadena de herramientas para agentes IA).
-  --agent-harness-path DIR         Ruta explícita al repositorio agent-harness.
   -y, --yes                        Confirmación automática en prompts de actualización.
   -h, --help                       Muestra esta ayuda.
 
@@ -226,8 +221,6 @@ Options:
   --wm-profile core|desktop        WM profile (default: desktop or the saved one).
   --base-only                      Run diagnostics solely for the base repository.
   --all                            Diagnose or synchronize all available components.
-  --agent-harness                  Integrate agent-harness (AI coding agents toolchain).
-  --agent-harness-path DIR         Explicit path to agent-harness repository.
   -y, --yes                        Automatic yes to update prompts.
   -h, --help                       Show this help.
 
@@ -472,24 +465,8 @@ parse_args() {
       --private|--private=*|--private-path|--private-path=*|--private-profile|--private-profile=*|--private-work|--private-work=*)
         usage_error "${1%%=*} se reemplazó por --overlay RUTA (un repositorio con layers/, p. ej. ~/.dotfiles-private)"
         ;;
-      --agent-harness|--harness)
-        HARNESS=1
-        COMPONENT_EXPLICIT=1
-        shift
-        ;;
-      --agent-harness-path|--harness-path)
-        require_option_value "$1" "${2-}"
-        HARNESS_PATH=$2
-        HARNESS=1
-        COMPONENT_EXPLICIT=1
-        shift 2
-        ;;
-      --agent-harness-path=*|--harness-path=*)
-        HARNESS_PATH=${1#*=}
-        require_option_value "--agent-harness-path" "$HARNESS_PATH"
-        HARNESS=1
-        COMPONENT_EXPLICIT=1
-        shift
+      --agent-harness|--agent-harness=*|--harness|--harness=*|--agent-harness-path|--agent-harness-path=*|--harness-path|--harness-path=*)
+        usage_error "${1%%=*} ya no existe: agent-harness es un proyecto independiente; use su propio instalador"
         ;;
       --base-only)
         BASE_ONLY=1
@@ -562,9 +539,6 @@ parse_args() {
     usage_error "--overlay y --no-overlay son mutuamente excluyentes"
   fi
 
-  if (( HARNESS == 0 )); then
-    [[ -z "$HARNESS_PATH" ]] || usage_error "--agent-harness-path requiere --agent-harness"
-  fi
 
   if [[ "$COMMAND" == "doctor" && "$APPLY" == 1 ]]; then
     usage_error "doctor siempre es read-only y no acepta --apply"
@@ -640,13 +614,6 @@ detect_active_environment() {
     fi
   fi
 
-  if (( HARNESS == 0 )); then
-    if [[ -f "$TARGET_DIR/.local/state/dotfiles/agent-harness.receipt" || "$COMMAND" == "sync" ]]; then
-      if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
-        HARNESS=1
-      fi
-    fi
-  fi
 }
 
 detect_all_environment() {
@@ -658,9 +625,6 @@ detect_all_environment() {
   done
   if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
     WALLPAPERS=1
-  fi
-  if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
-    HARNESS=1
   fi
 }
 
@@ -828,75 +792,6 @@ prepare_overlay() {
     done
   done
 }
-
-validate_harness_checkout() {
-  local base_root harness_root
-
-  (( HARNESS == 1 )) || return 0
-  command_exists realpath || die "falta el comando requerido: realpath"
-
-  if [[ -z "$HARNESS_PATH" ]]; then
-    if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" ]]; then
-      HARNESS_PATH="$TARGET_DIR/.dotfiles/agent-harness"
-    elif [[ -d "$REPO_ROOT/../agent-harness" ]]; then
-      HARNESS_PATH="$REPO_ROOT/../agent-harness"
-    fi
-  fi
-
-  [[ -n "$HARNESS_PATH" ]] || die "--agent-harness requiere un checkout disponible o la opción --agent-harness-path DIR"
-
-  base_root=$(realpath -m -- "$REPO_ROOT")
-  harness_root=$(realpath -m -- "$HARNESS_PATH")
-  [[ -d "$harness_root" ]] || die "el checkout de agent-harness no existe: $harness_root"
-  [[ "$harness_root" != "$base_root" && "$harness_root" != "$base_root/"* ]] || \
-    die "el checkout de agent-harness debe estar fuera del repositorio base: $harness_root"
-
-  HARNESS_ENTRYPOINT="$harness_root/bin/agent-harness"
-  [[ -f "$HARNESS_ENTRYPOINT" && -x "$HARNESS_ENTRYPOINT" ]] || \
-    die "el checkout de agent-harness no expone el entrypoint ejecutable esperado: $HARNESS_ENTRYPOINT"
-  HARNESS_PATH=$harness_root
-}
-
-run_harness_operation() {
-  local operation=$1
-  local apply_mode=$2
-  local -a harness_command=()
-
-  (( HARNESS == 1 )) || return 0
-
-  case "$operation" in
-    doctor)
-      harness_command=("$HARNESS_ENTRYPOINT" doctor)
-      ;;
-    bootstrap)
-      if [[ "$apply_mode" == 1 ]]; then
-        harness_command=("$HARNESS_ENTRYPOINT" setup --target all)
-      else
-        info "$(_t "Simulating agent-harness setup (dry-run)" "Simulando configuración de agent-harness (dry-run)")"
-        harness_command=("$HARNESS_ENTRYPOINT" setup --target all --dry-run)
-      fi
-      ;;
-    unlink)
-      return 0
-      ;;
-  esac
-
-  info "Operando sobre repositorio agent-harness ($HARNESS_PATH)"
-  format_command "${harness_command[@]}"
-  "${harness_command[@]}"
-}
-
-
-
-
-
-
-
-
-
-
-
-
 
 link_cli_command() {
   (( STOW_ENABLED == 1 )) || return 0
@@ -1099,9 +994,6 @@ prepare_selection() {
     printf '  %-24s %s\n' 'Overlay:' "$OVERLAY_PATH"
   fi
 
-  if (( HARNESS == 1 )); then
-    printf '  %-24s %s\n' 'Agent Harness:' "$HARNESS_PATH"
-  fi
 }
 
 # Runs operation $1 with apply mode $2 on every selected layer, in reverse
@@ -1137,11 +1029,6 @@ bootstrap_with_optional_components() {
       die "falló el preflight de la capa $FAILED_LAYER; no se modificó la base"
   fi
 
-  if (( HARNESS == 1 && APPLY == 1 )); then
-    info "Preflight de agent-harness antes de modificar la base"
-    run_harness_operation bootstrap 0 || die "falló el preflight de agent-harness; no se modificó la base"
-  fi
-
   run_selected_layers bootstrap "$APPLY" || die "falló el bootstrap de la capa $FAILED_LAYER"
   if (( APPLY == 1 )); then
     # Recorded as soon as the layers are on disk, so a failing optional
@@ -1150,7 +1037,6 @@ bootstrap_with_optional_components() {
     (( STOW_ENABLED == 0 )) || link_cli_command
   fi
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
-  run_harness_operation bootstrap "$APPLY" || die "falló el bootstrap de agent-harness"
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
     local -a sys_flags=()
@@ -1198,16 +1084,6 @@ doctor_with_optional_components() {
     fi
   fi
 
-  if (( HARNESS == 1 )); then
-    if run_harness_operation doctor 0; then
-      report_items+=("  ✓ Agent Harness (agent-harness): OK")
-    else
-      report_items+=("  ✗ Agent Harness (agent-harness): FAIL")
-      error "Doctor: falló la validación de agent-harness"
-      result=1
-    fi
-  fi
-
   printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "=== Composite Doctor Summary ===" "=== Resumen del Doctor Compuesto ===")" "$C_RESET"
   local item
   for item in "${report_items[@]}"; do
@@ -1239,7 +1115,6 @@ unlink_with_optional_components() {
   run_selected_layers unlink "$APPLY" reverse || die "falló el unlink de la capa $FAILED_LAYER"
   (( APPLY == 0 )) || unlink_cli_command
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
-  run_harness_operation unlink "$APPLY" || die "falló el unlink de agent-harness"
   # Only once every component is gone, so a failed unlink can be retried
   # with the same saved selection.
   (( APPLY == 0 )) || rm -f -- "$(receipt_path dotfiles)"
@@ -1330,7 +1205,6 @@ sync_environment() {
 
   resolve_wm_layers
   validate_wallpapers_checkout
-  validate_harness_checkout
 
   APPLY=1
   bootstrap_with_optional_components
@@ -1366,8 +1240,7 @@ update_from_remote() {
     overlay=${saved_selection[OVERLAY]:-}
   fi
   for candidate in ${overlay:+"$overlay"} \
-    "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
-    "$REPO_ROOT/../agent-harness" "$TARGET_DIR/.dotfiles/agent-harness"; do
+    "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls"; do
     if [[ -d "$candidate/.git" ]]; then
       local real_cand
       real_cand=$(realpath -m "$candidate")
@@ -1440,7 +1313,6 @@ cmd_doctor() {
 
   resolve_wm_layers
   validate_wallpapers_checkout
-  validate_harness_checkout
   doctor_with_optional_components
 }
 
@@ -1465,7 +1337,6 @@ main() {
     bootstrap)
       resolve_wm_layers
       validate_wallpapers_checkout
-      validate_harness_checkout
       bootstrap_with_optional_components
       ;;
     doctor)
@@ -1474,7 +1345,6 @@ main() {
     unlink)
       resolve_wm_layers
       validate_wallpapers_checkout
-      validate_harness_checkout
       cmd_unlink
       ;;
     completion)

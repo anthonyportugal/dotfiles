@@ -75,7 +75,7 @@ _dotfiles_completion() {
   _init_completion || return
 
   local commands="setup sync update bootstrap doctor unlink completion help"
-  local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --wallpapers --wallpapers-path --overlay --no-overlay --agent-harness --agent-harness-path --apply -h --help"
+  local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --wallpapers --wallpapers-path --overlay --no-overlay --apply -h --help"
 
   if (( cword == 1 )); then
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -111,7 +111,7 @@ _dotfiles_completion() {
       COMPREPLY=( $(compgen -W "core desktop" -- "$cur") )
       return 0
       ;;
-    --target|--wallpapers-path|--overlay|--agent-harness-path)
+    --target|--wallpapers-path|--overlay)
       COMPREPLY=( $(compgen -d -- "$cur") )
       return 0
       ;;

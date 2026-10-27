@@ -137,7 +137,7 @@ Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el menú o
 ```
 
 El menú principal te permite elegir entre:
-- **Asistente de Configuración Guiada:** Onboarding paso a paso para el sistema base y delegación automática a los asistentes de cada módulo (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`, `dotfiles-private setup`, `agent-harness setup`).
+- **Asistente de Configuración Guiada:** Onboarding paso a paso para el sistema base y delegación automática a los asistentes de cada módulo (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`).
 - **Configuración Modular Individual:** Lanzar directamente el asistente guiado de cualquier componente por separado o realizar tareas de mantenimiento del entorno (`sync`, `update`, `doctor`, `unlink`).
 
 ### 3. Orquestación Manual por Línea de Comandos
@@ -156,13 +156,12 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles bootstrap --profile desktop --layer dev --feature dev-containers --apply
   ```
-- **Composición con WMs, Wallpapers, Overlay Privado y Agent Harness:**
+- **Composición con WMs, Wallpapers, y Overlay Privado:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
     --wm mangowm --wm bspwm \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --overlay "$HOME/.dotfiles-private" \
-    --agent-harness --agent-harness-path "$HOME/.dotfiles/agent-harness" \
     --apply
   ```
 
@@ -173,16 +172,16 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ./bin/dotfiles setup            # Inglés por defecto
   ./bin/dotfiles setup --lang es  # Interfaz en español
   ```
-- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features, capas opcionales y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado), configura Agent Harness y valida paquetes sin tocar Git. Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
+- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features, capas opcionales y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado), y valida paquetes sin tocar Git. Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, `agent-harness`, más el overlay de la selección guardada; las capas de WM y de sistema viven dentro de `base` en `layers/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
+- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, más el overlay de la selección guardada; las capas de WM y de sistema viven dentro de `base` en `layers/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y
   ```
-- **Diagnóstico del Sistema (`doctor`):** Inspecciona la integridad de enlaces, shells y dependencias de la base y auto-detecta las capas activas (WM, wallpapers, privada, agent-harness) para emitir un reporte compuesto:
+- **Diagnóstico del Sistema (`doctor`):** Inspecciona la integridad de enlaces, shells y dependencias de la base y auto-detecta las capas activas (WM, wallpapers) para emitir un reporte compuesto:
   ```bash
   ./bin/dotfiles doctor             # Diagnóstico compuesto de componentes activos
   ./bin/dotfiles doctor --base-only # Diagnóstico aislado del repositorio base
@@ -209,7 +208,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
 | **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP y CLI de gestión | Multi-monitor |
 | **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | Configuraciones a nivel de sistema (gestor de pantalla Ly, bootloader Limine, DNS-over-TLS) | Sistema Linux |
 | **`dotfiles-private`** | Capa privada opcional para identidades, firmas y perfiles de trabajo | Local / Seguro |
-| **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | Harness para agentes IA, ensamblado de reglas modular, servidores MCP y skills | AI Engineering |
+| **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | Proyecto independiente (harness para agentes IA); se instala con su propio instalador, no desde estos dotfiles | AI Engineering |
 
 ---
 

@@ -230,17 +230,6 @@ EOF
   fi
   printf '  • Overlay:  %b\n' "$overlay_status"
 
-  local harness_dir=""
-  if [[ -d "$REPO_ROOT/../agent-harness" ]]; then
-    harness_dir="$REPO_ROOT/../agent-harness"
-  elif [[ -d "$TARGET_DIR/.dotfiles/agent-harness" ]]; then
-    harness_dir="$TARGET_DIR/.dotfiles/agent-harness"
-  fi
-  local harness_status
-  harness_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
-  [[ -n "$harness_dir" ]] && harness_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
-  printf '  • Harness:  %b\n' "$harness_status"
-
   local action_choice=0
   prompt_choice action_choice "$(_t "What would you like to do?" "¿Qué deseas hacer?")" \
     "$(_t "Guided Full Setup (Step-by-step onboarding for Base + Modules)" "Asistente de Configuración Guiada (Instalación por capas)")" \
@@ -250,7 +239,6 @@ EOF
     "$(_t "Configure System Layer (Ly, Limine, DNS-over-TLS)" "Configurar Capa del Sistema (Ly, Limine, DNS)")" \
     "$(_t "Configure Private Overlay (Identity, SSH, Work)" "Configurar Overlay Privado (Identidad, SSH, Laboral)")" \
     "$(_t "Configure Wallpapers (walls)" "Configurar Fondos de Pantalla (walls)")" \
-    "$(_t "Configure Agent Harness (AI Agents, Rules, MCP, Skills)" "Configurar Agent Harness (AI Agents, Rules, MCP, Skills)")" \
     "$(_t "Re-sync Local Environment (Sync links and packages)" "Re-sincronizar Entorno Local (Sync enlaces y paquetes)")" \
     "$(_t "Update from GitHub (Remote Update + Sync)" "Actualizar desde GitHub (Remote Update + Sync)")" \
     "$(_t "Health Diagnostics (Doctor)" "Diagnóstico de Salud (Doctor)")" \
@@ -346,38 +334,23 @@ EOF
       fi
       return 0
       ;;
-    7) # Agent Harness setup
-      local h_path="${harness_dir:-$TARGET_DIR/.dotfiles/agent-harness}"
-      if [[ ! -d "$h_path" ]]; then
-        wizard_clone_if_missing "agent-harness" \
-          "https://github.com/anthonyportugal/agent-harness.git" \
-          "git@github.com:anthonyportugal/agent-harness.git" \
-          "$h_path" || return 1
-      fi
-      if [[ -x "$h_path/bin/agent-harness" ]]; then
-        "$h_path/bin/agent-harness" setup
-      else
-        error "$(_t "Agent Harness executable not found in $h_path" "Ejecutable agent-harness no encontrado en $h_path")"
-      fi
-      return 0
-      ;;
-    8)
+    7)
       sync_environment || true
       return 0
       ;;
-    9)
+    8)
       update_from_remote || true
       return 0
       ;;
-    10)
+    9)
       cmd_doctor || true
       return 0
       ;;
-    11)
+    10)
       unlink_with_optional_components || true
       return 0
       ;;
-    12)
+    11)
       info "$(_t "Goodbye!" "¡Hasta luego!")"
       return 0
       ;;
@@ -448,41 +421,8 @@ EOF
     fi
   fi
 
-  HARNESS=0
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 6: Agent Harness (AI Coding Agents, Rules, MCP & Skills)" "Paso 6: Agent Harness (Agentes IA, Reglas, MCP y Skills)")" "$C_RESET"
-  local existing_harness=""
-  if [[ -d "$REPO_ROOT/../agent-harness" ]]; then
-    existing_harness="$REPO_ROOT/../agent-harness"
-  elif [[ -d "$TARGET_DIR/.dotfiles/agent-harness" ]]; then
-    existing_harness="$TARGET_DIR/.dotfiles/agent-harness"
-  fi
-
-  if [[ -n "$existing_harness" ]]; then
-    if prompt_yes_no "$(_t "Agent Harness detected at $(prettify_path "$existing_harness"). Configure runtimes now?" "Agent Harness detectado en $(prettify_path "$existing_harness"). ¿Configurar runtimes ahora?")" Y; then
-      HARNESS=1
-      HARNESS_PATH="$existing_harness"
-      if [[ -x "$existing_harness/bin/agent-harness" ]]; then
-        "$existing_harness/bin/agent-harness" setup || true
-      fi
-    fi
-  else
-    if prompt_yes_no "$(_t "Integrate Agent Harness (anthonyportugal/agent-harness)?" "¿Deseas integrar Agent Harness (anthonyportugal/agent-harness)?")" Y; then
-      local harness_dest="$TARGET_DIR/.dotfiles/agent-harness"
-      if wizard_clone_if_missing "agent-harness" \
-        "https://github.com/anthonyportugal/agent-harness.git" \
-        "git@github.com:anthonyportugal/agent-harness.git" \
-        "$harness_dest"; then
-        HARNESS=1
-        HARNESS_PATH="$harness_dest"
-        if [[ -x "$harness_dest/bin/agent-harness" ]]; then
-          "$harness_dest/bin/agent-harness" setup || true
-        fi
-      fi
-    fi
-  fi
-
   local mode_choice=0
-  prompt_choice mode_choice "$(_t "Step 7: Select Base System Installation Scope" "Paso 7: Selecciona el Alcance de la Instalación Base")" \
+  prompt_choice mode_choice "$(_t "Step 6: Select Base System Installation Scope" "Paso 6: Selecciona el Alcance de la Instalación Base")" \
     "$(_t "Complete: Install base packages (repo/AUR) + Deploy Stow symlinks [Recommended]" "Completo: Instalar paquetes del sistema (repo/AUR) + Enlaces Stow [Recomendado]")" \
     "$(_t "Symlinks only: Deploy Stow dotfiles symlinks only (No package install / No sudo)" "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)")"
   if (( mode_choice == 1 )); then
@@ -510,9 +450,6 @@ EOF
   local overlay_str="No"
   [[ -z "$OVERLAY_PATH" ]] || overlay_str=$(prettify_path "$OVERLAY_PATH")
   printf '│  • %-20s %-33s│\n' "$(_t "Private Overlay:" "Overlay Privado:")" "$overlay_str"
-  local harness_str="No"
-  (( HARNESS == 1 )) && harness_str="$(_t "Yes" "Sí")"
-  printf '│  • %-20s %-33s│\n' "$(_t "Agent Harness:" "Agent Harness:")" "$harness_str"
   printf '│  • %-20s %-33s│\n' "$(_t "Operation Mode:" "Modo de Operación:")" "$MODE_SELECTION"
   printf '│  • %-20s %-33s│\n' "$(_t "Target Home:" "Directorio Target:")" "$(prettify_path "$TARGET_DIR")"
   cat <<'EOF'
@@ -521,7 +458,7 @@ EOF
   printf '%b\n' "$C_RESET"
 
   local final_choice=0
-  prompt_choice final_choice "$(_t "Step 8: How would you like to proceed with Base?" "Paso 8: ¿Cómo deseas proceder con la Base?")" \
+  prompt_choice final_choice "$(_t "Step 7: How would you like to proceed with Base?" "Paso 7: ¿Cómo deseas proceder con la Base?")" \
     "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
     "$(_t "Dry-run simulation (Check actions without modifying)" "Simulación previa (Dry-Run: ver qué se tocaría sin modificar)")" \
     "$(_t "Cancel and exit" "Cancelar y salir")"
@@ -538,6 +475,5 @@ EOF
   COMMAND="bootstrap"
   validate_wm_checkout
   validate_wallpapers_checkout
-  validate_harness_checkout
   bootstrap_with_optional_components
 }
