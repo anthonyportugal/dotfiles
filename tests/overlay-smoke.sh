@@ -140,6 +140,14 @@ expect_refused inside-repo "$REPO_ROOT/layers" 'fuera del repositorio'
 CLASH="$TEST_ROOT/clash"
 make_overlay_layer "$CLASH" cli requires=core profiles=cli
 expect_refused clash "$CLASH" 'ya existe en el repositorio público'
+SHADOW="$TEST_ROOT/shadow"
+make_overlay_layer "$SHADOW" ident requires=core profiles=ident
+make_overlay_layer "$SHADOW/layers/wm" bspwm requires=desktop profiles=desktop
+mv -- "$SHADOW/layers/wm/layers/bspwm" "$SHADOW/layers/wm/bspwm" && rmdir -- "$SHADOW/layers/wm/layers"
+expect_refused wm-shadow "$SHADOW" 'la capa wm del overlay ya existe en el repositorio público'
+TYPO="$TEST_ROOT/typo"
+make_overlay_layer "$TYPO" ident requires=coer profiles=ident
+expect_refused typo "$TYPO" 'requiere una capa que no existe: coer'
 RESERVED="$TEST_ROOT/reserved"
 make_overlay_layer "$RESERVED" ident requires=core profiles=ident receipt=dotfiles
 expect_refused reserved-receipt "$RESERVED" 'recibo reservado'

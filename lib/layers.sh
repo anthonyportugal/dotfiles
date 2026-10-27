@@ -85,9 +85,10 @@ read_layer_conf() {
 LAYER_OVERLAY_ROOT=${LAYER_OVERLAY_ROOT:-}
 
 # Prints the root holding layer $2: the overlay root when it declares the
-# layer, root $1 otherwise.
+# layer, root $1 otherwise. Overlay layers are top-level only, so nested names
+# such as wm/<name> always resolve to root $1.
 layer_root() {
-  if [[ -n "$LAYER_OVERLAY_ROOT" && -f "$LAYER_OVERLAY_ROOT/$2/layer.conf" ]]; then
+  if [[ -n "$LAYER_OVERLAY_ROOT" && "$2" != */* && -f "$LAYER_OVERLAY_ROOT/$2/layer.conf" ]]; then
     printf '%s' "$LAYER_OVERLAY_ROOT"
   else
     printf '%s' "$1"

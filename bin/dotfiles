@@ -796,9 +796,10 @@ prepare_overlay() {
   for layer_dir in "$LAYER_OVERLAY_ROOT"/*/; do
     name=${layer_dir%/}
     name=${name##*/}
-    [[ -f "$LAYER_OVERLAY_ROOT/$name/layer.conf" ]] || continue
-    [[ "$name" =~ $LAYER_NAME_PATTERN ]] || die "nombre de capa inválido en el overlay: $name"
+    # Checked before layer.conf, so an overlay wm/ can never shadow a WM layer.
     [[ ! -e "$LAYERS_DIR/$name" ]] || die "la capa $name del overlay ya existe en el repositorio público"
+    [[ -f "$LAYER_OVERLAY_ROOT/$name/layer.conf" ]] || continue
+    [[ "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "nombre de capa inválido en el overlay: $name"
     read_layer_conf "$LAYER_OVERLAY_ROOT/$name" conf
     # Each layer keeps its own receipt; the public ones are never shared.
     receipt=${conf[receipt]:-$name}
@@ -813,6 +814,18 @@ prepare_overlay() {
       SUPPORTED_FEATURES+=("$feature")
     done
     OVERLAY_LAYERS+=("$name")
+  done
+
+  # A misspelled requirement would otherwise keep a layer from ever applying.
+  local dependency
+  local -a dependencies=()
+  for name in "${OVERLAY_LAYERS[@]}"; do
+    read_layer_conf "$LAYER_OVERLAY_ROOT/$name" conf
+    read -r -a dependencies <<< "${conf[requires]:-}"
+    for dependency in "${dependencies[@]}"; do
+      [[ -f "$LAYERS_DIR/$dependency/layer.conf" ]] || array_contains OVERLAY_LAYERS "$dependency" || \
+        die "la capa $name del overlay requiere una capa que no existe: $dependency"
+    done
   done
 }
 
