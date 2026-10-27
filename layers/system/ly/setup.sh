@@ -264,7 +264,12 @@ deploy_file() {
     local source=$1 target=$2 mode=$3 backup
 
     if [[ -f "${target}" ]] && cmp -s "${source}" "${target}"; then
-        log_success "Unchanged: ${target}"
+        if [[ "$(stat -c %a "${target}")" != "${mode#0}" ]]; then
+            chmod "${mode}" "${target}"
+            log_info "Mode restored to ${mode}: ${target}"
+        else
+            log_success "Unchanged: ${target}"
+        fi
         return 0
     fi
     if [[ -f "${target}" ]]; then

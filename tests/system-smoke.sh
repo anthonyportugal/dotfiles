@@ -56,6 +56,11 @@ run_system doctor --target "$H" > "$TEST_ROOT/doctor.out" 2>&1 || true
 grep -q 'Ly' "$TEST_ROOT/doctor.out" || fail "system doctor no auditó los componentes: $(<"$TEST_ROOT/doctor.out")"
 [[ ! -e "$SUDO_LOG" ]] || fail "system doctor usó sudo"
 
+# doctor rejects setup options instead of ignoring them.
+status=0
+run_system doctor --ly --target "$H" >/dev/null 2>&1 || status=$?
+(( status == 2 )) || fail "system doctor aceptó una opción de setup (salida $status)"
+
 # A dry run needs no root, never escalates and records nothing.
 output=$(run_system setup --dns -p quad9 --dry-run --target "$H" 2>&1) || fail "system setup --dry-run falló: $output"
 [[ "$output" == *DRY-RUN* ]] || fail "system setup --dry-run no simuló la instalación: $output"
@@ -94,7 +99,7 @@ rm -f -- "$SUDO_LOG"
 run_system setup --dns --custom '45.90.28.0#secret-id.dns.nextdns.io' --target "$H" >/dev/null 2>&1 || \
   fail "system setup --custom falló"
 ! grep -q 'secret-id' "$RECEIPT" || fail "el recibo guardó los endpoints DoT personalizados"
-grep -Fxq 'SYSTEM_ARGS="--dns --custom <omitido>"' "$RECEIPT" || fail "recibo inesperado con --custom: $(<"$RECEIPT")"
+grep -Fxq 'SYSTEM_ARGS="--dns --custom"' "$RECEIPT" || fail "recibo inesperado con --custom: $(<"$RECEIPT")"
 
 # The profile commands never run the system layer.
 rm -f -- "$SUDO_LOG"
@@ -128,6 +133,13 @@ git -C "$UPSTREAM" -c user.name=t -c user.email=t@t commit -qam system --no-veri
 output=$(run_update) || fail "update falló con cambios en system: $output"
 [[ "$output" == *'dotfiles system setup --dns -p quad9'* ]] || fail "update no avisó del cambio en system: $output"
 [[ ! -e "$SUDO_LOG" ]] || fail "update ejecutó la capa system"
+printf 'RECEIPT_VERSION=1\nCOMPONENT="system"\nSYSTEM_ARGS="--dns --custom"\n' \
+  > "$UH/.local/state/dotfiles/system.receipt"
+printf '# change\n' >> "$UPSTREAM/layers/system/dns/providers/quad9.conf"
+git -C "$UPSTREAM" -c user.name=t -c user.email=t@t commit -qam system2 --no-verify
+output=$(run_update) || fail "update falló con --custom guardado: $output"
+[[ "$output" == *'dotfiles system setup --dns --custom <endpoints>'* ]] || \
+  fail "update no pidió de nuevo los endpoints personalizados: $output"
 
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || fail "system modificó el checkout"
 

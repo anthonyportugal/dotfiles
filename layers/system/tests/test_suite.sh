@@ -213,6 +213,12 @@ if ly_deploy && [[ "$(ly_backups)" -eq 0 ]]; then
 else
     fail "Ly re-deploy created $(ly_backups) backup(s) for unchanged files"
 fi
+chmod 0644 "${LY_TARGET}/startup.sh"
+if ly_deploy && [[ "$(stat -c %a "${LY_TARGET}/startup.sh")" == 755 && "$(ly_backups)" -eq 0 ]]; then
+    pass "Ly restores the startup.sh mode without a backup"
+else
+    fail "Ly did not restore the startup.sh mode (now $(stat -c %a "${LY_TARGET}/startup.sh"))"
+fi
 printf 'edited=1\n' >> "${LY_TARGET}/config.ini"
 if ly_deploy && [[ "$(find "${LY_TARGET}" -name 'config.ini.bak_*' | wc -l)" -eq 1 && "$(ly_backups)" -eq 1 ]] \
     && cmp -s "${REPO_DIR}/ly/config.ini" "${LY_TARGET}/config.ini"; then

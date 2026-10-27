@@ -1343,7 +1343,10 @@ notify_system_layer_update() {
   [[ -n "$range" ]] || return 0
   read_receipt system saved || return 0
   git -C "$REPO_ROOT" diff --quiet "$range" -- layers/system && return 0
-  warn "$(_t "The system layer changed; update does not apply it. Re-apply it with" "La capa system cambió; update no la aplica. Vuelva a aplicarla con"): dotfiles system setup ${saved[SYSTEM_ARGS]:-}"
+  local args=${saved[SYSTEM_ARGS]:-}
+  # Custom DoT endpoints are never stored: ask for them again.
+  [[ " $args " != *" --custom "* ]] || args=${args/--custom/--custom <endpoints>}
+  warn "$(_t "The system layer changed; update does not apply it. Re-apply it with" "La capa system cambió; update no la aplica. Vuelva a aplicarla con"): dotfiles system setup $args"
 }
 
 update_from_remote() {

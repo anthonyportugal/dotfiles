@@ -68,7 +68,7 @@ system_packages() {
 }
 
 cmd_system() {
-  local subcommand=setup arg dry_run=0 install=0 components=0 ly=0 status=0
+  local subcommand=setup arg dry_run=0 install=0 components=0 ly=0 status=0 setup_options=0
   local -a installer_args=() recorded=()
   local -A saved=()
 
@@ -89,6 +89,10 @@ cmd_system() {
 
   while (( $# > 0 )); do
     arg=$1
+    case "$arg" in
+      --target|--target=*) ;;
+      *) setup_options=1 ;;
+    esac
     case "$arg" in
       --target)
         require_option_value "$arg" "${2-}"
@@ -136,7 +140,7 @@ cmd_system() {
         require_option_value "$arg" "${2-}"
         installer_args+=("$arg" "$2")
         # A custom resolver id is private: never stored.
-        recorded+=("$arg" "<omitido>")
+        recorded+=("$arg")
         shift 2
         continue
         ;;
@@ -153,6 +157,8 @@ cmd_system() {
   TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
 
   if [[ "$subcommand" == doctor || "$subcommand" == check ]]; then
+    (( setup_options == 0 )) || \
+      usage_error "$(_t "system doctor only accepts --target" "system doctor solo acepta --target")"
     if read_receipt system saved; then
       info "$(_t "Saved system selection" "Selección de system guardada"): ${saved[SYSTEM_ARGS]:-}"
     else
