@@ -45,7 +45,12 @@ merge_mimeapps() {
 apply_mimeapps() {
   local file="$1/.config/mimeapps.list" existing='/dev/null' merged
 
-  if [[ -f "$file" && -r "$file" ]]; then
+  if [[ -f "$file" ]]; then
+    # Replacing a file we cannot read would drop every entry in it.
+    if [[ ! -r "$file" ]]; then
+      error "no se puede leer $file; corrija sus permisos para no perder sus entradas"
+      return 1
+    fi
     existing=$file
   fi
   mkdir -p -- "$1/.config"
@@ -80,11 +85,16 @@ check_mimeapps() {
     warn "$file sigue siendo un enlace; ejecute bootstrap para generarlo"
     return 0
   fi
+  if [[ ! -r "$file" ]]; then
+    warn "no se puede leer $file; corrija sus permisos"
+    return 0
+  fi
   # Repo keys whose value differs from, or is missing in, the file.
   drifted=$(awk '
     FNR == 1 { section = "" }
+    /^[[:space:]]*(#|$)/ { next }
     /^\[.*\]$/ { section = $0; next }
-    !/=/ { next }
+    !/=/ || section == "" { next }
     {
       key = substr($0, 1, index($0, "=") - 1)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)

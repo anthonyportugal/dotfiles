@@ -114,6 +114,27 @@ if run_hook "$target" post-link bootstrap >/dev/null 2>&1; then
 fi
 compgen -G "$target/.config/.mimeapps.list.*" >/dev/null && fail "un apply fallido dejó un archivo temporal"
 
+# An existing file that cannot be read is never overwritten, and doctor
+# warns about it instead of failing.
+target=$(new_target unreadable)
+file="$target/.config/mimeapps.list"
+printf '%s\n' '[Default Applications]' 'x-scheme-handler/foo=foo.desktop' > "$file"
+chmod 000 "$file"
+if [[ -r "$file" ]]; then
+  printf 'SKIP: el archivo sigue legible (¿root?); se omite el caso ilegible\n'
+else
+  if run_hook "$target" post-link bootstrap >/dev/null 2>&1; then
+    fail "post-link sobrescribió un mimeapps.list ilegible"
+  fi
+  chmod 644 "$file"
+  [[ "$(value_of "$file" x-scheme-handler/foo 'Default Applications')" == foo.desktop ]] || \
+    fail "un apply fallido modificó el mimeapps.list ilegible"
+  chmod 000 "$file"
+  output=$(run_hook "$target" validate doctor 2>&1) || fail "doctor falló con un mimeapps.list ilegible: $output"
+  [[ "$output" == *"no se puede leer $file"* ]] || fail "doctor no avisó del archivo ilegible: $output"
+fi
+chmod 644 "$file"
+
 # A stow symlink in its place is replaced by a real file that keeps its
 # entries, and the file it pointed to is left untouched.
 target=$(new_target symlink)
