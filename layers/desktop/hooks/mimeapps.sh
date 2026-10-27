@@ -12,11 +12,13 @@ merge_mimeapps() {
     function add_section(name) {
       if (!(name in seen_section)) { seen_section[name] = 1; order[++sections] = name }
     }
+    FNR == 1 { section = "" }
     /^[[:space:]]*(#|$)/ { next }
     /^\[.*\]$/ { section = $0; add_section(section); next }
     !/=/ || section == "" { next }
     {
       key = substr($0, 1, index($0, "=") - 1)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
       id = section SUBSEP key
       if (FNR == NR) {
         repo[id] = 1
@@ -56,8 +58,12 @@ apply_mimeapps() {
     rm -f -- "$merged"
     return 0
   fi
-  chmod 644 -- "$merged"
-  mv -fT -- "$merged" "$file"
+  # Callers run this under `|| die`, where errexit is off: check every step.
+  if ! chmod 644 -- "$merged" || ! mv -fT -- "$merged" "$file"; then
+    rm -f -- "$merged"
+    error "no se pudo escribir $file"
+    return 1
+  fi
   info "mimeapps.list generado: $file"
 }
 
@@ -76,9 +82,14 @@ check_mimeapps() {
   fi
   # Repo keys whose value differs from, or is missing in, the file.
   drifted=$(awk '
+    FNR == 1 { section = "" }
     /^\[.*\]$/ { section = $0; next }
     !/=/ { next }
-    { key = substr($0, 1, index($0, "=") - 1); id = section SUBSEP key }
+    {
+      key = substr($0, 1, index($0, "=") - 1)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+      id = section SUBSEP key
+    }
     FNR == NR { want[id] = $0; name[id] = key; next }
     id in want { found[id] = 1; if (want[id] != $0) bad[id] = 1 }
     END {

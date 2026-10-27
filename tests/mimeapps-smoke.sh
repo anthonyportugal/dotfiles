@@ -97,6 +97,23 @@ run_hook "$target" post-link bootstrap >/dev/null
 [[ "$(sha256sum < "$file")" == "$before_sum" ]] || fail "un segundo apply cambió mimeapps.list"
 [[ "$(stat -c %Y "$file")" == "$before_mtime" ]] || fail "un segundo apply reescribió mimeapps.list sin cambios"
 
+# A hand-edited key with spaces around '=' is still the repo key.
+target=$(new_target spaces)
+file="$target/.config/mimeapps.list"
+printf '%s\n' '[Default Applications]' 'application/pdf = evince.desktop;' > "$file"
+run_hook "$target" post-link bootstrap >/dev/null || fail "post-link falló con espacios alrededor de '='"
+(( $(grep -c '^application/pdf' "$file") == 1 )) || fail "una clave con espacios quedó junto a la del repo"
+[[ "$(value_of "$file" application/pdf 'Default Applications')" == "$expected_pdf" ]] || \
+  fail "una clave con espacios no cedió ante la del repo"
+
+# A file that cannot be replaced fails the apply and leaves no temporary file.
+target=$(new_target blocked)
+mkdir -p "$target/.config/mimeapps.list"
+if run_hook "$target" post-link bootstrap >/dev/null 2>&1; then
+  fail "post-link informó éxito sin poder escribir mimeapps.list"
+fi
+compgen -G "$target/.config/.mimeapps.list.*" >/dev/null && fail "un apply fallido dejó un archivo temporal"
+
 # A stow symlink in its place is replaced by a real file that keeps its
 # entries, and the file it pointed to is left untouched.
 target=$(new_target symlink)
