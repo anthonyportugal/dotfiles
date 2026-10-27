@@ -6,7 +6,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 # The layer lives at layers/wm/mangowm inside the monorepo.
 MONOREPO_ROOT=$(cd -- "$REPO_ROOT/../../.." && pwd -P)
-PALETTE="$REPO_ROOT/themes/catppuccin-mocha-pink/palette.conf"
+PALETTE="$REPO_ROOT/../../../themes/palettes/catppuccin-mocha-pink.conf"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -105,7 +105,7 @@ fi
   fail "falta el renderer de tema"
 [[ -f "$MONOREPO_ROOT/THIRD_PARTY_NOTICES.md" ]] || \
   fail "falta la atribución de la paleta"
-[[ -f "$REPO_ROOT/themes/templates/yazi-flavor.toml" ]] || \
+[[ -f "$REPO_ROOT/../../../themes/templates/yazi/flavor.toml" ]] || \
   fail "falta el template de tema para yazi"
 
 declare -A expected_keys=()
@@ -123,7 +123,7 @@ done
 check_palette() {
   local palette=$1
   local expected_id
-  expected_id=$(basename -- "$(dirname -- "$palette")")
+  expected_id=$(basename -- "$palette" .conf)
   local expected_accent="${expected_id#catppuccin-mocha-}"
 
   declare -A seen_keys=()
@@ -169,7 +169,7 @@ check_palette() {
 }
 
 found_palettes=0
-for palette_file in "$REPO_ROOT"/themes/*/palette.conf; do
+for palette_file in "$REPO_ROOT"/../../../themes/palettes/*.conf; do
   [[ -f "$palette_file" ]] || continue
   check_palette "$palette_file"
   ((found_palettes++)) || true

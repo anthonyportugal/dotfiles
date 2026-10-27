@@ -32,9 +32,8 @@ SOFTWARE.
 
 ## Catppuccin palette
 
-`themes/palettes/*.conf`, `layers/wm/bspwm/themes/*/palette.conf` and
-`layers/wm/mangowm/themes/*/palette.conf` contain color values from the
-Catppuccin Mocha palette, used as data by the theme renderers. No GTK theme archive or application port is vendored.
+`themes/palettes/*.conf` contain color values from the Catppuccin Mocha
+palette, used as data by the theme engine and its templates. No GTK theme archive or application port is vendored.
 
 - Project: https://github.com/catppuccin/catppuccin
 - License: MIT

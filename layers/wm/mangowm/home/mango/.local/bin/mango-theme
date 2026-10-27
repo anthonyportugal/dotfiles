@@ -6,6 +6,8 @@ PROGRAM_NAME=${0##*/}
 SCRIPT_PATH=$(realpath -m -- "${BASH_SOURCE[0]}")
 SCRIPT_DIR=$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd -P)
+# Palettes and the Yazi template are shared at the monorepo root.
+THEMES_DIR=$(cd -- "$REPO_ROOT/../../.." && pwd -P)/themes
 THEME_ID=''
 PALETTE=''
 STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
@@ -43,7 +45,7 @@ resolve_theme_id() {
   if [[ -r "$selected_file" ]]; then
     local saved
     saved=$(<"$selected_file")
-    if [[ -n "$saved" && -f "$REPO_ROOT/themes/$saved/palette.conf" ]]; then
+    if [[ -n "$saved" && -f "$THEMES_DIR/palettes/$saved.conf" ]]; then
       printf '%s\n' "$saved"
       return 0
     fi
@@ -68,7 +70,7 @@ declare_schema() {
 read_palette() {
   local target_id=${1:-$(resolve_theme_id)}
   THEME_ID=$target_id
-  PALETTE="$REPO_ROOT/themes/$THEME_ID/palette.conf"
+  PALETTE="$THEMES_DIR/palettes/$THEME_ID.conf"
 
   local line key value
 
@@ -614,7 +616,7 @@ render_gtk() {
 
 render_yazi() {
   local destination=$1
-  local template="$REPO_ROOT/themes/templates/yazi-flavor.toml"
+  local template="$THEMES_DIR/templates/yazi/flavor.toml"
   mkdir -p "$destination/yazi"
   if [[ -f "$template" ]]; then
     sed "s/{{accent}}/${COLORS[accent]}/g" "$template" > "$destination/yazi/flavor.toml"
@@ -690,7 +692,7 @@ render_theme() {
   command -v flock >/dev/null 2>&1 || fail 'flock es necesario para renderizar temas'
   exec 9>"$THEME_ROOT/render.guard"
   flock 9
-  local template="$REPO_ROOT/themes/templates/yazi-flavor.toml"
+  local template="$THEMES_DIR/templates/yazi/flavor.toml"
   if [[ -f "$template" ]]; then
     digest=$(sha256sum -- "$PALETTE" "$SCRIPT_PATH" "$template" | sha256sum)
   else
@@ -748,7 +750,7 @@ reload_live() {
 
 set_theme() {
   local target_id=$1
-  [[ -f "$REPO_ROOT/themes/$target_id/palette.conf" ]] || fail "tema desconocido: $target_id"
+  [[ -f "$THEMES_DIR/palettes/$target_id.conf" ]] || fail "tema desconocido: $target_id"
 
   mkdir -p -- "$THEME_ROOT"
   printf '%s\n' "$target_id" > "$THEME_ROOT/selected"
@@ -767,10 +769,11 @@ set_theme() {
 }
 
 list_themes() {
-  local dir
-  for dir in "$REPO_ROOT/themes"/*/; do
-    [[ -f "$dir/palette.conf" ]] || continue
-    basename "$dir"
+  local palette
+  for palette in "$THEMES_DIR/palettes"/*.conf; do
+    [[ -f "$palette" ]] || continue
+    palette=${palette##*/}
+    printf '%s\n' "${palette%.conf}"
   done | sort
 }
 
