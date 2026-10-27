@@ -96,6 +96,16 @@ fi
 compgen -G "$STATE/.render.*" >/dev/null && fail "un render fallido dejó directorios temporales"
 rm -f -- "$TEMPLATES/otherwm/broken.conf"
 
+# A WM template directory with an unsafe name fails the render.
+mkdir -p "$TEMPLATES/Bad_WM"
+printf 'x={{accent}}\n' > "$TEMPLATES/Bad_WM/x.conf"
+if output=$(theme_in "$H" render 2>&1); then
+  fail "render aceptó un directorio de plantillas con nombre inválido"
+fi
+[[ "$output" == *'nombre de plantillas de WM inválido: Bad_WM'* ]] || fail "render falló por otra causa: $output"
+[[ "$(readlink -- "$STATE/current")" == "$before" ]] || fail "un nombre inválido cambió theme/current"
+rm -rf -- "$TEMPLATES/Bad_WM"
+
 # set renders, persists the selection, syncs the GNOME accent and runs every
 # WM reload hook; a failing hook only warns.
 mkdir -p "$H/.local/share/dotfiles/theme/reload.d"

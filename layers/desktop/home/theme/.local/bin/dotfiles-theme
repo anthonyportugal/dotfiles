@@ -24,6 +24,7 @@ NAME_PATTERN='^[a-z0-9]+(-[a-z0-9]+)*$'
 
 declare -A COLORS=()
 declare -A EXPECTED=()
+declare -a WM_DIRS=()
 
 fail() {
   printf '%s: %s\n' "$PROGRAM_NAME" "$*" >&2
@@ -142,10 +143,12 @@ read_palette() {
   done
 }
 
-# Installed WM template directories, one per line, sorted.
-wm_template_dirs() {
+# Collects the installed WM template directories into WM_DIRS. It runs in the
+# main shell so an unsafe name stops the render instead of a subshell.
+collect_wm_template_dirs() {
   local dir name
 
+  WM_DIRS=()
   [[ -d "$WM_TEMPLATES_DIR" ]] || return 0
   for dir in "$WM_TEMPLATES_DIR"/*/; do
     [[ -d "$dir" ]] || continue
@@ -153,7 +156,7 @@ wm_template_dirs() {
     name=${dir##*/}
     [[ "$name" =~ $NAME_PATTERN && "$name" != yazi ]] || \
       fail "nombre de plantillas de WM inválido: $name"
-    printf '%s\n' "$dir"
+    WM_DIRS+=("$dir")
   done
 }
 
@@ -194,9 +197,9 @@ render_all() {
   local destination=$1 dir
 
   render_tree "$SHARED_TEMPLATES_DIR" "$destination"
-  while IFS= read -r dir; do
+  for dir in "${WM_DIRS[@]}"; do
     render_tree "$dir" "$destination/${dir##*/}"
-  done < <(wm_template_dirs)
+  done
   printf '%s\n' "${COLORS[background]}" > "$destination/background"
   printf '%s\n' 'schema=1' "id=${COLORS[id]}" "family=${COLORS[family]}" \
     "flavour=${COLORS[flavour]}" "accent_name=${COLORS[accent_name]}" \
@@ -215,13 +218,13 @@ validate_outputs() {
     fail 'Yazi no recibió el acento del tema'
   grep -Fxq "id=${COLORS[id]}" "$destination/metadata" || \
     fail 'metadata de tema inconsistente'
-  while IFS= read -r dir; do
+  for dir in "${WM_DIRS[@]}"; do
     while IFS= read -r relative; do
       [[ -n "$relative" ]] || continue
       [[ -s "$destination/${dir##*/}/$relative" ]] || \
         fail "output de tema vacío o ausente: ${dir##*/}/$relative"
     done < <(template_files "$dir")
-  done < <(wm_template_dirs)
+  done
 }
 
 # The revision covers the palette, this engine and every template, including
@@ -238,13 +241,13 @@ theme_digest() {
         printf 'shared/%s ' "$relative"
         sha256sum < "$SHARED_TEMPLATES_DIR/$relative"
       done < <(template_files "$SHARED_TEMPLATES_DIR")
-      while IFS= read -r dir; do
+      for dir in "${WM_DIRS[@]}"; do
         while IFS= read -r relative; do
           [[ -n "$relative" ]] || continue
           printf '%s/%s ' "${dir##*/}" "$relative"
           sha256sum < "$dir/$relative"
         done < <(template_files "$dir")
-      done < <(wm_template_dirs)
+      done
     } | sha256sum
   )
   printf '%s\n' "${digest:0:12}"
@@ -280,6 +283,7 @@ render_theme() {
   command -v flock >/dev/null 2>&1 || fail 'flock es necesario para renderizar temas'
   exec 9>"$THEME_ROOT/render.guard"
   flock 9
+  collect_wm_template_dirs
   revision="${COLORS[id]}-$(theme_digest)"
 
   if [[ ! -d "$THEME_ROOT/$revision" ]]; then
