@@ -1,0 +1,6 @@
+# Base development tools.
+actionlint
+github-cli
+jq
+shellcheck
+shfmt

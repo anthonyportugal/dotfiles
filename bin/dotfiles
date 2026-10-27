@@ -55,9 +55,13 @@ PLATFORM=""
 BACKEND=""
 
 declare -a FEATURES=()
-# Read through array_contains by name.
+# Opt-in layers chosen with --layer (or pulled in by one of their features).
+declare -a OPTIONAL_LAYERS=()
+# Filled by discover_layers: the opt-in layers, every declared feature and the
+# layer declaring it. Read through array_contains by name.
 # shellcheck disable=SC2034
-SUPPORTED_FEATURES=(yazi-extras)
+declare -a SUPPORTED_LAYERS=() SUPPORTED_FEATURES=()
+declare -A FEATURE_LAYERS=()
 declare -a REPO_PACKAGES=()
 declare -a AUR_PACKAGES=()
 declare -a EXTERNAL_PACKAGES=()
@@ -148,7 +152,7 @@ Uso:
 
 Comandos:
   setup       Asistente interactivo guiado para configurar e instalar por capas.
-  sync        Re-aplica la selección guardada (perfil, WMs) sin tocar Git.
+  sync        Re-aplica la selección guardada (perfil, capas, WMs) sin tocar Git.
   update      Descarga actualizaciones (fast-forward) y re-aplica la selección guardada.
   doctor      Comprueba dependencias, sintaxis y enlaces sin modificar nada.
   unlink      Retira únicamente los enlaces Stow del sistema.
@@ -158,7 +162,9 @@ Comandos:
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
   --lang en|es                     Idioma de la interfaz (default: en).
-  --feature yazi-extras            Feature opt-in; aplica también la capa que la declara (cli).
+  --feature NOMBRE                 Feature opt-in (yazi-extras, dev-containers, dev-js); aplica
+                                   también la capa que la declara.
+  --layer NOMBRE                   Capa opcional que ningún perfil incluye (dev); se puede repetir.
   --backend auto|shelly|paru|yay|pacman
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
@@ -193,7 +199,7 @@ Usage:
 
 Commands:
   setup       Interactive guided assistant to configure and install by layers.
-  sync        Re-applies the saved selection (profile, WMs) without touching Git.
+  sync        Re-applies the saved selection (profile, layers, WMs) without touching Git.
   update      Pulls updates (fast-forward) and re-applies the saved selection.
   doctor      Verifies dependencies, syntax, and symlinks without modifying anything.
   unlink      Removes GNU Stow symlinks from the system.
@@ -203,7 +209,9 @@ Commands:
 Options:
   --profile core|cli|desktop       Cumulative profile (default: desktop).
   --lang en|es                     Interface language (default: en).
-  --feature yazi-extras            Opt-in feature; also applies the layer declaring it (cli).
+  --feature NAME                   Opt-in feature (yazi-extras, dev-containers, dev-js); also
+                                   applies the layer declaring it.
+  --layer NAME                     Opt-in layer no profile includes (dev); repeatable.
   --backend auto|shelly|paru|yay|pacman
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
@@ -322,6 +330,17 @@ parse_args() {
         local feature_value=${1#*=}
         require_option_value "--feature" "$feature_value"
         FEATURES+=("$feature_value")
+        shift
+        ;;
+      --layer)
+        require_option_value "$1" "${2-}"
+        OPTIONAL_LAYERS+=("$2")
+        shift 2
+        ;;
+      --layer=*)
+        local layer_value=${1#*=}
+        require_option_value "--layer" "$layer_value"
+        OPTIONAL_LAYERS+=("$layer_value")
         shift
         ;;
       --backend)
@@ -597,15 +616,45 @@ parse_args() {
   fi
 }
 
+# Opt-in layers are the layers under layers/ with a layer.conf that are
+# neither base nor WM layers; features come from base and opt-in layers.
+discover_layers() {
+  local layer_dir name feature
+  local -A conf=()
+  local -a declared=()
+
+  SUPPORTED_LAYERS=() SUPPORTED_FEATURES=() FEATURE_LAYERS=()
+  for layer_dir in "$LAYERS_DIR"/*/; do
+    name=${layer_dir%/}
+    name=${name##*/}
+    [[ -f "$LAYERS_DIR/$name/layer.conf" && "$name" != wm ]] || continue
+    array_contains BASE_LAYERS "$name" || SUPPORTED_LAYERS+=("$name")
+    read_layer_conf "$LAYERS_DIR/$name" conf
+    read -r -a declared <<< "${conf[features]:-}"
+    for feature in "${declared[@]}"; do
+      [[ -z "${FEATURE_LAYERS[$feature]:-}" ]] || \
+        die "la feature $feature está declarada en ${FEATURE_LAYERS[$feature]} y en $name"
+      FEATURE_LAYERS["$feature"]=$name
+      SUPPORTED_FEATURES+=("$feature")
+    done
+  done
+}
+
 validate_features() {
-  local feature
-  local -a unique_features=()
+  local feature name
+  local -a unique_features=() unique_layers=()
 
   for feature in "${FEATURES[@]}"; do
     array_contains SUPPORTED_FEATURES "$feature" || usage_error "feature no soportado: $feature"
     append_unique unique_features "$feature"
   done
   FEATURES=("${unique_features[@]}")
+  for name in "${OPTIONAL_LAYERS[@]}"; do
+    array_contains SUPPORTED_LAYERS "$name" || \
+      usage_error "capa opcional no soportada: $name (disponibles: ${SUPPORTED_LAYERS[*]:-ninguna})"
+    append_unique unique_layers "$name"
+  done
+  OPTIONAL_LAYERS=("${unique_layers[@]}")
 }
 
 
@@ -1000,34 +1049,39 @@ validate_cli_command() {
 # each after what it requires. A WM requires the desktop layer, so choosing one
 # raises the recorded profile to desktop.
 resolve_selected_layers() {
-  local wm feature base_layer
-  local -a requested=("$PROFILE")
-  local -A base_conf=()
+  local wm feature layer base_layer
+  local -a requested=()
 
-  # A selected feature pulls in the base layer that declares it.
+  # A selected feature pulls in the layer that declares it.
   for feature in "${FEATURES[@]}"; do
-    for base_layer in "${BASE_LAYERS[@]}"; do
-      read_layer_conf "$LAYERS_DIR/$base_layer" base_conf
-      [[ " ${base_conf[features]:-} " == *" $feature "* ]] || continue
-      if (( $(base_layer_rank "$base_layer") > $(base_layer_rank "$PROFILE") )); then
-        info "La feature $feature requiere la capa $base_layer; se aplica $base_layer en lugar de $PROFILE"
-        PROFILE=$base_layer
-        requested=("$PROFILE")
-      fi
-      break
-    done
+    layer=${FEATURE_LAYERS[$feature]}
+    if ! array_contains BASE_LAYERS "$layer"; then
+      append_unique OPTIONAL_LAYERS "$layer"
+    elif (( $(base_layer_rank "$layer") > $(base_layer_rank "$PROFILE") )); then
+      info "La feature $feature requiere la capa $layer; se aplica $layer en lugar de $PROFILE"
+      PROFILE=$layer
+    fi
   done
 
+  requested=("$PROFILE" "${OPTIONAL_LAYERS[@]}")
   for wm in "${WMS[@]}"; do
     requested+=("wm/$wm")
   done
   SELECTED_LAYERS=()
   resolve_layers "$LAYERS_DIR" SELECTED_LAYERS "${requested[@]}"
 
-  if [[ "$PROFILE" != desktop ]] && array_contains SELECTED_LAYERS desktop; then
+  # The profile follows the highest base layer the selection pulled in.
+  local highest=$PROFILE
+  for base_layer in "${BASE_LAYERS[@]}"; do
+    array_contains SELECTED_LAYERS "$base_layer" && highest=$base_layer
+  done
+  [[ "$highest" != "$PROFILE" ]] || return 0
+  if [[ "$highest" == desktop ]] && (( ${#WMS[@]} > 0 )); then
     info "Los WMs requieren el perfil desktop; se aplica desktop en lugar de $PROFILE"
-    PROFILE=desktop
+  else
+    info "Las capas elegidas requieren la capa $highest; se aplica $highest en lugar de $PROFILE"
   fi
+  PROFILE=$highest
 }
 
 # Prints the position of base layer $1 in BASE_LAYERS (core=0, cli=1, ...).
@@ -1051,7 +1105,13 @@ layer_profile() {
 layer_label() {
   case "$1" in
     wm/*) printf 'Window Manager (%s)' "${1#wm/}" ;;
-    *) printf 'Base (%s)' "$1" ;;
+    *)
+      if array_contains BASE_LAYERS "$1"; then
+        printf 'Base (%s)' "$1"
+      else
+        printf 'Optional (%s)' "$1"
+      fi
+      ;;
   esac
 }
 
@@ -1078,6 +1138,7 @@ prepare_selection() {
   printf '  %-24s %s\n' 'Modo:' "$execution_mode"
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
   print_array "Features" FEATURES
+  print_array "Capas opcionales" OPTIONAL_LAYERS
   for current_layer in "${SELECTED_LAYERS[@]}"; do
     printf '  %-24s %s\n' "Capa $current_layer:" "perfil $(layer_profile "$current_layer")"
   done
@@ -1261,7 +1322,8 @@ unlink_with_optional_components() {
 
 # Records what this machine selected so sync/update re-apply it without flags.
 save_selection_receipt() {
-  write_receipt dotfiles PROFILE="$PROFILE" FEATURES="${FEATURES[*]}" WMS="${WMS[*]}" BACKEND="${BACKEND:-}"
+  write_receipt dotfiles PROFILE="$PROFILE" FEATURES="${FEATURES[*]}" LAYERS="${OPTIONAL_LAYERS[*]}" \
+    WMS="${WMS[*]}" BACKEND="${BACKEND:-}"
 }
 
 # Restores the recorded selection for whatever the command line left unset.
@@ -1294,6 +1356,17 @@ load_selection_receipt() {
       fi
     done
     (( ${#FEATURES[@]} == 0 )) || restored+=("features ${FEATURES[*]}")
+  fi
+  if (( ${#OPTIONAL_LAYERS[@]} == 0 )); then
+    read -r -a entries <<< "${selection[LAYERS]:-}"
+    for entry in "${entries[@]}"; do
+      if array_contains SUPPORTED_LAYERS "$entry"; then
+        append_unique OPTIONAL_LAYERS "$entry"
+      else
+        warn "se ignora una capa inválida en el recibo de selección: $entry"
+      fi
+    done
+    (( ${#OPTIONAL_LAYERS[@]} == 0 )) || restored+=("capas ${OPTIONAL_LAYERS[*]}")
   fi
   if (( ${#WMS[@]} == 0 )); then
     read -r -a entries <<< "${selection[WMS]:-}"
@@ -1444,6 +1517,7 @@ cmd_unlink() {
 
 main() {
   parse_args "$@"
+  discover_layers
 
   case "$COMMAND" in
     setup|install)

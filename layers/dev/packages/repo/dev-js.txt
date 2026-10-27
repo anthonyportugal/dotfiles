@@ -1,0 +1,2 @@
+# Feature dev-js: JavaScript package manager.
+pnpm

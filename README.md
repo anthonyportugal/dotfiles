@@ -78,6 +78,16 @@ Configurations are structured into small packages managed with [GNU Stow](https:
 | **`xdg-defaults`** | GTK 3/4 `prefer-dark` settings and session hooks | `desktop` |
 | **`theme`** | `dotfiles-theme`, the single theme engine shared by every window manager (see [`themes/README.md`](themes/README.md)) | `desktop` |
 
+### Opt-in layers
+
+Some layers are never part of a profile and apply only when asked for with `--layer` (they pull in the layers they require). Their features add heavier stacks on top, and choosing a feature also applies its layer:
+
+| Layer / feature | Contents |
+| :--- | :--- |
+| **`dev`** | Development tools: `actionlint`, `github-cli`, `jq`, `shellcheck`, `shfmt`; Docker doctor checks. Requires `cli`. |
+| **`dev-containers`** | Feature of `dev`: `docker`, `docker-compose`, `lazydocker` |
+| **`dev-js`** | Feature of `dev`: `pnpm`, with its global binaries on `PATH` |
+
 `~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.
 
@@ -141,6 +151,10 @@ You can also orchestrate components directly using explicit flags:
   ```bash
   ./bin/dotfiles bootstrap --profile core --apply
   ```
+- **Opt-in Development Layer (with Docker):**
+  ```bash
+  ./bin/dotfiles bootstrap --profile desktop --layer dev --feature dev-containers --apply
+  ```
 - **Compose with WMs, Wallpapers, Private Layer, and Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
@@ -158,7 +172,7 @@ You can also orchestrate components directly using explicit flags:
   ./bin/dotfiles setup            # English by default
   ./bin/dotfiles setup --lang es  # Spanish interface
   ```
-- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap), configures Agent Harness, and validates packages without touching Git. Explicit flags such as `--profile` override the saved values:
+- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap), configures Agent Harness, and validates packages without touching Git. Explicit flags such as `--profile` override the saved values:
   ```bash
   ./bin/dotfiles sync
   ```

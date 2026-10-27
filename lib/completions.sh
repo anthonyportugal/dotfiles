@@ -31,7 +31,8 @@ _dotfiles() {
   common_options=(
     '--profile[Cumulative profile]:profile:(core cli desktop)'
     '--lang[Interface language]:language:(en es)'
-    '*--feature[Opt-in feature]:feature:(yazi-extras)'
+    '*--feature[Opt-in feature]:feature:(yazi-extras dev-containers dev-js)'
+    '*--layer[Opt-in layer]:layer:(dev)'
     '--backend[Package backend]:backend:(auto shelly paru yay pacman)'
     '--platform[Platform override]:platform:(auto cachyos arch)'
     '--target[Target directory]:directory:_files -/'
@@ -72,7 +73,7 @@ _dotfiles_completion() {
   _init_completion || return
 
   local commands="setup sync update bootstrap doctor unlink completion help"
-  local options="--profile --feature --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --agent-harness --agent-harness-path --apply -h --help"
+  local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --wallpapers --wallpapers-path --private --private-path --private-profile --private-work --agent-harness --agent-harness-path --apply -h --help"
 
   if (( cword == 1 )); then
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -85,7 +86,11 @@ _dotfiles_completion() {
       return 0
       ;;
     --feature)
-      COMPREPLY=( $(compgen -W "yazi-extras" -- "$cur") )
+      COMPREPLY=( $(compgen -W "yazi-extras dev-containers dev-js" -- "$cur") )
+      return 0
+      ;;
+    --layer)
+      COMPREPLY=( $(compgen -W "dev" -- "$cur") )
       return 0
       ;;
     --backend)

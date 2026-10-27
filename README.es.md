@@ -78,6 +78,16 @@ Las configuraciones están divididas en pequeños paquetes gestionados con [GNU 
 | **`xdg-defaults`** | Ajustes GTK 3/4 `prefer-dark` y hooks de sesión | `desktop` |
 | **`theme`** | `dotfiles-theme`, el único motor de temas que comparten todos los gestores de ventanas (ver [`themes/README.md`](themes/README.md)) | `desktop` |
 
+### Capas opcionales
+
+Algunas capas nunca forman parte de un perfil y solo se aplican si se piden con `--layer` (arrastran las capas que requieren). Sus features añaden stacks más pesados encima, y elegir una feature aplica también su capa:
+
+| Capa / feature | Contenido |
+| :--- | :--- |
+| **`dev`** | Herramientas de desarrollo: `actionlint`, `github-cli`, `jq`, `shellcheck`, `shfmt`; comprobaciones de Docker en doctor. Requiere `cli`. |
+| **`dev-containers`** | Feature de `dev`: `docker`, `docker-compose`, `lazydocker` |
+| **`dev-js`** | Feature de `dev`: `pnpm`, con sus binarios globales en el `PATH` |
+
 `~/.config/mimeapps.list` se genera, no se enlaza: las aplicaciones escriben en él, así que un enlace les dejaría modificar el checkout. La capa `desktop` mezcla
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) en él en cada apply. Las claves del repo siempre ganan, y se conserva cualquier otra entrada que haya registrado una aplicación. `doctor` avisa cuando una clave del repo se desvió.
 
@@ -141,6 +151,10 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles bootstrap --profile core --apply
   ```
+- **Capa opcional de desarrollo (con Docker):**
+  ```bash
+  ./bin/dotfiles bootstrap --profile desktop --layer dev --feature dev-containers --apply
+  ```
 - **Composición con WMs, Wallpapers, Capa Privada y Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
@@ -158,7 +172,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ./bin/dotfiles setup            # Inglés por defecto
   ./bin/dotfiles setup --lang es  # Interfaz en español
   ```
-- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado), configura Agent Harness y valida paquetes sin tocar Git. Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
+- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features, capas opcionales y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado), configura Agent Harness y valida paquetes sin tocar Git. Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
   ```bash
   ./bin/dotfiles sync
   ```

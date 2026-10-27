@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# Doctor checks of the dev layer: Docker needs the user in the docker group
+# and docker.service running. Only warns; installing never needs them.
+# Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
+
+set -Eeuo pipefail
+
+# Read by lib/colors.sh as the log prefix.
+# shellcheck disable=SC2034
+PROGRAM_NAME=dev
+# shellcheck source=../../../lib/colors.sh
+source "$DOTFILES_LIB/colors.sh"
+# shellcheck source=../../../lib/core.sh
+source "$DOTFILES_LIB/core.sh"
+
+check_docker() {
+  command_exists docker || return 0
+  target_is_current_home || return 0
+  if ! id -nG 2>/dev/null | grep -qw docker; then
+    warn "$(_t "the current user is not in the docker group; run: sudo usermod -aG docker \$USER" \
+      "el usuario actual no pertenece al grupo docker; ejecute: sudo usermod -aG docker \$USER")"
+  fi
+  command_exists systemctl || return 0
+  if ! systemctl is-active --quiet docker 2>/dev/null; then
+    warn "$(_t "docker.service is not active; run: sudo systemctl enable --now docker.service" \
+      "docker.service no está activo; ejecute: sudo systemctl enable --now docker.service")"
+  fi
+}
+
+[[ "$OPERATION" == doctor ]] || exit 0
+check_docker
