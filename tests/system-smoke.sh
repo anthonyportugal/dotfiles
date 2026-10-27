@@ -51,9 +51,13 @@ output=$(run_system help) || fail "system help falló"
 [[ "$output" == *'dotfiles system'*'doctor'* ]] || fail "system help no describe los subcomandos: $output"
 [[ ! -e "$SUDO_LOG" ]] || fail "system help usó sudo"
 
-# doctor audits without sudo.
-run_system doctor --target "$H" > "$TEST_ROOT/doctor.out" 2>&1 || true
-grep -q 'Ly' "$TEST_ROOT/doctor.out" || fail "system doctor no auditó los componentes: $(<"$TEST_ROOT/doctor.out")"
+# doctor reaches the installer's audit (not its usage or an error) without sudo.
+run_system doctor --target "$H" > "$TEST_ROOT/doctor.out" 2>&1 || \
+  fail "system doctor falló: $(<"$TEST_ROOT/doctor.out")"
+grep -q 'Running comprehensive system audit' "$TEST_ROOT/doctor.out" || \
+  fail "system doctor no llegó a la auditoría del instalador: $(<"$TEST_ROOT/doctor.out")"
+grep -q 'Performing configuration and service audit' "$TEST_ROOT/doctor.out" || \
+  fail "system doctor no auditó Ly: $(<"$TEST_ROOT/doctor.out")"
 [[ ! -e "$SUDO_LOG" ]] || fail "system doctor usó sudo"
 
 # doctor rejects setup options instead of ignoring them.
