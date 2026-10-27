@@ -35,13 +35,12 @@ WALLPAPERS=0
 WALLPAPERS_PATH=""
 WALLPAPERS_ENTRYPOINT=""
 
-PRIVATE=0
-PRIVATE_PATH=""
-PRIVATE_PROFILE="core"
-PRIVATE_PROFILE_EXPLICIT=0
-PRIVATE_ENTRYPOINT=""
-declare -a PRIVATE_WORK=()
-PRIVATE_WORK_EXPLICIT=0
+# Overlay: a second layers root (--overlay DIR), usually a private repository.
+OVERLAY_PATH=""
+OVERLAY_EXPLICIT=0
+NO_OVERLAY=0
+OVERLAY_READY=0
+declare -a OVERLAY_LAYERS=()
 
 HARNESS=0
 HARNESS_PATH=""
@@ -165,6 +164,9 @@ Opciones:
   --feature NOMBRE                 Feature opt-in (yazi-extras, dev-containers, dev-js); aplica
                                    también la capa que la declara.
   --layer NOMBRE                   Capa opcional que ningún perfil incluye (dev); se puede repetir.
+  --overlay RUTA                   Repositorio con layers/ propias (p. ej. ~/.dotfiles-private); cada
+                                   capa se aplica sola cuando lo que requiere está elegido.
+  --no-overlay                     Deja de aplicar el overlay guardado en el recibo.
   --backend auto|shelly|paru|yay|pacman
                                    Backend de paquetes (default: auto).
   --platform auto|cachyos|arch     Plataforma detectada u override explícito.
@@ -212,6 +214,9 @@ Options:
   --feature NAME                   Opt-in feature (yazi-extras, dev-containers, dev-js); also
                                    applies the layer declaring it.
   --layer NAME                     Opt-in layer no profile includes (dev); repeatable.
+  --overlay DIR                    Repository with its own layers/ (e.g. ~/.dotfiles-private); each
+                                   layer applies on its own once what it requires is selected.
+  --no-overlay                     Stop applying the overlay saved in the receipt.
   --backend auto|shelly|paru|yay|pacman
                                    Package backend (default: auto).
   --platform auto|cachyos|arch     Detected platform or explicit override.
@@ -448,57 +453,24 @@ parse_args() {
         COMPONENT_EXPLICIT=1
         shift
         ;;
-      --private)
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
-        shift
-        ;;
-      --private-path)
+      --overlay)
         require_option_value "$1" "${2-}"
-        PRIVATE_PATH=$2
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
+        OVERLAY_PATH=$2
+        OVERLAY_EXPLICIT=1
         shift 2
         ;;
-      --private-path=*)
-        PRIVATE_PATH=${1#*=}
-        require_option_value "--private-path" "$PRIVATE_PATH"
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
+      --overlay=*)
+        OVERLAY_PATH=${1#*=}
+        require_option_value "--overlay" "$OVERLAY_PATH"
+        OVERLAY_EXPLICIT=1
         shift
         ;;
-      --private-profile)
-        require_option_value "$1" "${2-}"
-        PRIVATE_PROFILE=$2
-        PRIVATE_PROFILE_EXPLICIT=1
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
-        shift 2
-        ;;
-      --private-profile=*)
-        PRIVATE_PROFILE=${1#*=}
-        require_option_value "--private-profile" "$PRIVATE_PROFILE"
-        PRIVATE_PROFILE_EXPLICIT=1
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
+      --no-overlay)
+        NO_OVERLAY=1
         shift
         ;;
-      --private-work)
-        require_option_value "$1" "${2-}"
-        PRIVATE_WORK+=("$2")
-        PRIVATE_WORK_EXPLICIT=1
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
-        shift 2
-        ;;
-      --private-work=*)
-        local private_work_val=${1#*=}
-        require_option_value "--private-work" "$private_work_val"
-        PRIVATE_WORK+=("$private_work_val")
-        PRIVATE_WORK_EXPLICIT=1
-        PRIVATE=1
-        COMPONENT_EXPLICIT=1
-        shift
+      --private|--private=*|--private-path|--private-path=*|--private-profile|--private-profile=*|--private-work|--private-work=*)
+        usage_error "${1%%=*} se reemplazó por --overlay RUTA (un repositorio con layers/, p. ej. ~/.dotfiles-private)"
         ;;
       --agent-harness|--harness)
         HARNESS=1
@@ -586,18 +558,8 @@ parse_args() {
     usage_error "--base-only solo está soportado para el comando doctor"
   fi
 
-  if (( PRIVATE == 1 )); then
-    case "$PRIVATE_PROFILE" in
-      core|development|dev)
-        [[ "$PRIVATE_PROFILE" != "dev" ]] || PRIVATE_PROFILE="development"
-        ;;
-      *)
-        usage_error "perfil de capa privada no soportado: $PRIVATE_PROFILE"
-        ;;
-    esac
-  else
-    [[ -z "$PRIVATE_PATH" ]] || usage_error "--private-path requiere --private"
-    (( ${#PRIVATE_WORK[@]} == 0 )) || usage_error "--private-work requiere --private"
+  if (( OVERLAY_EXPLICIT == 1 && NO_OVERLAY == 1 )); then
+    usage_error "--overlay y --no-overlay son mutuamente excluyentes"
   fi
 
   if (( HARNESS == 0 )); then
@@ -678,14 +640,6 @@ detect_active_environment() {
     fi
   fi
 
-  if (( PRIVATE == 0 )); then
-    if [[ -f "$TARGET_DIR/.local/state/dotfiles/private.receipt" || "$COMMAND" == "sync" ]]; then
-      if [[ -d "$TARGET_DIR/.dotfiles/private" || -d "$REPO_ROOT/../private" ]]; then
-        PRIVATE=1
-      fi
-    fi
-  fi
-
   if (( HARNESS == 0 )); then
     if [[ -f "$TARGET_DIR/.local/state/dotfiles/agent-harness.receipt" || "$COMMAND" == "sync" ]]; then
       if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
@@ -704,9 +658,6 @@ detect_all_environment() {
   done
   if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
     WALLPAPERS=1
-  fi
-  if [[ -d "$TARGET_DIR/.dotfiles/private" || -d "$REPO_ROOT/../private" ]]; then
-    PRIVATE=1
   fi
   if [[ -d "$TARGET_DIR/.dotfiles/agent-harness" || -d "$REPO_ROOT/../agent-harness" ]]; then
     HARNESS=1
@@ -821,97 +772,48 @@ run_wallpapers_operation() {
   "${walls_command[@]}"
 }
 
-load_private_receipt() {
-  local -A private_receipt=()
-  read_receipt private private_receipt || return 0
+# Validates the selected overlay and adds its layers and features to the
+# discovered ones. Runs once; a recorded overlay that is gone stops here.
+prepare_overlay() {
+  local root layer_dir name receipt feature
+  local -A conf=()
+  local -a declared=()
 
-  local val=${private_receipt[PROFILE]:-}
-  if (( PRIVATE_PROFILE_EXPLICIT == 0 )) && [[ "$val" == core || "$val" == development ]]; then
-    PRIVATE_PROFILE="$val"
-  fi
+  (( OVERLAY_READY == 0 )) || return 0
+  OVERLAY_READY=1
+  (( NO_OVERLAY == 0 )) || OVERLAY_PATH=""
+  [[ -n "$OVERLAY_PATH" ]] || return 0
 
-  val=${private_receipt[WORK]:-}
-  if (( PRIVATE_WORK_EXPLICIT == 0 )) && [[ -n "$val" ]]; then
-    local work_item
-    for work_item in $val; do
-      append_unique PRIVATE_WORK "$work_item"
-    done
-  fi
-}
+  root=$(realpath -m -- "$OVERLAY_PATH")
+  [[ -d "$root" ]] || die "no existe el overlay: $root (indique otra ruta con --overlay RUTA o continúe sin él con --no-overlay)"
+  [[ "$root" != "$REPO_ROOT" && "$root" != "$REPO_ROOT/"* ]] || \
+    die "el overlay debe estar fuera del repositorio público: $root"
+  [[ -d "$root/layers" ]] || die "el overlay no contiene layers/: $root"
+  OVERLAY_PATH=$root
+  LAYER_OVERLAY_ROOT="$root/layers"
 
-validate_private_checkout() {
-  local base_root private_root
-
-  (( PRIVATE == 1 )) || return 0
-  command_exists realpath || die "falta el comando requerido: realpath"
-
-  if [[ -z "$PRIVATE_PATH" ]]; then
-    if [[ -d "$TARGET_DIR/.dotfiles/private" ]]; then
-      PRIVATE_PATH="$TARGET_DIR/.dotfiles/private"
-    elif [[ -d "$REPO_ROOT/../private" ]]; then
-      PRIVATE_PATH="$REPO_ROOT/../private"
+  OVERLAY_LAYERS=()
+  for layer_dir in "$LAYER_OVERLAY_ROOT"/*/; do
+    name=${layer_dir%/}
+    name=${name##*/}
+    [[ -f "$LAYER_OVERLAY_ROOT/$name/layer.conf" ]] || continue
+    [[ "$name" =~ $LAYER_NAME_PATTERN ]] || die "nombre de capa inválido en el overlay: $name"
+    [[ ! -e "$LAYERS_DIR/$name" ]] || die "la capa $name del overlay ya existe en el repositorio público"
+    read_layer_conf "$LAYER_OVERLAY_ROOT/$name" conf
+    # Each layer keeps its own receipt; the public ones are never shared.
+    receipt=${conf[receipt]:-$name}
+    if [[ "$receipt" == dotfiles || -e "$LAYERS_DIR/$receipt" || -e "$LAYERS_DIR/wm/$receipt" ]]; then
+      die "la capa $name del overlay usa un recibo reservado: $receipt"
     fi
-  fi
-
-  [[ -n "$PRIVATE_PATH" ]] || die "--private requiere un checkout disponible o la opción --private-path DIR"
-
-  base_root=$(realpath -m -- "$REPO_ROOT")
-  private_root=$(realpath -m -- "$PRIVATE_PATH")
-  [[ -d "$private_root" ]] || die "el checkout de la capa privada no existe: $private_root"
-  [[ "$private_root" != "$base_root" && "$private_root" != "$base_root/"* ]] || \
-    die "el checkout de la capa privada debe estar fuera del repositorio base: $private_root"
-
-  PRIVATE_ENTRYPOINT="$private_root/bin/dotfiles-private"
-  [[ -f "$PRIVATE_ENTRYPOINT" && -x "$PRIVATE_ENTRYPOINT" ]] || \
-    die "el checkout de la capa privada no expone el entrypoint ejecutable esperado: $PRIVATE_ENTRYPOINT"
-  PRIVATE_PATH=$private_root
-  load_private_receipt
-}
-
-build_private_command() {
-  local operation=$1
-  local apply_mode=$2
-  local output_name=$3
-  local -n private_output_ref=$output_name
-
-  private_output_ref=(
-    "$PRIVATE_ENTRYPOINT"
-    "$operation"
-    "--profile=$PRIVATE_PROFILE"
-    "--backend=$BACKEND_REQUEST"
-    "--platform=$PLATFORM_REQUEST"
-    "--target=$TARGET_DIR"
-  )
-
-  local work_item
-  for work_item in "${PRIVATE_WORK[@]}"; do
-    private_output_ref+=("--work=$work_item")
+    read -r -a declared <<< "${conf[features]:-}"
+    for feature in "${declared[@]}"; do
+      [[ -z "${FEATURE_LAYERS[$feature]:-}" ]] || \
+        die "la feature $feature está declarada en ${FEATURE_LAYERS[$feature]} y en $name"
+      FEATURE_LAYERS["$feature"]=$name
+      SUPPORTED_FEATURES+=("$feature")
+    done
+    OVERLAY_LAYERS+=("$name")
   done
-
-  case "$MODE_SELECTION" in
-    packages)
-      private_output_ref+=(--packages-only)
-      ;;
-    stow)
-      private_output_ref+=(--stow-only)
-      ;;
-  esac
-
-  if [[ "$apply_mode" == 1 && "$operation" != doctor ]]; then
-    private_output_ref+=(--apply)
-  fi
-}
-
-run_private_operation() {
-  local operation=$1
-  local apply_mode=$2
-  local -a private_command=()
-
-  (( PRIVATE == 1 )) || return 0
-  build_private_command "$operation" "$apply_mode" private_command
-  info "Delegando en el repositorio privado ($PRIVATE_PATH)"
-  format_command "${private_command[@]}"
-  "${private_command[@]}"
 }
 
 validate_harness_checkout() {
@@ -1053,9 +955,12 @@ resolve_selected_layers() {
   local -a requested=()
 
   # A selected feature pulls in the layer that declares it.
+  local -a overlay_requested=()
   for feature in "${FEATURES[@]}"; do
     layer=${FEATURE_LAYERS[$feature]}
-    if ! array_contains BASE_LAYERS "$layer"; then
+    if array_contains OVERLAY_LAYERS "$layer"; then
+      append_unique overlay_requested "$layer"
+    elif ! array_contains BASE_LAYERS "$layer"; then
       append_unique OPTIONAL_LAYERS "$layer"
     elif (( $(base_layer_rank "$layer") > $(base_layer_rank "$PROFILE") )); then
       info "La feature $feature requiere la capa $layer; se aplica $layer en lugar de $PROFILE"
@@ -1067,8 +972,10 @@ resolve_selected_layers() {
   for wm in "${WMS[@]}"; do
     requested+=("wm/$wm")
   done
+  requested+=("${overlay_requested[@]}")
   SELECTED_LAYERS=()
   resolve_layers "$LAYERS_DIR" SELECTED_LAYERS "${requested[@]}"
+  add_overlay_layers
 
   # The profile follows the highest base layer the selection pulled in.
   local highest=$PROFILE
@@ -1082,6 +989,30 @@ resolve_selected_layers() {
     info "Las capas elegidas requieren la capa $highest; se aplica $highest en lugar de $PROFILE"
   fi
   PROFILE=$highest
+}
+
+# Appends every overlay layer whose requires are all selected, repeating until
+# no more apply, so an overlay layer may require another one.
+add_overlay_layers() {
+  local name dependency added=1 ready
+  local -A conf=()
+  local -a dependencies=()
+
+  while (( added == 1 )); do
+    added=0
+    for name in "${OVERLAY_LAYERS[@]}"; do
+      ! array_contains SELECTED_LAYERS "$name" || continue
+      read_layer_conf "$LAYER_OVERLAY_ROOT/$name" conf
+      read -r -a dependencies <<< "${conf[requires]:-}"
+      ready=1
+      for dependency in "${dependencies[@]}"; do
+        array_contains SELECTED_LAYERS "$dependency" || { ready=0; break; }
+      done
+      (( ready == 1 )) || continue
+      SELECTED_LAYERS+=("$name")
+      added=1
+    done
+  done
 }
 
 # Prints the position of base layer $1 in BASE_LAYERS (core=0, cli=1, ...).
@@ -1108,6 +1039,8 @@ layer_label() {
     *)
       if array_contains BASE_LAYERS "$1"; then
         printf 'Base (%s)' "$1"
+      elif array_contains OVERLAY_LAYERS "$1"; then
+        printf 'Overlay (%s)' "$1"
       else
         printf 'Optional (%s)' "$1"
       fi
@@ -1120,6 +1053,7 @@ layer_label() {
 prepare_selection() {
   local execution_mode current_layer
 
+  prepare_overlay
   validate_features
   command_exists realpath || die "falta el comando requerido: realpath"
   TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
@@ -1148,10 +1082,8 @@ prepare_selection() {
     printf '  %-24s %s\n' 'Wallpapers:' "$WALLPAPERS_PATH"
   fi
 
-  if (( PRIVATE == 1 )); then
-    printf '  %-24s %s\n' 'Capa privada:' "$PRIVATE_PATH"
-    printf '  %-24s %s\n' 'Perfil privado:' "$PRIVATE_PROFILE"
-    print_array "Trabajo privado" PRIVATE_WORK
+  if [[ -n "$OVERLAY_PATH" ]]; then
+    printf '  %-24s %s\n' 'Overlay:' "$OVERLAY_PATH"
   fi
 
   if (( HARNESS == 1 )); then
@@ -1172,7 +1104,8 @@ run_selected_layers() {
     else
       current_layer=${layers[index]}
     fi
-    if ! run_layer "$LAYERS_DIR" "$current_layer" "$operation" "$(layer_profile "$current_layer")" "$apply_mode"; then
+    if ! run_layer "$(layer_root "$LAYERS_DIR" "$current_layer")" "$current_layer" "$operation" \
+      "$(layer_profile "$current_layer")" "$apply_mode"; then
       FAILED_LAYER=$current_layer
       return 1
     fi
@@ -1191,11 +1124,6 @@ bootstrap_with_optional_components() {
       die "falló el preflight de la capa $FAILED_LAYER; no se modificó la base"
   fi
 
-  if (( PRIVATE == 1 && APPLY == 1 )); then
-    info "Preflight de la capa privada antes de modificar la base"
-    run_private_operation bootstrap 0 || die "falló el preflight de la capa privada; no se modificó la base"
-  fi
-
   if (( HARNESS == 1 && APPLY == 1 )); then
     info "Preflight de agent-harness antes de modificar la base"
     run_harness_operation bootstrap 0 || die "falló el preflight de agent-harness; no se modificó la base"
@@ -1209,7 +1137,6 @@ bootstrap_with_optional_components() {
     (( STOW_ENABLED == 0 )) || link_cli_command
   fi
   run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
-  run_private_operation bootstrap "$APPLY" || die "falló el bootstrap de la capa privada"
   run_harness_operation bootstrap "$APPLY" || die "falló el bootstrap de agent-harness"
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
@@ -1235,7 +1162,8 @@ doctor_with_optional_components() {
 
   prepare_selection
   for current_layer in "${SELECTED_LAYERS[@]}"; do
-    if run_layer "$LAYERS_DIR" "$current_layer" doctor "$(layer_profile "$current_layer")" 0; then
+    if run_layer "$(layer_root "$LAYERS_DIR" "$current_layer")" "$current_layer" doctor \
+      "$(layer_profile "$current_layer")" 0; then
       report_items+=("  ✓ $(layer_label "$current_layer"): OK")
     else
       report_items+=("  ✗ $(layer_label "$current_layer"): FAIL")
@@ -1253,16 +1181,6 @@ doctor_with_optional_components() {
     else
       report_items+=("  ✗ Wallpapers (walls): FAIL")
       error "Doctor: falló la validación del repositorio de wallpapers"
-      result=1
-    fi
-  fi
-
-  if (( PRIVATE == 1 )); then
-    if run_private_operation doctor 0; then
-      report_items+=("  ✓ Private (dotfiles-private): OK")
-    else
-      report_items+=("  ✗ Private (dotfiles-private): FAIL")
-      error "Doctor: falló la validación de la capa privada"
       result=1
     fi
   fi
@@ -1305,15 +1223,9 @@ unlink_with_optional_components() {
       die "falló el preflight de unlink de la capa $FAILED_LAYER; no se modificó la base"
   fi
 
-  if (( PRIVATE == 1 && APPLY == 1 )); then
-    info "Preflight de unlink de la capa privada antes de modificar la base"
-    run_private_operation unlink 0 || die "falló el preflight de unlink de la capa privada; no se modificó la base"
-  fi
-
   run_selected_layers unlink "$APPLY" reverse || die "falló el unlink de la capa $FAILED_LAYER"
   (( APPLY == 0 )) || unlink_cli_command
   run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
-  run_private_operation unlink "$APPLY" || die "falló el unlink de la capa privada"
   run_harness_operation unlink "$APPLY" || die "falló el unlink de agent-harness"
   # Only once every component is gone, so a failed unlink can be retried
   # with the same saved selection.
@@ -1323,7 +1235,7 @@ unlink_with_optional_components() {
 # Records what this machine selected so sync/update re-apply it without flags.
 save_selection_receipt() {
   write_receipt dotfiles PROFILE="$PROFILE" FEATURES="${FEATURES[*]}" LAYERS="${OPTIONAL_LAYERS[*]}" \
-    WMS="${WMS[*]}" BACKEND="${BACKEND:-}"
+    WMS="${WMS[*]}" OVERLAY="$OVERLAY_PATH" BACKEND="${BACKEND:-}"
 }
 
 # Restores the recorded selection for whatever the command line left unset.
@@ -1346,6 +1258,12 @@ load_selection_receipt() {
     esac
     restored+=("perfil $PROFILE")
   fi
+  if (( OVERLAY_EXPLICIT == 0 && NO_OVERLAY == 0 )) && [[ -n "${selection[OVERLAY]:-}" ]]; then
+    OVERLAY_PATH=${selection[OVERLAY]}
+    restored+=("overlay $OVERLAY_PATH")
+  fi
+  # The overlay declares features of its own, so it is validated first.
+  prepare_overlay
   if (( ${#FEATURES[@]} == 0 )); then
     read -r -a entries <<< "${selection[FEATURES]:-}"
     for entry in "${entries[@]}"; do
@@ -1399,7 +1317,6 @@ sync_environment() {
 
   resolve_wm_layers
   validate_wallpapers_checkout
-  validate_private_checkout
   validate_harness_checkout
 
   APPLY=1
@@ -1429,10 +1346,14 @@ update_from_remote() {
   local -a repos_to_update=()
   repos_to_update+=("$REPO_ROOT")
 
-  local candidate
-  for candidate in \
+  # The overlay of the command line or of the saved selection is pulled too.
+  local candidate overlay=$OVERLAY_PATH
+  local -A saved_selection=()
+  if [[ -z "$overlay" ]] && (( NO_OVERLAY == 0 )) && read_receipt dotfiles saved_selection; then
+    overlay=${saved_selection[OVERLAY]:-}
+  fi
+  for candidate in ${overlay:+"$overlay"} \
     "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls" \
-    "$REPO_ROOT/../private" "$TARGET_DIR/.dotfiles/private" \
     "$REPO_ROOT/../agent-harness" "$TARGET_DIR/.dotfiles/agent-harness"; do
     if [[ -d "$candidate/.git" ]]; then
       local real_cand
@@ -1506,7 +1427,6 @@ cmd_doctor() {
 
   resolve_wm_layers
   validate_wallpapers_checkout
-  validate_private_checkout
   validate_harness_checkout
   doctor_with_optional_components
 }
@@ -1532,7 +1452,6 @@ main() {
     bootstrap)
       resolve_wm_layers
       validate_wallpapers_checkout
-      validate_private_checkout
       validate_harness_checkout
       bootstrap_with_optional_components
       ;;
@@ -1542,7 +1461,6 @@ main() {
     unlink)
       resolve_wm_layers
       validate_wallpapers_checkout
-      validate_private_checkout
       validate_harness_checkout
       cmd_unlink
       ;;

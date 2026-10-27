@@ -17,9 +17,10 @@ printf '\n--> 3/9: Executing shared theme engine and mimeapps smoke tests...\n'
 "$SCRIPT_DIR/theme-smoke.sh"
 "$SCRIPT_DIR/mimeapps-smoke.sh"
 
-printf '\n--> 4/9: Executing WM and opt-in layer smoke tests...\n'
+printf '\n--> 4/9: Executing WM, opt-in layer and overlay smoke tests...\n'
 "$SCRIPT_DIR/wm-layers-smoke.sh"
 "$SCRIPT_DIR/optional-layers-smoke.sh"
+"$SCRIPT_DIR/overlay-smoke.sh"
 
 printf '\n--> 5/9: Executing MangoWM scaffold smoke tests...\n'
 "$REPO_ROOT/layers/wm/mangowm/tests/scaffold-smoke.sh"

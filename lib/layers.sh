@@ -80,8 +80,23 @@ read_layer_conf() {
   done < "$_lyr_file"
 }
 
-# Appends to the array named by $2 the layers named in $3.. under root $1,
-# each preceded by everything it requires, without duplicates.
+# Optional second layers root (an overlay's layers/). Its layers resolve,
+# require and run like the public ones; the caller rejects name collisions.
+LAYER_OVERLAY_ROOT=${LAYER_OVERLAY_ROOT:-}
+
+# Prints the root holding layer $2: the overlay root when it declares the
+# layer, root $1 otherwise.
+layer_root() {
+  if [[ -n "$LAYER_OVERLAY_ROOT" && -f "$LAYER_OVERLAY_ROOT/$2/layer.conf" ]]; then
+    printf '%s' "$LAYER_OVERLAY_ROOT"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# Appends to the array named by $2 the layers named in $3.. under root $1
+# (or the overlay root), each preceded by everything it requires, without
+# duplicates.
 resolve_layers() {
   local _lyr_root=$1
   local _lyr_output=$2
@@ -99,7 +114,7 @@ _lyr_resolve() {
   local _lyr_output=$2
   local _lyr_name=$3
   local _lyr_chain=$4
-  local _lyr_dependency
+  local _lyr_dependency _lyr_dir
   local -A _lyr_dep_conf=()
   local -a _lyr_dependencies=()
   local IFS=$' \t\n'
@@ -109,11 +124,12 @@ _lyr_resolve() {
     done) return 0 ;;
     visiting) die "dependencia circular entre capas: ${_lyr_chain}${_lyr_name}" ;;
   esac
-  [[ -d "$_lyr_root/$_lyr_name" ]] || \
+  _lyr_dir="$(layer_root "$_lyr_root" "$_lyr_name")/$_lyr_name"
+  [[ -d "$_lyr_dir" ]] || \
     die "la capa '$_lyr_name' no existe en $_lyr_root${_lyr_chain:+ (requerida por ${_lyr_chain% -> })}"
 
   _lyr_state["$_lyr_name"]="visiting"
-  read_layer_conf "$_lyr_root/$_lyr_name" _lyr_dep_conf
+  read_layer_conf "$_lyr_dir" _lyr_dep_conf
   read -r -a _lyr_dependencies <<< "${_lyr_dep_conf[requires]:-}"
   for _lyr_dependency in "${_lyr_dependencies[@]}"; do
     _lyr_resolve "$_lyr_root" "$_lyr_output" "$_lyr_dependency" "${_lyr_chain}${_lyr_name} -> "

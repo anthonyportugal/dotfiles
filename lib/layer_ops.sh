@@ -145,7 +145,23 @@ layer_prepare() {
       fi
     fi
     read_layer_stow_packages "$LAYER_DIR" "$PROFILE" STOW_PACKAGES
+    layer_add_feature_stow_packages
   fi
+}
+
+# Selected features also add the Stow packages of packages/stow/<feature>.txt.
+layer_add_feature_stow_packages() {
+  local feature entry
+  local -a entries=()
+
+  for feature in "${LAYER_FEATURES[@]}"; do
+    [[ -f "$PACKAGES_DIR/stow/$feature.txt" ]] || continue
+    read_manifest "$PACKAGES_DIR/stow/$feature.txt" entries
+    for entry in "${entries[@]}"; do
+      [[ -d "$STOW_DIR/$entry" ]] || die "el paquete Stow '$entry' no existe bajo $STOW_DIR"
+      append_unique STOW_PACKAGES "$entry"
+    done
+  done
 }
 
 layer_print_plan() {

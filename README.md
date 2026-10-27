@@ -105,6 +105,7 @@ Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machin
 1. **Git Multi-Identity:** `layers/core/home/git/.config/git/config` loads `~/.config/git/private.gitconfig` (if present) for personal/work emails and signing keys, followed by machine-specific `~/.config/git/local.gitconfig`.
 2. **Shell Environment:** `layers/core/home/zsh/.zshrc` automatically sources `~/.config/zsh/private.zsh` (if present) for private aliases, environment variables, and work paths, followed by `~/.config/zsh/local.zsh`.
 3. **Fail-Closed & Independent:** The absence of the private layer never breaks the public setup. No secrets, credentials, or private keys are ever tracked in public repositories.
+4. **Overlay:** the private repository uses the same layer format (`layers/<name>/layer.conf`, `packages/`, `home/`) and is applied with `--overlay ~/.dotfiles-private`. Each of its layers applies on its own once every layer it `requires` is selected (for example `requires=core`, or `requires=dev` to apply only with the opt-in `dev` layer); its features work like public ones. The overlay path is saved in the selection receipt, so `sync` and `update` re-apply and pull it; `--no-overlay` stops applying it. Overlay layer names cannot reuse a public layer name.
 
 ---
 
@@ -155,12 +156,12 @@ You can also orchestrate components directly using explicit flags:
   ```bash
   ./bin/dotfiles bootstrap --profile desktop --layer dev --feature dev-containers --apply
   ```
-- **Compose with WMs, Wallpapers, Private Layer, and Agent Harness:**
+- **Compose with WMs, Wallpapers, the Private Overlay, and Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
     --wm mangowm --wm bspwm \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
-    --private --private-path "$HOME/.dotfiles/private" \
+    --overlay "$HOME/.dotfiles-private" \
     --agent-harness --agent-harness-path "$HOME/.dotfiles/agent-harness" \
     --apply
   ```
@@ -176,7 +177,7 @@ You can also orchestrate components directly using explicit flags:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `walls`, `private`, `agent-harness`; the WM and system layers live inside `base` under `layers/`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
+- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `walls`, `agent-harness`, plus the overlay of the saved selection; the WM and system layers live inside `base` under `layers/`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y

@@ -105,6 +105,7 @@ Configuración Base Pública  ──►  Capa Privada Opcional  ──►  Sobre
 1. **Identidad Git Múltiple:** `layers/core/home/git/.config/git/config` carga `~/.config/git/private.gitconfig` (si existe) para emails y claves de firma personales o laborales, seguido de `~/.config/git/local.gitconfig` específico de la máquina.
 2. **Entorno de Shell:** `layers/core/home/zsh/.zshrc` carga automáticamente `~/.config/zsh/private.zsh` (si existe) para alias privados, variables de entorno y rutas laborales, seguido de `~/.config/zsh/local.zsh`.
 3. **Fail-Closed e Independiente:** La ausencia de la capa privada nunca rompe la configuración pública. Ningún secreto, credencial o clave privada es rastreado en repositorios públicos.
+4. **Overlay:** el repositorio privado usa el mismo formato de capas (`layers/<nombre>/layer.conf`, `packages/`, `home/`) y se aplica con `--overlay ~/.dotfiles-private`. Cada una de sus capas se aplica sola cuando todas las capas que `requires` están elegidas (por ejemplo `requires=core`, o `requires=dev` para aplicarse solo junto a la capa opcional `dev`); sus features funcionan como las públicas. La ruta del overlay se guarda en el recibo de selección, así que `sync` y `update` lo vuelven a aplicar y a actualizar; `--no-overlay` deja de aplicarlo. Las capas del overlay no pueden repetir el nombre de una capa pública.
 
 ---
 
@@ -155,12 +156,12 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles bootstrap --profile desktop --layer dev --feature dev-containers --apply
   ```
-- **Composición con WMs, Wallpapers, Capa Privada y Agent Harness:**
+- **Composición con WMs, Wallpapers, Overlay Privado y Agent Harness:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
     --wm mangowm --wm bspwm \
     --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
-    --private --private-path "$HOME/.dotfiles/private" \
+    --overlay "$HOME/.dotfiles-private" \
     --agent-harness --agent-harness-path "$HOME/.dotfiles/agent-harness" \
     --apply
   ```
@@ -176,7 +177,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles sync
   ```
-- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, `private`, `agent-harness`; las capas de WM y de sistema viven dentro de `base` en `layers/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
+- **Actualización Remota (`update`):** Comprueba el estado de Git en todos los repositorios locales bajo `$HOME/.dotfiles/` (`base`, `walls`, `agent-harness`, más el overlay de la selección guardada; las capas de WM y de sistema viven dentro de `base` en `layers/`). Aquellos con cambios sin confirmar se omiten para proteger el trabajo local; los limpios realizan `git pull --ff-only`. Si hay novedades, solicita confirmación interactiva antes de sincronizar (o usa `-y` / `--yes` para modo desatendido):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y

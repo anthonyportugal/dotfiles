@@ -126,6 +126,37 @@ prettify_path() {
   printf '%s' "$clean"
 }
 
+# Picks the private overlay: an existing checkout with layers/, or a Git URL
+# cloned into ~/.dotfiles-private. Returns 1 when none was chosen.
+wizard_choose_overlay() {
+  local candidate existing="" url="" dest="$TARGET_DIR/.dotfiles-private"
+
+  for candidate in "$OVERLAY_PATH" "$dest" "$REPO_ROOT/../dotfiles-private"; do
+    [[ -n "$candidate" && -d "$candidate/layers" ]] || continue
+    existing=$candidate
+    break
+  done
+  if [[ -n "$existing" ]]; then
+    if prompt_yes_no "$(_t "Overlay detected at $(prettify_path "$existing"). Apply it?" "Overlay detectado en $(prettify_path "$existing"). ¿Aplicarlo?")" Y; then
+      OVERLAY_PATH=$existing
+      OVERLAY_EXPLICIT=1
+      return 0
+    fi
+    NO_OVERLAY=1
+    return 1
+  fi
+
+  prompt_input "$(_t "Git URL of your private overlay, cloned into ~/.dotfiles-private (ENTER to skip)" "URL Git de tu overlay privado, se clona en ~/.dotfiles-private (ENTER para omitir)")" "" url
+  [[ -n "$url" ]] || return 1
+  if git clone "$url" "$dest"; then
+    OVERLAY_PATH=$dest
+    OVERLAY_EXPLICIT=1
+    return 0
+  fi
+  warn "$(_t "Could not clone the overlay. Continuing without it." "No se pudo clonar el overlay. Se continúa sin él.")"
+  return 1
+}
+
 run_interactive_wizard() {
   wizard_colors
 
@@ -191,16 +222,13 @@ EOF
   fi
   printf '  • System:   %b\n' "$system_status"
 
-  local private_dir=""
-  if [[ -d "$REPO_ROOT/../private" ]]; then
-    private_dir="$REPO_ROOT/../private"
-  elif [[ -d "$TARGET_DIR/.dotfiles/private" ]]; then
-    private_dir="$TARGET_DIR/.dotfiles/private"
+  local -A overlay_saved=()
+  local overlay_status
+  overlay_status="${C_SUBTEXT}[$(_t "Not configured" "Sin configurar")]${C_RESET}"
+  if read_receipt dotfiles overlay_saved && [[ -n "${overlay_saved[OVERLAY]:-}" ]]; then
+    overlay_status="${C_GREEN}[✓ $(prettify_path "${overlay_saved[OVERLAY]}")]${C_RESET}"
   fi
-  local private_status
-  private_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
-  [[ -n "$private_dir" ]] && private_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
-  printf '  • Private:  %b\n' "$private_status"
+  printf '  • Overlay:  %b\n' "$overlay_status"
 
   local harness_dir=""
   if [[ -d "$REPO_ROOT/../agent-harness" ]]; then
@@ -220,7 +248,7 @@ EOF
     "$(_t "Configure MangoWM (Wayland Environment)" "Configurar MangoWM (Entorno Wayland)")" \
     "$(_t "Configure BSPWM (X11 Environment)" "Configurar BSPWM (Entorno X11)")" \
     "$(_t "Configure System Layer (Ly, Limine, DNS-over-TLS)" "Configurar Capa del Sistema (Ly, Limine, DNS)")" \
-    "$(_t "Configure Private Layer (Identity, SSH, Work)" "Configurar Capa Privada (Identidad, SSH, Laboral)")" \
+    "$(_t "Configure Private Overlay (Identity, SSH, Work)" "Configurar Overlay Privado (Identidad, SSH, Laboral)")" \
     "$(_t "Configure Wallpapers (walls)" "Configurar Fondos de Pantalla (walls)")" \
     "$(_t "Configure Agent Harness (AI Agents, Rules, MCP, Skills)" "Configurar Agent Harness (AI Agents, Rules, MCP, Skills)")" \
     "$(_t "Re-sync Local Environment (Sync links and packages)" "Re-sincronizar Entorno Local (Sync enlaces y paquetes)")" \
@@ -297,12 +325,9 @@ EOF
         warn "$(_t "The system layer was not applied" "La capa system no se aplicó")"
       return 0
       ;;
-    5) # Private setup
-      local p_path="${private_dir:-$TARGET_DIR/.dotfiles/private}"
-      if [[ -x "$p_path/bin/dotfiles-private" ]]; then
-        "$p_path/bin/dotfiles-private" setup --lang "$DOTFILES_LANG"
-      else
-        warn "$(_t "Private repository not found in $p_path" "Repositorio privado no encontrado en $p_path")"
+    5) # Private overlay: choose it, then re-apply the saved selection with it.
+      if wizard_choose_overlay; then
+        sync_environment
       fi
       return 0
       ;;
@@ -408,50 +433,17 @@ EOF
       warn "$(_t "The system layer was not applied" "La capa system no se aplicó")"
   fi
 
-  PRIVATE=0
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 5: Private Configuration Layer (dotfiles-private)" "Paso 5: Capa Privada de Configuración (dotfiles-private)")" "$C_RESET"
-  local existing_private=""
-  if [[ -d "$REPO_ROOT/../private" ]]; then
-    existing_private="$REPO_ROOT/../private"
-  elif [[ -d "$TARGET_DIR/.dotfiles/private" ]]; then
-    existing_private="$TARGET_DIR/.dotfiles/private"
-  fi
-
-  if [[ -n "$existing_private" ]]; then
-    if prompt_yes_no "$(_t "Private layer detected at $(prettify_path "$existing_private"). Run its setup wizard now?" "Capa privada detectada en $(prettify_path "$existing_private"). ¿Ejecutar su asistente ahora?")" Y; then
-      PRIVATE=1
-      PRIVATE_PATH="$existing_private"
-      "$existing_private/bin/dotfiles-private" setup --lang "$DOTFILES_LANG" || true
-    fi
-  else
-    printf '%b%s%b\n' "$C_SUBTEXT" "$(_t "No private layer detected at ~/.dotfiles/private." "No se detectó capa privada en ~/.dotfiles/private.")" "$C_RESET"
-    local custom_private_url=""
-    prompt_input "$(_t "Enter private repository Git URL to clone (or press ENTER to skip)" "Ingresa la URL del repo privado a clonar (o ENTER para omitir)")" "" custom_private_url
-    if [[ -n "$custom_private_url" ]]; then
-      local private_dest="$TARGET_DIR/.dotfiles/private"
-      info "Clonando repositorio privado en $private_dest..."
-      mkdir -p "$TARGET_DIR/.dotfiles"
-      if git clone "$custom_private_url" "$private_dest"; then
-        PRIVATE=1
-        PRIVATE_PATH="$private_dest"
-        info "$(_t "Private repository cloned successfully." "Repositorio privado clonado exitosamente.")"
-        if [[ -x "$private_dest/bin/dotfiles-private" ]]; then
-          "$private_dest/bin/dotfiles-private" setup --lang "$DOTFILES_LANG" || true
-        fi
-      else
-        warn "$(_t "Could not clone private repository. Continuing without private layer." "No se pudo clonar el repositorio privado. Continuando sin capa privada.")"
-      fi
-    else
-      if prompt_yes_no "$(_t "Configure local Git identity (user.name and user.email)?" "¿Deseas configurar tu identidad Git local (user.name y user.email)?")" Y; then
-        local git_name="" git_email=""
-        prompt_input "$(_t "Git Name" "Nombre para Git")" "Anthony Portugal" git_name
-        prompt_input "$(_t "Git Email" "Email para Git")" "" git_email
-        if [[ -n "$git_name" && -n "$git_email" ]]; then
-          mkdir -p "$TARGET_DIR/.config/git"
-          git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.name "$git_name"
-          git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.email "$git_email"
-          info "$(_t "Git identity saved to ~/.config/git/local.gitconfig" "Identidad Git guardada en ~/.config/git/local.gitconfig")"
-        fi
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 5: Private Overlay (your own layers: identity, SSH, work)" "Paso 5: Overlay Privado (tus propias capas: identidad, SSH, trabajo)")" "$C_RESET"
+  if ! wizard_choose_overlay; then
+    if prompt_yes_no "$(_t "Configure local Git identity (user.name and user.email)?" "¿Deseas configurar tu identidad Git local (user.name y user.email)?")" Y; then
+      local git_name="" git_email=""
+      prompt_input "$(_t "Git Name" "Nombre para Git")" "" git_name
+      prompt_input "$(_t "Git Email" "Email para Git")" "" git_email
+      if [[ -n "$git_name" && -n "$git_email" ]]; then
+        mkdir -p "$TARGET_DIR/.config/git"
+        git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.name "$git_name"
+        git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.email "$git_email"
+        info "$(_t "Git identity saved to ~/.config/git/local.gitconfig" "Identidad Git guardada en ~/.config/git/local.gitconfig")"
       fi
     fi
   fi
@@ -515,9 +507,9 @@ EOF
   local walls_str="No"
   (( WALLPAPERS == 1 )) && walls_str="$(_t "Yes" "Sí")"
   printf '│  • %-20s %-33s│\n' "$(_t "Wallpapers:" "Wallpapers:")" "$walls_str"
-  local priv_str="No"
-  (( PRIVATE == 1 )) && priv_str="$(_t "Yes" "Sí")"
-  printf '│  • %-20s %-33s│\n' "$(_t "Private Layer:" "Capa Privada:")" "$priv_str"
+  local overlay_str="No"
+  [[ -z "$OVERLAY_PATH" ]] || overlay_str=$(prettify_path "$OVERLAY_PATH")
+  printf '│  • %-20s %-33s│\n' "$(_t "Private Overlay:" "Overlay Privado:")" "$overlay_str"
   local harness_str="No"
   (( HARNESS == 1 )) && harness_str="$(_t "Yes" "Sí")"
   printf '│  • %-20s %-33s│\n' "$(_t "Agent Harness:" "Agent Harness:")" "$harness_str"
@@ -546,7 +538,6 @@ EOF
   COMMAND="bootstrap"
   validate_wm_checkout
   validate_wallpapers_checkout
-  validate_private_checkout
   validate_harness_checkout
   bootstrap_with_optional_components
 }
