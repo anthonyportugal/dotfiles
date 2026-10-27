@@ -26,13 +26,13 @@ jobs:
       - name: Validate syntax (bash -n)
         run: |
           # bash -n only parses its first operand; the rest become arguments.
-          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh layers/desktop/home/theme/.local/bin/dotfiles-theme; do
+          for file in bin/dotfiles install.sh lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh layers/desktop/home/theme/.local/bin/dotfiles-theme layers/system/install.sh layers/system/*/setup.sh layers/system/ly/startup.sh layers/system/tests/*.sh; do
             bash -n "$file"
           done
 
       - name: Run ShellCheck
         run: |
-          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh layers/desktop/home/theme/.local/bin/dotfiles-theme
+          shellcheck -x install.sh bin/dotfiles lib/*.sh tests/*.sh .githooks/* layers/*/hooks/* layers/wm/*/hooks/* layers/wm/*/tests/*.sh layers/desktop/home/theme/.local/bin/dotfiles-theme layers/system/install.sh layers/system/*/setup.sh layers/system/ly/startup.sh layers/system/tests/*.sh
 
       - name: Scan for secrets
         run: |
@@ -62,10 +62,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install dependencies (stow, zsh, jq, shellcheck)
+      - name: Install dependencies (stow, zsh, jq, shellcheck, luajit)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq stow zsh jq shellcheck
+          sudo apt-get install -y -qq stow zsh jq shellcheck luajit
 
       - name: Validate Zsh configuration syntax (zsh -n)
         run: |
@@ -75,5 +75,5 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          chmod +x tests/*.sh layers/wm/*/tests/*.sh bin/dotfiles install.sh
+          chmod +x tests/*.sh layers/wm/*/tests/*.sh layers/system/tests/*.sh bin/dotfiles install.sh
           ./tests/smoke.sh

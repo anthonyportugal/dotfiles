@@ -1,29 +1,19 @@
 # System Configurations
 
 <p align="center">
-  <a href="https://github.com/anthonyportugal/dotfiles-system/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles-system/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
+  <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://codeberg.org/fairyglade/ly"><img src="https://img.shields.io/badge/DM-Ly_1.4+-ff69b4?style=flat-square" alt="Ly"></a>
   <a href="https://limine-bootloader.org/"><img src="https://img.shields.io/badge/Bootloader-Limine-blue?style=flat-square" alt="Limine"></a>
   <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
 *Read this in other languages:* [Español](README.es.md)
 
 Modular, reproducible, and non-destructive system-level configurations and theming for **Arch Linux**. Manages display manager ([Ly](https://codeberg.org/fairyglade/ly)) and bootloader ([Limine](https://limine-bootloader.org/)) styling using the unified **Catppuccin Mocha** palette, backed by fail-safe automatic backups and idempotent deployment scripts.
-
-<p align="center">
-  <img src="assets/ly-preview.webp" alt="Ly Display Manager Catppuccin Mocha Preview" width="100%">
-</p>
-
-> [!TIP]
-> 🧩 **Modular Dotfiles Ecosystem:**  
-> [Base & CLI](https://github.com/anthonyportugal/dotfiles) • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • **System [Current]**
-> 
-> While userland configurations live in `$HOME` and are deployed without privileges via GNU Stow, system-level components requiring root privileges (`/etc`, `/boot`) are cleanly isolated in this repository for maximum stability and security.
 
 ---
 
@@ -225,7 +215,7 @@ Architected and maintained by [Anthony Portugal](https://anthonyportugal.github.
 
 ## 📄 License & Acknowledgements
 
-- **License:** Distributed under the [MIT License](LICENSE).
+- **License:** Distributed under the [MIT License](../../LICENSE).
 - **Themes:** Color palettes inspired by and sourced from the [Catppuccin Project](https://github.com/catppuccin/catppuccin) and [catppuccin/limine](https://github.com/catppuccin/limine).
 - **Upstream Projects:**
   - [Ly Display Manager](https://codeberg.org/fairyglade/ly)
