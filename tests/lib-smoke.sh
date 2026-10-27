@@ -208,16 +208,16 @@ mkdir -p "$LAYERS/wm/mango/hooks"
 {
   printf '#!/usr/bin/env bash\n'
   # shellcheck disable=SC2016
-  printf 'printf "%%s|%%s|%%s|%%s|%%s|%%s\\n" "$LAYER_DIR" "$TARGET_DIR" "$PROFILE" "$APPLY" "$OPERATION" "${DOTFILES_LIB:+lib}" > %q\n' "$HOOK_LOG"
+  printf 'printf "%%s|%%s|%%s|%%s|%%s|%%s|%%s\\n" "$LAYER_DIR" "$TARGET_DIR" "$PROFILE" "$APPLY" "$OPERATION" "${DOTFILES_LIB:+lib}" "$SYSTEM_ENABLED" > %q\n' "$HOOK_LOG"
 } > "$LAYERS/wm/mango/hooks/validate"
 chmod +x "$LAYERS/wm/mango/hooks/validate"
-run_engine "TARGET_DIR='$TEST_ROOT/home' PROFILE=core APPLY=0 OPERATION=unlink
+run_engine "TARGET_DIR='$TEST_ROOT/home' PROFILE=core APPLY=0 OPERATION=unlink SYSTEM_ENABLED=1
   run_layer_hook '$LAYERS/wm/mango' validate" >/dev/null
-[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|$TEST_ROOT/home|core|0|unlink|lib" ]] || \
+[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|$TEST_ROOT/home|core|0|unlink|lib|1" ]] || \
   fail "el hook recibió un entorno inesperado: $(cat "$HOOK_LOG")"
 run_engine "run_layer_hook '$LAYERS/wm/mango' validate" >/dev/null || \
   fail "run_layer_hook falló con PROFILE/APPLY sin definir"
-[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|||0||lib" ]] || \
+[[ "$(cat "$HOOK_LOG")" == "$LAYERS/wm/mango|||0||lib|0" ]] || \
   fail "run_layer_hook no aplicó valores por defecto: $(cat "$HOOK_LOG")"
 
 run_engine "TARGET_DIR=/x PROFILE=core APPLY=0; run_layer_hook '$LAYERS/base' validate" >/dev/null || \

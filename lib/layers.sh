@@ -187,8 +187,8 @@ read_layer_stow_packages() {
 }
 
 # Runs hook $2 of layer dir $1 when present. On top of the exported
-# environment, the hook sees LAYER_DIR, TARGET_DIR, PROFILE, APPLY, OPERATION
-# and DOTFILES_LIB.
+# environment, the hook sees LAYER_DIR, TARGET_DIR, PROFILE, APPLY, OPERATION,
+# SYSTEM_ENABLED (1 when the run installs packages) and DOTFILES_LIB.
 run_layer_hook() {
   local _lyr_layer_dir=$1
   local _lyr_phase=$2
@@ -199,6 +199,7 @@ run_layer_hook() {
   [[ -f "$_lyr_hook" && -x "$_lyr_hook" ]] || die "el hook $_lyr_hook no es un archivo ejecutable"
 
   LAYER_DIR="$_lyr_layer_dir" TARGET_DIR="${TARGET_DIR:-}" PROFILE="${PROFILE:-}" \
-    APPLY="${APPLY:-0}" OPERATION="${OPERATION:-}" DOTFILES_LIB="$DOTFILES_LIB_DIR" \
+    APPLY="${APPLY:-0}" OPERATION="${OPERATION:-}" SYSTEM_ENABLED="${SYSTEM_ENABLED:-0}" \
+    DOTFILES_LIB="$DOTFILES_LIB_DIR" \
     "$_lyr_hook"
 }
