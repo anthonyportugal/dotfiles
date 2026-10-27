@@ -63,6 +63,7 @@ output=$(run help)
 # A profile never includes an opt-in layer.
 output=$(plan_packages --profile desktop) || fail "el plan desktop falló: $output"
 [[ "$output" != *'Plan de la capa dev'* ]] || fail "el perfil desktop incluyó la capa opcional dev"
+[[ "$output" != *'Capas opcionales'* ]] || fail "el plan sin --layer cambió su salida con una línea de capas opcionales"
 
 # --layer dev pulls in cli and plans its base tools, not its features.
 output=$(plan_packages --profile core --layer dev) || fail "el plan con --layer dev falló: $output"
@@ -80,6 +81,10 @@ dev_plan=$(layer_section "$output" dev)
 [[ "$dev_plan" == *docker* ]] || fail "dev-containers no añadió docker a la capa dev: $output"
 output=$(plan_packages --profile core --feature dev-js) || fail "el plan con dev-js falló: $output"
 [[ "$(layer_section "$output" dev)" == *pnpm* ]] || fail "dev-js no añadió pnpm a la capa dev: $output"
+
+# --feature dev-containers alone raises the profile to cli too.
+output=$(plan_packages --profile core --feature dev-containers) || fail "el plan con dev-containers falló: $output"
+[[ "$output" == *'Plan de la capa cli'* ]] || fail "dev-containers no aplicó la capa cli que requiere dev"
 
 # A base feature still raises the profile to the layer declaring it.
 output=$(plan_packages --profile core --feature yazi-extras) || fail "el plan con yazi-extras falló: $output"
@@ -110,6 +115,11 @@ rm -f -- "$dev_link"
 output=$(run sync --stow-only --target "$H" 2>&1) || fail "sync falló: $output"
 [[ "$output" == *'Plan de la capa dev'* ]] || fail "sync no restauró la capa dev del recibo: $output"
 [[ -L "$dev_link" ]] || fail "sync no volvió a enlazar la capa dev"
+
+# An explicit --layer on sync overrides the receipt; an empty selection is
+# recorded as such.
+output=$(run sync --stow-only --profile core --target "$H" 2>&1) || fail "sync --profile core falló: $output"
+grep -Fxq 'LAYERS="dev"' "$RECEIPT" || fail "sync sin --layer perdió la capa del recibo: $(<"$RECEIPT")"
 
 # An unknown layer in the receipt is ignored with a warning.
 sed -i 's/^LAYERS=.*/LAYERS="dev nope"/' "$RECEIPT"

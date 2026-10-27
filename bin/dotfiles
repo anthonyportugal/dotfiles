@@ -1138,7 +1138,7 @@ prepare_selection() {
   printf '  %-24s %s\n' 'Modo:' "$execution_mode"
   printf '  %-24s %s\n' 'Perfil:' "$PROFILE"
   print_array "Features" FEATURES
-  print_array "Capas opcionales" OPTIONAL_LAYERS
+  (( ${#OPTIONAL_LAYERS[@]} == 0 )) || print_array "Capas opcionales" OPTIONAL_LAYERS
   for current_layer in "${SELECTED_LAYERS[@]}"; do
     printf '  %-24s %s\n' "Capa $current_layer:" "perfil $(layer_profile "$current_layer")"
   done
