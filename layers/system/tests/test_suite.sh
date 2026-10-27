@@ -195,6 +195,27 @@ else
     fail "DNS installer --check flag failed"
 fi
 
+# --check names the provider from its DNS= servers, not its FallbackDNS.
+DNS_AUDIT_DIR="$(mktemp -d)"
+for entry in quad9:Quad9 cloudflare:"Cloudflare Standard" cloudflare-security:"Cloudflare Security" \
+    adguard:AdGuard mullvad:Mullvad custom:Custom; do
+    provider="${entry%%:*}"
+    expected="${entry#*:}"
+    if [[ "${provider}" == custom ]]; then
+        printf '[Resolve]\nDNS=45.90.28.0#test.nextdns.io\nFallbackDNS=1.1.1.1#cloudflare-dns.com\nDNSOverTLS=yes\n' \
+            > "${DNS_AUDIT_DIR}/dns_over_tls.conf"
+    else
+        cp "${REPO_DIR}/dns/providers/${provider}.conf" "${DNS_AUDIT_DIR}/dns_over_tls.conf"
+    fi
+    audit=$(DOTFILES_DNS_TARGET_DIR="${DNS_AUDIT_DIR}" "${REPO_DIR}/dns/setup.sh" --check < /dev/null 2>&1 || true)
+    if [[ "${audit}" == *"Configured provider: ${expected}"* ]]; then
+        pass "DNS --check identifies ${provider} as ${expected}"
+    else
+        fail "DNS --check misidentified ${provider}: $(grep 'Configured provider' <<< "${audit}" || printf 'none')"
+    fi
+done
+rm -rf "${DNS_AUDIT_DIR}"
+
 if "${REPO_DIR}/dns/setup.sh" --dry-run -p quad9 < /dev/null >/dev/null 2>&1; then
     pass "DNS installer --dry-run (Quad9 default) executed without errors"
 else

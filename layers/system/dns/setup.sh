@@ -19,7 +19,8 @@ RESET='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROVIDERS_DIR="${SCRIPT_DIR}/providers"
-TARGET_DIR="/etc/systemd/resolved.conf.d"
+# DOTFILES_DNS_TARGET_DIR only lets the test suite audit a scratch copy.
+TARGET_DIR="${DOTFILES_DNS_TARGET_DIR:-/etc/systemd/resolved.conf.d}"
 TARGET_CONF="${TARGET_DIR}/dns_over_tls.conf"
 
 PROVIDER_NAME="quad9"
@@ -132,20 +133,23 @@ if [[ "${CHECK_ONLY}" == true ]]; then
             log_warn "DNSOverTLS=yes is not found in ${TARGET_CONF}"
         fi
 
-        # Detect configured provider
-        if grep -q "security.cloudflare-dns.com" "${TARGET_CONF}" 2>/dev/null; then
-            log_success "Configured provider: Cloudflare Security (1.1.1.2)"
-        elif grep -q "cloudflare-dns.com" "${TARGET_CONF}" 2>/dev/null; then
-            log_success "Configured provider: Cloudflare Standard (1.1.1.1)"
-        elif grep -q "dns.quad9.net" "${TARGET_CONF}" 2>/dev/null; then
-            log_success "Configured provider: Quad9 (9.9.9.9)"
-        elif grep -q "adguard-dns.com" "${TARGET_CONF}" 2>/dev/null; then
-            log_success "Configured provider: AdGuard DNS"
-        elif grep -q "dns.mullvad.net" "${TARGET_CONF}" 2>/dev/null; then
-            log_success "Configured provider: Mullvad DNS"
-        else
-            log_info "Configured provider: Custom"
-        fi
+        # Detect configured provider from the primary DNS= servers only: every
+        # preset lists Cloudflare in FallbackDNS.
+        primary_dns=$(grep -m1 '^DNS=' "${TARGET_CONF}" 2>/dev/null || true)
+        case "${primary_dns}" in
+            *security.cloudflare-dns.com*)
+                log_success "Configured provider: Cloudflare Security (1.1.1.2)" ;;
+            *cloudflare-dns.com*)
+                log_success "Configured provider: Cloudflare Standard (1.1.1.1)" ;;
+            *dns.quad9.net*)
+                log_success "Configured provider: Quad9 (9.9.9.9)" ;;
+            *adguard-dns.com*)
+                log_success "Configured provider: AdGuard DNS" ;;
+            *dns.mullvad.net*)
+                log_success "Configured provider: Mullvad DNS" ;;
+            *)
+                log_info "Configured provider: Custom" ;;
+        esac
     else
         log_info "No drop-in configuration found at ${TARGET_CONF}"
     fi
