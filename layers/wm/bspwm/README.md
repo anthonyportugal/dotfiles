@@ -134,7 +134,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
   # Display current active theme
   bspwm-theme current
   ```
-- **Atomic Rendering:** The `bspwm-theme` engine compiles palette tokens into runtime configs for BSPWM borders, Polybar, Dunst, Rofi, Picom, and Alacritty under `$XDG_STATE_HOME/bspwm/theme/current/` with atomic symlink promotion and zero background daemons.
+- **Shared Engine:** `bspwm-theme` is a thin wrapper: `menu` opens the Rofi picker and every other command runs `dotfiles-theme`, the single engine stowed by the `desktop` layer (see [`themes/README.md`](../../../themes/README.md)). This layer only ships templates under `~/.local/share/dotfiles/theme/templates/bspwm/` for the BSPWM borders (`bspwm.env`), Polybar, Rofi and Dunst colors; they render to `$XDG_STATE_HOME/dotfiles/theme/current/bspwm/` with atomic symlink promotion. Picom and Alacritty are not themed by this engine. After `set`, the `reload.d/bspwm` hook recolors the borders and restarts Polybar and Dunst; linking the layer renders the current theme.
 
 ---
 

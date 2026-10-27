@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Live bspwm reload run by `dotfiles-theme set` after promoting a theme. The
+# engine already synced the GNOME accent; this only applies the bspwm part:
+# border colors from the rendered bspwm.env, then Polybar and Dunst restarts.
+
+set -Eeuo pipefail
+
+THEME_DIR=${DOTFILES_THEME_DIR:?DOTFILES_THEME_DIR no está definido}/bspwm
+BSPWM_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bspwm"
+
+reload_borders() {
+  local BSPWM_FOCUSED_BORDER='' BSPWM_ACTIVE_BORDER='' BSPWM_NORMAL_BORDER=''
+  local BSPWM_PRESEL_BORDER=''
+
+  command -v bspc >/dev/null 2>&1 || return 0
+  [[ -r "$THEME_DIR/bspwm.env" ]] || return 0
+  # shellcheck source=/dev/null
+  source "$THEME_DIR/bspwm.env"
+  bspc config focused_border_color "$BSPWM_FOCUSED_BORDER" 2>/dev/null || true
+  bspc config active_border_color "$BSPWM_ACTIVE_BORDER" 2>/dev/null || true
+  bspc config normal_border_color "$BSPWM_NORMAL_BORDER" 2>/dev/null || true
+  bspc config presel_feedback_color "$BSPWM_PRESEL_BORDER" 2>/dev/null || true
+}
+
+reload_polybar() {
+  if [[ -x "$BSPWM_DIR/scripts/launch-polybar" ]] && \
+     pgrep -u "$UID" -x polybar >/dev/null 2>&1; then
+    "$BSPWM_DIR/scripts/launch-polybar" >/dev/null 2>&1 &
+  fi
+}
+
+reload_dunst() {
+  pgrep -u "$UID" -x dunst >/dev/null 2>&1 || return 0
+  pkill -TERM -u "$UID" -x dunst 2>/dev/null || true
+  if command -v dunst >/dev/null 2>&1 && [[ -r "$THEME_DIR/dunstrc" ]]; then
+    dunst --config "$THEME_DIR/dunstrc" >/dev/null 2>&1 &
+  fi
+}
+
+reload_borders
+reload_polybar
+reload_dunst

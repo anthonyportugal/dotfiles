@@ -4,6 +4,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
+DOTFILES_ROOT=$(cd -- "$REPO_ROOT/../../.." && pwd -P)
 CONFIG_ROOT="$REPO_ROOT/home/bspwm/.config/bspwm"
 FAKE_SOURCE="$SCRIPT_DIR/fakes/session-command"
 TEST_ROOT=""
@@ -42,6 +43,7 @@ fake_commands=(
   brave
   bspc
   ffmpeg
+  gsettings
   i3lock
   notify-send
   pactl
@@ -305,30 +307,60 @@ fi
 [[ $("$CONFIG_ROOT/scripts/bspwm-recording" status) == "stopped" ]] || \
   fail "menu no detuvo la grabación activa"
 
-# bspwm-theme: validación de motor y render de temas
-theme_list=$("$CONFIG_ROOT/scripts/bspwm-theme" list)
+# bspwm-theme: thin wrapper over the shared dotfiles-theme engine. It runs in a
+# throwaway home with the bspwm templates and reload hook stowed by hand and
+# every session command (gsettings, bspc, pgrep, ...) replaced by the fake.
+THEME_HOME="$TEST_ROOT/theme-home"
+THEME_DATA="$THEME_HOME/.local/share/dotfiles/theme"
+THEME_SOURCE="$REPO_ROOT/home/bspwm/.local/share/dotfiles/theme"
+mkdir -p "$THEME_DATA/templates" "$THEME_DATA/reload.d" "$THEME_HOME/.config/yazi"
+ln -s "$THEME_SOURCE/templates/bspwm" "$THEME_DATA/templates/bspwm"
+ln -s "$THEME_SOURCE/reload.d/bspwm" "$THEME_DATA/reload.d/bspwm"
+ln -s "$DOTFILES_ROOT/layers/desktop/home/theme/.local/bin/dotfiles-theme" "$FAKE_BIN/dotfiles-theme"
+
+bspwm_theme() {
+  env -u DOTFILES_THEME HOME="$THEME_HOME" XDG_STATE_HOME="$THEME_HOME/.local/state" \
+    XDG_DATA_HOME="$THEME_HOME/.local/share" XDG_CONFIG_HOME="$THEME_HOME/.config" \
+    "$CONFIG_ROOT/scripts/bspwm-theme" "$@"
+}
+
+[[ $(bspwm_theme) == *'menu'* ]] || fail "bspwm-theme sin argumentos no mostró la ayuda"
+
+theme_list=$(bspwm_theme list)
 [[ $(grep -c '^catppuccin-mocha-' <<< "$theme_list") -eq 14 ]] || \
   fail "bspwm-theme list no devolvió los 14 temas Catppuccin Mocha"
 
-"$CONFIG_ROOT/scripts/bspwm-theme" validate catppuccin-mocha-mauve || \
+bspwm_theme validate catppuccin-mocha-mauve >/dev/null || \
   fail "bspwm-theme validate falló para catppuccin-mocha-mauve"
 
-"$CONFIG_ROOT/scripts/bspwm-theme" set catppuccin-mocha-mauve
-[[ $("$CONFIG_ROOT/scripts/bspwm-theme" current) == *"catppuccin-mocha-mauve"* ]] || \
+bspwm_theme set catppuccin-mocha-mauve >/dev/null || fail "bspwm-theme set mauve falló"
+[[ $(bspwm_theme current) == *"catppuccin-mocha-mauve"* ]] || \
   fail "bspwm-theme current no reportó catppuccin-mocha-mauve tras set"
 
-mauve_theme_dir="$XDG_STATE_HOME/bspwm/theme/current"
+shared_theme_dir="$THEME_HOME/.local/state/dotfiles/theme/current"
+mauve_theme_dir="$shared_theme_dir/bspwm"
+[[ ! -e "$THEME_HOME/.local/state/bspwm/theme" ]] || \
+  fail "bspwm-theme volvió a escribir el estado antiguo bspwm/theme"
 [[ -r "$mauve_theme_dir/bspwm.env" ]] || fail "no se generó bspwm.env para mauve"
-grep -q "BSPWM_FOCUSED_BORDER='#cba6f7'" "$mauve_theme_dir/bspwm.env" || \
+grep -Fq "BSPWM_FOCUSED_BORDER='#cba6f7'" "$mauve_theme_dir/bspwm.env" || \
   fail "bspwm.env no contiene el color de acento Mauve"
-grep -q "ACCENT = #cba6f7" "$mauve_theme_dir/polybar-colors.ini" || \
+grep -Fq "ACCENT = #cba6f7" "$mauve_theme_dir/polybar-colors.ini" || \
   fail "polybar-colors.ini no contiene el color de acento Mauve"
-grep -q 'frame_color = "#cba6f7"' "$mauve_theme_dir/dunstrc" || \
+grep -Fq 'selected:       #cba6f7;' "$mauve_theme_dir/rofi-colors.rasi" || \
+  fail "rofi-colors.rasi no contiene el color de acento Mauve"
+grep -Fq 'frame_color = "#cba6f7"' "$mauve_theme_dir/dunstrc" || \
   fail "dunstrc no contiene el color de acento Mauve"
-[[ -r "$mauve_theme_dir/yazi/flavor.toml" ]] || fail "no se compiló el flavor de Yazi"
+grep -Fq '#cba6f7' "$shared_theme_dir/yazi/flavor.toml" || \
+  fail "el motor compartido no compiló el flavor de Yazi"
+grep -q '^bspc config focused_border_color #cba6f7$' "$TEST_LOG" || \
+  fail "el hook de recarga no aplicó el borde Mauve en vivo"
+grep -q '^gsettings set org.gnome.desktop.interface accent-color purple$' "$TEST_LOG" || \
+  fail "set no sincronizó el acento de GNOME a través del doble"
 
-"$CONFIG_ROOT/scripts/bspwm-theme" set catppuccin-mocha-pink
-[[ $("$CONFIG_ROOT/scripts/bspwm-theme" current) == *"catppuccin-mocha-pink"* ]] || \
+bspwm_theme set catppuccin-mocha-pink >/dev/null || fail "bspwm-theme set pink falló"
+[[ $(bspwm_theme current) == *"catppuccin-mocha-pink"* ]] || \
   fail "bspwm-theme no restauró catppuccin-mocha-pink"
+grep -Fq "BSPWM_FOCUSED_BORDER='#f5c2e7'" "$mauve_theme_dir/bspwm.env" || \
+  fail "bspwm.env no volvió al acento Pink"
 
 printf 'OK: sesión dinámica y helpers principales validados\n'

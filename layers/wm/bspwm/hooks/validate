@@ -26,6 +26,7 @@ validate_stow_scope() {
   local package_root="$STOW_DIR/bspwm"
   local config_parent="$package_root/.config"
   local owned_root="$config_parent/bspwm"
+  local theme_root="$package_root/.local/share/dotfiles/theme"
   local source_path unexpected_path=''
 
   [[ -d "$owned_root" ]] || {
@@ -35,6 +36,14 @@ validate_stow_scope() {
   while IFS= read -r -d '' source_path; do
     case "$source_path" in
       "$config_parent"|"$owned_root"|"$owned_root"/*)
+        ;;
+      # Theme templates and the reload hook live in the shared engine's
+      # namespace, one bspwm entry each.
+      "$package_root/.local"|"$package_root/.local/share"|\
+      "$package_root/.local/share/dotfiles"|"$theme_root"|\
+      "$theme_root/templates"|"$theme_root/templates/bspwm"|\
+      "$theme_root/templates/bspwm"/*|"$theme_root/reload.d"|\
+      "$theme_root/reload.d/bspwm")
         ;;
       *)
         unexpected_path=$source_path
@@ -48,7 +57,7 @@ validate_stow_scope() {
     return 1
   fi
 
-  info "Ownership Stow validado: sólo .config/bspwm"
+  info "Ownership Stow validado: .config/bspwm y las plantillas de tema de bspwm"
   return 0
 }
 
@@ -105,6 +114,46 @@ validate_session_sources() {
   return "$result"
 }
 
+# Renders the bspwm templates with the repository engine into a throwaway
+# home and checks the accent reaches every themed component.
+validate_theme_templates() {
+  local engine="$LAYER_DIR/../../desktop/home/theme/.local/bin/dotfiles-theme"
+  local theme_root="$STOW_DIR/bspwm/.local/share/dotfiles/theme"
+  local reload_hook="$theme_root/reload.d/bspwm"
+  local palette="$LAYER_DIR/../../../themes/palettes/catppuccin-mocha-pink.conf"
+  local scratch accent output component result=0
+
+  if [[ ! -x "$reload_hook" ]] || ! bash -n "$reload_hook"; then
+    error "el hook de recarga de tema no es un script Bash ejecutable: $reload_hook"
+    result=1
+  fi
+  [[ -x "$engine" ]] || {
+    error "no se encontró el motor de temas: $engine"
+    return 1
+  }
+  accent=$(sed -n 's/^accent=//p' "$palette")
+  scratch=$(mktemp -d "${TMPDIR:-/tmp}/bspwm-theme-validate.XXXXXX")
+  mkdir -p "$scratch/.local/share/dotfiles/theme/templates"
+  ln -s "$theme_root/templates/bspwm" "$scratch/.local/share/dotfiles/theme/templates/bspwm"
+  if ! env -u DOTFILES_THEME HOME="$scratch" XDG_STATE_HOME="$scratch/.local/state" \
+    XDG_DATA_HOME="$scratch/.local/share" XDG_CONFIG_HOME="$scratch/.config" \
+    "$engine" render catppuccin-mocha-pink >/dev/null; then
+    error "el motor de temas no pudo renderizar las plantillas de bspwm"
+    rm -rf -- "$scratch"
+    return 1
+  fi
+  output="$scratch/.local/state/dotfiles/theme/current/bspwm"
+  for component in polybar-colors.ini rofi-colors.rasi dunstrc; do
+    if ! grep -Fq "$accent" "$output/$component"; then
+      error "$component no recibió el acento del tema"
+      result=1
+    fi
+  done
+  rm -rf -- "$scratch"
+  (( result == 0 )) && info "Plantillas de tema validadas (Polybar, Rofi y Dunst)"
+  return "$result"
+}
+
 validate_portability() {
   local config_root="$STOW_DIR/bspwm/.config/bspwm"
   local matches
@@ -127,5 +176,6 @@ validate_stow_scope || exit 1
 
 result=0
 validate_session_sources || result=1
+validate_theme_templates || result=1
 validate_portability || result=1
 exit "$result"

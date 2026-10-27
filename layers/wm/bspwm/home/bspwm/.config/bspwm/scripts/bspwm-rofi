@@ -18,7 +18,7 @@ CONFIRM_YES=''
 CONFIRM_NO=''
 
 ROFI_THEME_EXTRA=()
-THEME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/bspwm/theme/current"
+THEME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme/current/bspwm"
 if [[ -r "$THEME_DIR/rofi-colors.rasi" ]]; then
   ROFI_THEME_EXTRA=(-theme-str "@import \"$THEME_DIR/rofi-colors.rasi\"")
 fi

@@ -115,10 +115,10 @@ printf 'unexpected=1\n' >> "$copy/home/mango/.config/mango/config.conf"
 output=$(run_hook "$copy" validate bootstrap 2>&1) && fail "validate de mangowm aceptó una directiva fuera del entrypoint"
 [[ "$output" == *"directiva fuera del entrypoint modular"* ]] || fail "validate de mangowm falló por otra causa: $output"
 
-# The MangoWM post-link renders its templates with the desktop theme engine under
+# Each WM post-link renders its templates with the desktop theme engine under
 # the target's XDG state.
 stow --dir="$REPO_ROOT/layers/desktop/home" --target="$TARGET" --no-folding theme
-for wm in mangowm:mango; do
+for wm in bspwm:bspwm mangowm:mango; do
   layer="$REPO_ROOT/layers/wm/${wm%%:*}"
   [[ -x "$layer/hooks/post-link" ]] || fail "falta el hook ejecutable layers/wm/${wm%%:*}/hooks/post-link"
   stow --dir="$layer/home" --target="$TARGET" --no-folding "${wm#*:}"

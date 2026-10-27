@@ -134,7 +134,7 @@ El escritorio está estilizado con **Catppuccin Mocha**, soportando las **14 pal
   # Mostrar el tema de acento activo
   bspwm-theme current
   ```
-- **Renderizado Atómico:** El motor `bspwm-theme` compila los tokens de la paleta en configuraciones en tiempo de ejecución para los bordes de BSPWM, Polybar, Dunst, Rofi, Picom y Alacritty bajo `$XDG_STATE_HOME/bspwm/theme/current/` con promoción atómica de enlaces simbólicos y sin sobrecargar procesos en segundo plano.
+- **Motor Compartido:** `bspwm-theme` es un envoltorio ligero: `menu` abre el selector de Rofi y cualquier otro comando ejecuta `dotfiles-theme`, el único motor, que enlaza la capa `desktop` (ver [`themes/README.md`](../../../themes/README.md)). Esta capa sólo aporta plantillas en `~/.local/share/dotfiles/theme/templates/bspwm/` para los bordes de BSPWM (`bspwm.env`) y los colores de Polybar, Rofi y Dunst; se renderizan en `$XDG_STATE_HOME/dotfiles/theme/current/bspwm/` con promoción atómica de enlaces simbólicos. Picom y Alacritty no los tematiza este motor. Tras `set`, el hook `reload.d/bspwm` recolorea los bordes y reinicia Polybar y Dunst; enlazar la capa renderiza el tema actual.
 
 ---
 
