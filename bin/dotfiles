@@ -79,6 +79,10 @@ declare -a SELECTED_LAYERS=()
 BASE_LAYERS=(core cli desktop)
 FAILED_LAYER=""
 
+# An explicit language (DOTFILES_LANG or --lang) always wins; otherwise setup
+# follows $LANG (see wizard_detect_language) and every other command uses en.
+DOTFILES_LANG_EXPLICIT=0
+[[ -z "${DOTFILES_LANG:-}" ]] || DOTFILES_LANG_EXPLICIT=1
 DOTFILES_LANG="${DOTFILES_LANG:-en}"
 FORCE_YES=0
 
@@ -141,16 +145,21 @@ usage() {
     cat <<EOF
 Uso:
   $PROGRAM_NAME setup [opciones]
+  $PROGRAM_NAME bootstrap [opciones] [--apply]
   $PROGRAM_NAME sync [opciones]
   $PROGRAM_NAME update [opciones]
   $PROGRAM_NAME doctor [opciones]
   $PROGRAM_NAME unlink [opciones]
   $PROGRAM_NAME add NOMBRE [--target DIR] [-n|--dry-run]
   $PROGRAM_NAME system [setup|doctor] [opciones]
+  $PROGRAM_NAME completion [zsh|bash]
   $PROGRAM_NAME help
 
 Comandos:
-  setup       Asistente interactivo guiado para configurar e instalar por capas.
+  setup       Asistente guiado corto: perfil (servidor o escritorio), WMs, extras y overlay;
+              luego muestra el plan y pregunta aplicar, simular (dry-run) o cancelar.
+  bootstrap   Instala la selección indicada por flags sin asistente; sin --apply solo
+              muestra el plan (dry-run).
   sync        Re-aplica la selección guardada (perfil, capas, WMs, componentes) sin tocar Git.
   update      Descarga el repositorio público y el overlay (fast-forward) y re-aplica la
               selección guardada; los componentes pasan a su nueva ref fijada.
@@ -160,10 +169,11 @@ Comandos:
               ~/.local/share/dotfiles/NOMBRE en su commit fijado y crea sus enlaces.
   system      Capa opcional de sistema (Ly, Limine, DNS-over-TLS) con sudo explícito;
               nunca la ejecutan bootstrap, sync ni update. Ver '$PROGRAM_NAME system help'.
+  completion  Imprime el script de autocompletado para zsh (default) o bash.
 
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
-  --lang en|es                     Idioma de la interfaz (default: en).
+  --lang en|es                     Idioma de la interfaz (default: en; setup sigue a \$LANG).
   --feature NOMBRE                 Feature opt-in (yazi-extras, dev-containers, dev-js); aplica
                                    también la capa que la declara.
   --layer NOMBRE                   Capa opcional que ningún perfil incluye (dev); se puede repetir.
@@ -179,11 +189,14 @@ Opciones:
   --wm-profile core|desktop        Perfil de los WMs (default: desktop o el del recibo).
   --base-only                      Ejecuta diagnósticos únicamente para el repositorio base.
   --all                            Diagnostica o sincroniza todos los componentes disponibles.
+  --apply                          Aplica bootstrap o unlink (sin él solo se muestra el plan).
+  --stow-only | --packages-only    Solo enlaces (sin paquetes ni sudo) o solo paquetes.
   -y, --yes                        Confirmación automática en prompts de actualización.
   -h, --help                       Muestra esta ayuda.
 
 Ejemplos:
   $PROGRAM_NAME setup
+  $PROGRAM_NAME bootstrap --profile cli --layer dev --apply
   $PROGRAM_NAME sync
   $PROGRAM_NAME update
   $PROGRAM_NAME doctor
@@ -194,16 +207,21 @@ EOF
     cat <<EOF
 Usage:
   $PROGRAM_NAME setup [options]
+  $PROGRAM_NAME bootstrap [options] [--apply]
   $PROGRAM_NAME sync [options]
   $PROGRAM_NAME update [options]
   $PROGRAM_NAME doctor [options]
   $PROGRAM_NAME unlink [options]
   $PROGRAM_NAME add NAME [--target DIR] [-n|--dry-run]
   $PROGRAM_NAME system [setup|doctor] [options]
+  $PROGRAM_NAME completion [zsh|bash]
   $PROGRAM_NAME help
 
 Commands:
-  setup       Interactive guided assistant to configure and install by layers.
+  setup       Short guided setup: profile (server or desktop), WMs, extras and overlay;
+              then shows the plan and asks to apply, dry-run or cancel.
+  bootstrap   Installs the selection given by flags without the wizard; without --apply
+              it only prints the plan (dry-run).
   sync        Re-applies the saved selection (profile, layers, WMs, components) without touching Git.
   update      Pulls the public repository and the overlay (fast-forward) and re-applies the
               saved selection; components move to their newly pinned ref.
@@ -213,10 +231,11 @@ Commands:
               ~/.local/share/dotfiles/NAME at its pinned commit and creates its links.
   system      Optional system layer (Ly, Limine, DNS-over-TLS) under an explicit sudo;
               bootstrap, sync and update never run it. See '$PROGRAM_NAME system help'.
+  completion  Prints the shell completion script for zsh (default) or bash.
 
 Options:
   --profile core|cli|desktop       Cumulative profile (default: desktop).
-  --lang en|es                     Interface language (default: en).
+  --lang en|es                     Interface language (default: en; setup follows \$LANG).
   --feature NAME                   Opt-in feature (yazi-extras, dev-containers, dev-js); also
                                    applies the layer declaring it.
   --layer NAME                     Opt-in layer no profile includes (dev); repeatable.
@@ -232,11 +251,14 @@ Options:
   --wm-profile core|desktop        WM profile (default: desktop or the saved one).
   --base-only                      Run diagnostics solely for the base repository.
   --all                            Diagnose or synchronize all available components.
+  --apply                          Apply bootstrap or unlink (without it only the plan is shown).
+  --stow-only | --packages-only    Links only (no packages, no sudo) or packages only.
   -y, --yes                        Automatic yes to update prompts.
   -h, --help                       Show this help.
 
 Examples:
   $PROGRAM_NAME setup
+  $PROGRAM_NAME bootstrap --profile cli --layer dev --apply
   $PROGRAM_NAME sync
   $PROGRAM_NAME update
   $PROGRAM_NAME doctor
@@ -259,12 +281,14 @@ parse_args() {
       --lang)
         require_option_value "$1" "${2-}"
         DOTFILES_LANG=$2
+        DOTFILES_LANG_EXPLICIT=1
         export DOTFILES_LANG
         shift 2
         ;;
       --lang=*)
         DOTFILES_LANG=${1#*=}
         require_option_value "--lang" "$DOTFILES_LANG"
+        DOTFILES_LANG_EXPLICIT=1
         export DOTFILES_LANG
         shift
         ;;
@@ -293,7 +317,7 @@ parse_args() {
   shift
 
   case "$COMMAND" in
-    bootstrap|doctor|unlink|sync|update|setup|install)
+    bootstrap|doctor|unlink|sync|update|setup)
       ;;
     completion)
       COMPLETION_SHELL=${1:-zsh}
@@ -1231,7 +1255,7 @@ main() {
   discover_layers
 
   case "$COMMAND" in
-    setup|install)
+    setup)
       run_interactive_wizard
       ;;
     sync)

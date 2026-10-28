@@ -315,12 +315,13 @@ output=$(HOME="$N" "$DOTFILES" unlink --profile core --target "$N" --apply 2>&1)
 [[ "$output" != *'componente'* && ! -L "$N/.zshrc" && ! -e "$N/.local/state/dotfiles/dotfiles.receipt" ]] || \
   fail "unlink sin componentes cambió de comportamiento: $output"
 
-# The wizard's walls option adds the component.
+# A component chosen among the setup extras is added at its pinned ref.
 W="$TEST_ROOT/wizard-home"
 mkdir -p "$W"
-output=$(printf '7\n1\n' | HOME="$W" "$DOTFILES" setup --target "$W" 2>&1) || fail "el asistente falló: $output"
+output=$(printf 'server\nwalls\n\napply\n' | HOME="$W" "$DOTFILES" setup --stow-only --target "$W" 2>&1) || \
+  fail "el asistente falló: $output"
 [[ -L "$W/.local/share/wallpapers" && "$(git -C "$W/.local/share/dotfiles/walls" rev-parse HEAD)" == "$REF1" ]] || \
-  fail "la opción walls del asistente no añadió el componente: $output"
+  fail "el extra walls del asistente no añadió el componente: $output"
 
 # update pulls the public repository (never a walls checkout) and its sync
 # moves recorded components to the newly pinned ref.

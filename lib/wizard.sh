@@ -1,38 +1,30 @@
 #!/usr/bin/env bash
-# lib/wizard.sh - Interactive setup wizard and prompt helpers for dotfiles
+# lib/wizard.sh - `dotfiles setup`: one short guided flow and prompt helpers.
+#
+# The flow asks four questions, prints the plan and runs the normal bootstrap:
+#   1. profile: server (cli) or desktop;
+#   2. WMs (desktop only): any of layers/wm/*/layer.conf, none included;
+#   3. extras: opt-in layers, features and components.conf entries that fit
+#      the chosen profile and WMs, discovered at run time, none checked;
+#   4. overlay: an existing checkout with layers/, or a Git URL cloned into
+#      the target's .dotfiles-private on apply, or Enter to skip;
+# then apply, dry-run or cancel (the default). Answers are read one line at a
+# time; an empty line or the end of input takes the default, so piped input
+# always ends. Maintenance (sync, update, doctor, unlink) and the system layer
+# stay CLI commands.
 #
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154
 
-wizard_colors() {
-  setup_colors
-}
+# Set once stdin ends; every later prompt then takes its default.
+WIZARD_EOF=0
+# Overlay URL to clone on apply (dry-run and cancel never clone).
+WIZARD_OVERLAY_URL=""
+# Extras offered by the current run: kind (layer|feature|component), name and
+# description share the index.
+declare -a WIZARD_EXTRA_KINDS=() WIZARD_EXTRA_NAMES=() WIZARD_EXTRA_DESCRIPTIONS=()
 
-prompt_choice() {
-  local var_name=$1
-  local title=$2
-  shift 2
-  local -a options=("$@")
-  local choice=""
-
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$title" "$C_RESET"
-  local i=1
-  for opt in "${options[@]}"; do
-    printf '  %b[%d]%b %s\n' "$C_PINK" "$i" "$C_RESET" "$opt"
-    (( i++ ))
-  done
-
-  while true; do
-    printf '%b%s (1-%d): %b' "$C_BLUE" "$(_t "Select an option" "Selecciona una opción")" "${#options[@]}" "$C_RESET"
-    read -r choice || return 1
-    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
-      printf -v "$var_name" '%d' "$(( choice - 1 ))"
-      return 0
-    fi
-    printf '%b%s%b\n' "$C_RED" "$(_t "Invalid option. Please try again." "Opción inválida. Intenta nuevamente.")" "$C_RESET"
-  done
-}
-
+# Yes/no question used by `dotfiles update` on a terminal.
 prompt_yes_no() {
   local question=$1
   local default_val=${2:-Y}
@@ -64,26 +56,6 @@ prompt_yes_no() {
   done
 }
 
-prompt_input() {
-  local prompt_text=$1
-  local default_text=${2-}
-  local var_name=$3
-  local -n result_ref=$var_name
-  local input_val=""
-
-  if [[ -n "$default_text" ]]; then
-    printf '%b%s %b[%s]: %b' "${C_BOLD}" "$prompt_text" "${C_SUBTEXT}" "$default_text" "$C_RESET"
-  else
-    printf '%b%s: %b' "${C_BOLD}" "$prompt_text" "$C_RESET"
-  fi
-  read -r input_val || return 1
-  if [[ -z "$input_val" ]]; then
-    result_ref=$default_text
-  else
-    result_ref=$input_val
-  fi
-}
-
 prettify_path() {
   local p=${1:-}
   local clean
@@ -92,346 +64,368 @@ prettify_path() {
   printf '%s' "$clean"
 }
 
-# Picks the private overlay: an existing checkout with layers/, or a Git URL
-# cloned into ~/.dotfiles-private. Returns 1 when none was chosen.
+# Without an explicit --lang or DOTFILES_LANG, setup speaks Spanish when $LANG
+# is a Spanish locale and English otherwise.
+wizard_detect_language() {
+  (( ${DOTFILES_LANG_EXPLICIT:-0} == 0 )) || return 0
+  case "${LANG:-}" in
+    es|es_*|es.*) DOTFILES_LANG=es ;;
+    *) DOTFILES_LANG=en ;;
+  esac
+  export DOTFILES_LANG
+}
+
+# Reads one trimmed answer into the variable named $1. Returns 1 at the end of
+# input, and from then on for every later call. Piped answers are echoed so
+# the transcript reads like a terminal session.
+wizard_read() {
+  local -n _wz_answer=$1
+
+  _wz_answer=""
+  if (( WIZARD_EOF == 0 )) && ! IFS= read -r _wz_answer; then
+    WIZARD_EOF=1
+  fi
+  _wz_answer=$(trim_line "$_wz_answer")
+  if [[ ! -t 0 ]]; then
+    printf '%s\n' "$_wz_answer"
+  fi
+  # A last line without a newline still counts as an answer.
+  (( WIZARD_EOF == 0 )) || [[ -n "$_wz_answer" ]]
+}
+
+wizard_heading() {
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$1" "$C_RESET"
+}
+
+wizard_option() {
+  printf '  %b[%d]%b %s%s\n' "$C_PINK" "$1" "$C_RESET" "$2" "${3:+ - $3}"
+}
+
+wizard_invalid() {
+  printf '%b%s%b\n' "$C_RED" "$(_t "Invalid answer: $1" "Respuesta inválida: $1")" "$C_RESET"
+}
+
+# Single choice: sets the variable named $1 to one of the option names, $2 by
+# default. Options follow the title $3 as name/description pairs; an answer is
+# an option number or name.
+wizard_select() {
+  local -n _wz_choice=$1
+  local default=$2 title=$3
+  shift 3
+  local -a names=() descriptions=()
+  local index answer
+
+  while (( $# > 1 )); do
+    names+=("$1")
+    descriptions+=("$2")
+    shift 2
+  done
+  wizard_heading "$title"
+  for index in "${!names[@]}"; do
+    wizard_option "$(( index + 1 ))" "${names[index]}" "${descriptions[index]}"
+  done
+  while true; do
+    printf '%b%s [%s]: %b' "$C_BLUE" "$(_t "Choose" "Elige")" "$default" "$C_RESET"
+    if ! wizard_read answer || [[ -z "$answer" ]]; then
+      _wz_choice=$default
+      return 0
+    fi
+    if [[ "$answer" =~ ^[1-9][0-9]*$ ]] && (( answer <= ${#names[@]} )); then
+      _wz_choice=${names[answer - 1]}
+      return 0
+    fi
+    for index in "${!names[@]}"; do
+      if [[ "${answer,,}" == "${names[index]}" ]]; then
+        _wz_choice=${names[index]}
+        return 0
+      fi
+    done
+    wizard_invalid "$answer"
+  done
+}
+
+# Multiple choice: fills the array named $1 with the indexes chosen among the
+# names of array $3 (descriptions in array $4) under title $2. An answer lists
+# numbers or names separated by spaces or commas; empty means none.
+wizard_multiselect() {
+  local -n _wz_selected=$1
+  local title=$2
+  local -n _wz_names=$3 _wz_descriptions=$4
+  local index answer token found valid
+  local -a tokens=() _wz_picked=()
+
+  _wz_selected=()
+  wizard_heading "$title"
+  for index in "${!_wz_names[@]}"; do
+    wizard_option "$(( index + 1 ))" "${_wz_names[index]}" "${_wz_descriptions[index]}"
+  done
+  while true; do
+    printf '%b%s: %b' "$C_BLUE" "$(_t "Numbers or names separated by spaces (Enter = none)" "Números o nombres separados por espacios (Enter = ninguno)")" "$C_RESET"
+    wizard_read answer || return 0
+    IFS=$' \t,' read -r -a tokens <<< "$answer"
+    _wz_picked=()
+    valid=1
+    for token in "${tokens[@]}"; do
+      found=""
+      if [[ "$token" =~ ^[1-9][0-9]*$ ]] && (( token <= ${#_wz_names[@]} )); then
+        found=$(( token - 1 ))
+      else
+        for index in "${!_wz_names[@]}"; do
+          [[ "${token,,}" != "${_wz_names[index]}" ]] || { found=$index; break; }
+        done
+      fi
+      if [[ -z "$found" ]]; then
+        wizard_invalid "$token"
+        valid=0
+        break
+      fi
+      append_unique _wz_picked "$found"
+    done
+    if (( valid == 1 )); then
+      _wz_selected=("${_wz_picked[@]}")
+      return 0
+    fi
+    # At the end of input an invalid list selects nothing.
+    (( WIZARD_EOF == 0 )) || return 0
+  done
+}
+
+# Yes/no question $1 with default $2 (Y or N); the end of input takes it.
+wizard_confirm() {
+  local question=$1 default=${2:-Y} answer suffix
+
+  suffix=$(_t "[Y/n]" "[S/n]")
+  [[ "$default" != [Nn] ]] || suffix=$(_t "[y/N]" "[s/N]")
+  while true; do
+    printf '%b%s %b%s%b ' "${C_BOLD}" "$question" "${C_SUBTEXT}" "$suffix" "$C_RESET"
+    wizard_read answer || true
+    [[ -n "$answer" ]] || answer=$default
+    case "${answer,,}" in
+      y|yes|s|si|sí) return 0 ;;
+      n|no) return 1 ;;
+    esac
+    wizard_invalid "$answer"
+    # At the end of input an invalid answer takes the default.
+    (( WIZARD_EOF == 0 )) || { [[ "$default" == [Yy] ]]; return; }
+  done
+}
+
+# Prints the description declared by layer dir $1 for key $2.
+wizard_layer_description() {
+  local -A conf=()
+  read_layer_conf "$1" conf
+  printf '%s' "${conf[$2]:-}"
+}
+
+# True when every layer that layer $1 pulls in fits the chosen PROFILE and WMS.
+wizard_layer_fits() {
+  local pulled_layer
+  local -a pulled=()
+
+  resolve_layers "$LAYERS_DIR" pulled "$1"
+  for pulled_layer in "${pulled[@]}"; do
+    if [[ "$pulled_layer" == wm/* ]]; then
+      array_contains WMS "${pulled_layer#wm/}" || return 1
+    elif array_contains BASE_LAYERS "$pulled_layer"; then
+      (( $(base_layer_rank "$pulled_layer") <= $(base_layer_rank "$PROFILE") )) || return 1
+    fi
+  done
+}
+
+# Fills WIZARD_EXTRA_* with the opt-in layers, the features of base and
+# opt-in layers, and the components that fit the chosen profile and WMs.
+wizard_collect_extras() {
+  local name layer
+
+  WIZARD_EXTRA_KINDS=() WIZARD_EXTRA_NAMES=() WIZARD_EXTRA_DESCRIPTIONS=()
+  for name in "${SUPPORTED_LAYERS[@]}"; do
+    wizard_layer_fits "$name" || continue
+    WIZARD_EXTRA_KINDS+=(layer)
+    WIZARD_EXTRA_NAMES+=("$name")
+    WIZARD_EXTRA_DESCRIPTIONS+=("$(wizard_layer_description "$LAYERS_DIR/$name" description)")
+  done
+  for name in "${SUPPORTED_FEATURES[@]}"; do
+    layer=${FEATURE_LAYERS[$name]}
+    wizard_layer_fits "$layer" || continue
+    WIZARD_EXTRA_KINDS+=(feature)
+    WIZARD_EXTRA_NAMES+=("$name")
+    WIZARD_EXTRA_DESCRIPTIONS+=("$(wizard_layer_description "$LAYERS_DIR/$layer" "description.$name")")
+  done
+  load_components
+  for name in "${COMPONENT_NAMES[@]}"; do
+    WIZARD_EXTRA_KINDS+=(component)
+    WIZARD_EXTRA_NAMES+=("$name")
+    WIZARD_EXTRA_DESCRIPTIONS+=("${COMPONENT_DESCRIPTIONS[$name]:-}")
+  done
+}
+
+# Chooses the overlay. An existing checkout with layers/ (the --overlay path,
+# the receipt's overlay or the target's .dotfiles-private) is offered with
+# Yes by default; otherwise a Git URL is cloned into .dotfiles-private on
+# apply, or Enter skips it.
 wizard_choose_overlay() {
   local candidate existing="" url="" dest="$TARGET_DIR/.dotfiles-private"
+  local -A saved=()
+  local recorded=""
 
-  for candidate in "$OVERLAY_PATH" "$dest" "$REPO_ROOT/../dotfiles-private"; do
+  (( NO_OVERLAY == 0 )) || return 0
+  ! read_receipt dotfiles saved || recorded=${saved[OVERLAY]:-}
+  for candidate in "$OVERLAY_PATH" "$recorded" "$dest"; do
     [[ -n "$candidate" && -d "$candidate/layers" ]] || continue
     existing=$candidate
     break
   done
+
+  wizard_heading "$(_t "Private overlay" "Overlay privado")"
   if [[ -n "$existing" ]]; then
-    if prompt_yes_no "$(_t "Overlay detected at $(prettify_path "$existing"). Apply it?" "Overlay detectado en $(prettify_path "$existing"). ¿Aplicarlo?")" Y; then
+    if wizard_confirm "$(_t "Overlay detected at $(prettify_path "$existing"). Apply it?" "Overlay detectado en $(prettify_path "$existing"). ¿Aplicarlo?")" Y; then
       OVERLAY_PATH=$existing
       OVERLAY_EXPLICIT=1
       return 0
     fi
+    OVERLAY_PATH=""
     NO_OVERLAY=1
-    return 1
+  else
+    printf '%b%s: %b' "${C_BOLD}" "$(_t "Git URL of your overlay, cloned into $(prettify_path "$dest") on apply (Enter to skip)" "URL Git de tu overlay, se clona en $(prettify_path "$dest") al aplicar (Enter para omitir)")" "$C_RESET"
+    wizard_read url || true
+    WIZARD_OVERLAY_URL=$url
+    OVERLAY_PATH=""
+    [[ -z "$url" ]] || return 0
   fi
+  info "$(_t "No overlay: the public Git config stays fail-closed until an identity is configured (~/.config/git/local.gitconfig)." "Sin overlay: la configuración Git pública queda fail-closed hasta configurar una identidad (~/.config/git/local.gitconfig).")"
+}
 
-  prompt_input "$(_t "Git URL of your private overlay, cloned into ~/.dotfiles-private (ENTER to skip)" "URL Git de tu overlay privado, se clona en ~/.dotfiles-private (ENTER para omitir)")" "" url
-  [[ -n "$url" ]] || return 1
-  if git clone "$url" "$dest"; then
+# Clones WIZARD_OVERLAY_URL into the target's .dotfiles-private.
+wizard_clone_overlay() {
+  local dest="$TARGET_DIR/.dotfiles-private"
+
+  info "$(_t "Cloning the overlay into $dest" "Clonando el overlay en $dest")"
+  if git clone -q -- "$WIZARD_OVERLAY_URL" "$dest" && [[ -d "$dest/layers" ]]; then
     OVERLAY_PATH=$dest
     OVERLAY_EXPLICIT=1
     return 0
   fi
-  warn "$(_t "Could not clone the overlay. Continuing without it." "No se pudo clonar el overlay. Se continúa sin él.")"
-  return 1
+  warn "$(_t "Could not clone an overlay with layers/ from $WIZARD_OVERLAY_URL. Continuing without it." "No se pudo clonar un overlay con layers/ desde $WIZARD_OVERLAY_URL. Se continúa sin él.")"
+  NO_OVERLAY=1
+}
+
+# Adds component $1 (apply mode $2) like `dotfiles add`. A subshell keeps a
+# refused add from ending the wizard.
+wizard_add_component() {
+  local -a add_args=("$1" --target "$TARGET_DIR")
+  (( $2 == 1 )) || add_args+=(--dry-run)
+  ( cmd_add "${add_args[@]}" ) || \
+    warn "$(_t "The $1 component was not added" "El componente $1 no se añadió")"
+}
+
+wizard_plan_line() {
+  printf '  %-12s %s\n' "$1" "$2"
 }
 
 run_interactive_wizard() {
-  wizard_colors
+  local profile_choice final_choice index mode overlay_text component
+  local -a wm_names=() wm_descriptions=() picked=() components=()
+  local wm_dir
 
-  if [[ -z "${DOTFILES_LANG:-}" ]]; then
-    clear 2>/dev/null || true
-    local lang_choice=0
-    prompt_choice lang_choice "Select language / Selecciona el idioma" \
-      "English [Default]" \
-      "Español"
-    if (( lang_choice == 1 )); then
-      DOTFILES_LANG="es"
-    else
-      DOTFILES_LANG="en"
-    fi
-    export DOTFILES_LANG
-  fi
+  wizard_detect_language
+  setup_colors
+  printf '%b%s%b %s\n' "${C_BOLD}${C_MAUVE}" "dotfiles setup" "$C_RESET" \
+    "$(prettify_path "$REPO_ROOT") -> $(prettify_path "$TARGET_DIR")"
 
-  clear 2>/dev/null || true
-  printf '%b' "$C_MAUVE"
-  cat <<'EOF'
-╭─────────────────────────────────────────────────────────────╮
-│                      ANTHONY PORTUGAL                       │
-│                 dotfiles-base • Setup Wizard                │
-│           Modular Arch Linux Configuration System           │
-│ ╰─────────────────────────────────────────────────────────────╯
-EOF
-  printf '%b\n' "$C_RESET"
-
-  printf '%b%s%b\n' "${C_BOLD}" "$(_t "Detected environment:" "Estado actual detectado:")" "$C_RESET"
-  printf '  • Base:     %b[✓ %s]%b (%s)\n' "$C_GREEN" "$(_t "Present" "Presente")" "$C_RESET" "$(prettify_path "$REPO_ROOT")"
-
-  local mango_dir=""
-  [[ ! -f "$LAYERS_DIR/wm/mangowm/layer.conf" ]] || mango_dir="$LAYERS_DIR/wm/mangowm"
-  local mango_status
-  mango_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
-  [[ -n "$mango_dir" ]] && mango_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
-  printf '  • MangoWM:  %b\n' "$mango_status"
-
-  local bspwm_dir=""
-  [[ ! -f "$LAYERS_DIR/wm/bspwm/layer.conf" ]] || bspwm_dir="$LAYERS_DIR/wm/bspwm"
-  local bspwm_status
-  bspwm_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
-  [[ -n "$bspwm_dir" ]] && bspwm_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
-  printf '  • BSPWM:    %b\n' "$bspwm_status"
-
-  # walls is an external component (components.conf), added with `dotfiles add walls`.
-  local walls_status
-  walls_status="${C_SUBTEXT}[$(_t "Not added (dotfiles add walls)" "Sin añadir (dotfiles add walls)")]${C_RESET}"
-  [[ ! -e "$TARGET_DIR/.local/share/dotfiles/walls/.git" ]] || \
-    walls_status="${C_GREEN}[✓ $(_t "Added" "Añadido")]${C_RESET}"
-  printf '  • Walls:    %b\n' "$walls_status"
-
-  # The system layer ships in this repository; show whether it was applied.
-  local system_status
-  local -A system_saved=()
-  system_status="${C_SUBTEXT}[$(_t "Optional, not applied" "Opcional, sin aplicar")]${C_RESET}"
-  if read_receipt system system_saved; then
-    system_status="${C_GREEN}[✓ ${system_saved[SYSTEM_ARGS]:-}]${C_RESET}"
-  fi
-  printf '  • System:   %b\n' "$system_status"
-
-  local -A overlay_saved=()
-  local overlay_status
-  overlay_status="${C_SUBTEXT}[$(_t "Not configured" "Sin configurar")]${C_RESET}"
-  if read_receipt dotfiles overlay_saved && [[ -n "${overlay_saved[OVERLAY]:-}" ]]; then
-    overlay_status="${C_GREEN}[✓ $(prettify_path "${overlay_saved[OVERLAY]}")]${C_RESET}"
-  fi
-  printf '  • Overlay:  %b\n' "$overlay_status"
-
-  local action_choice=0
-  prompt_choice action_choice "$(_t "What would you like to do?" "¿Qué deseas hacer?")" \
-    "$(_t "Guided Full Setup (Step-by-step onboarding for Base + Modules)" "Asistente de Configuración Guiada (Instalación por capas)")" \
-    "$(_t "Configure Base System Profile Only" "Configurar solo Perfil Base del Sistema")" \
-    "$(_t "Configure MangoWM (Wayland Environment)" "Configurar MangoWM (Entorno Wayland)")" \
-    "$(_t "Configure BSPWM (X11 Environment)" "Configurar BSPWM (Entorno X11)")" \
-    "$(_t "Configure System Layer (Ly, Limine, DNS-over-TLS)" "Configurar Capa del Sistema (Ly, Limine, DNS)")" \
-    "$(_t "Configure Private Overlay (Identity, SSH, Work)" "Configurar Overlay Privado (Identidad, SSH, Laboral)")" \
-    "$(_t "Add Wallpapers (dotfiles add walls)" "Añadir Fondos de Pantalla (dotfiles add walls)")" \
-    "$(_t "Re-sync Local Environment (Sync links and packages)" "Re-sincronizar Entorno Local (Sync enlaces y paquetes)")" \
-    "$(_t "Update from GitHub (Remote Update + Sync)" "Actualizar desde GitHub (Remote Update + Sync)")" \
-    "$(_t "Health Diagnostics (Doctor)" "Diagnóstico de Salud (Doctor)")" \
-    "$(_t "Unlink Dotfiles" "Retirar Enlaces (Unlink)")" \
-    "$(_t "Exit" "Salir")"
-
-  case "$action_choice" in
-    1) # Configure Base Profile Only
-      local b_profile=2
-      prompt_choice b_profile "$(_t "Select Base System Profile" "Selecciona el Perfil Base del Sistema")" \
-        "$(_t "Core (Zsh, Git, essential CLI tools)" "Core (Zsh, Git, herramientas esenciales de terminal)")" \
-        "$(_t "CLI (Core + Micro, Yazi, Neovim/modern CLI tools)" "CLI (Core + Micro, Yazi, Neovim/herramientas modernas)")" \
-        "$(_t "Desktop [Recommended] (CLI + Catppuccin GTK theme, fonts, audio, portals)" "Desktop [Recomendado] (CLI + Tema GTK Catppuccin, fuentes, audio, portales)")"
-      case "$b_profile" in
-        0) PROFILE="core" ;;
-        1) PROFILE="cli" ;;
-        2) PROFILE="desktop" ;;
-      esac
-      local b_mode=0
-      prompt_choice b_mode "$(_t "Select Installation Scope" "Selecciona el Alcance de la Instalación")" \
-        "$(_t "Complete: Install packages (repo/AUR) + Deploy Stow symlinks [Recommended]" "Completo: Instalar paquetes (repo/AUR) + Enlaces Stow [Recomendado]")" \
-        "$(_t "Symlinks only: Deploy Stow symlinks only (No package install / No sudo)" "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)")"
-      if (( b_mode == 1 )); then
-        MODE_SELECTION="stow"
-        SYSTEM_ENABLED=0
-        STOW_ENABLED=1
-      else
-        MODE_SELECTION="both"
-        SYSTEM_ENABLED=1
-        STOW_ENABLED=1
-      fi
-      local b_act=0
-      prompt_choice b_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
-        "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
-        "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
-        "$(_t "Cancel and exit" "Cancelar y salir")"
-      case "$b_act" in
-        0) APPLY=1 ;;
-        1) APPLY=0 ;;
-        2) return 0 ;;
-      esac
-      COMMAND="bootstrap"
-      bootstrap_with_optional_components
-      return 0
-      ;;
-    2|3) # Window manager layer (with the base it builds on)
-      local wm_name="mangowm"
-      (( action_choice == 3 )) && wm_name="bspwm"
-      [[ -f "$LAYERS_DIR/wm/$wm_name/layer.conf" ]] || {
-        error "$(_t "WM layer not found: $LAYERS_DIR/wm/$wm_name" "Capa de WM no encontrada: $LAYERS_DIR/wm/$wm_name")"
-        return 1
-      }
-      WMS=("$wm_name")
-      local wm_act=0
-      prompt_choice wm_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
-        "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
-        "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
-        "$(_t "Cancel and exit" "Cancelar y salir")"
-      case "$wm_act" in
-        0) APPLY=1 ;;
-        1) APPLY=0 ;;
-        2) return 0 ;;
-      esac
-      COMMAND="bootstrap"
-      resolve_wm_layers
-      bootstrap_with_optional_components
-      return 0
-      ;;
-    4) # System setup
-      # A subshell keeps a failing installer from ending the wizard.
-      ( cmd_system setup ) || \
-        warn "$(_t "The system layer was not applied" "La capa system no se aplicó")"
-      return 0
-      ;;
-    5) # Private overlay: choose it, then re-apply the saved selection with it.
-      if wizard_choose_overlay; then
-        sync_environment
-      fi
-      return 0
-      ;;
-    6) # Wallpapers: the walls component of components.conf
-      local w_act=0
-      prompt_choice w_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
-        "$(_t "Add the component now" "Añadir el componente ahora mismo")" \
-        "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
-        "$(_t "Cancel and exit" "Cancelar y salir")"
-      case "$w_act" in
-        0) wizard_add_walls 1 ;;
-        1) wizard_add_walls 0 ;;
-      esac
-      return 0
-      ;;
-    7)
-      sync_environment || true
-      return 0
-      ;;
-    8)
-      update_from_remote || true
-      return 0
-      ;;
-    9)
-      cmd_doctor || true
-      return 0
-      ;;
-    10)
-      unlink_with_optional_components || true
-      return 0
-      ;;
-    11)
-      info "$(_t "Goodbye!" "¡Hasta luego!")"
-      return 0
-      ;;
-  esac
-
-  printf '\n%b=== %s ===%b\n' "${C_BOLD}${C_PINK}" "$(_t "GUIDED MODULAR SETUP" "ASISTENTE DE CONFIGURACIÓN POR CAPAS")" "$C_RESET"
-
-  local profile_choice=2
-  prompt_choice profile_choice "$(_t "Step 1: Select Base System Profile" "Paso 1: Selecciona el Perfil Base del Sistema")" \
-    "$(_t "Core (Zsh, Git, essential CLI tools)" "Core (Zsh, Git, herramientas esenciales de terminal)")" \
-    "$(_t "CLI (Core + Micro, Yazi, Neovim/modern CLI tools)" "CLI (Core + Micro, Yazi, Neovim/herramientas modernas)")" \
-    "$(_t "Desktop [Recommended] (CLI + Catppuccin GTK theme, fonts, audio, portals)" "Desktop [Recomendado] (CLI + Tema GTK Catppuccin, fuentes, audio, portales)")"
-  case "$profile_choice" in
-    0) PROFILE="core" ;;
-    1) PROFILE="cli" ;;
-    2) PROFILE="desktop" ;;
-  esac
-
-  WMS=()
-  local wm_choice=0
-  prompt_choice wm_choice "$(_t "Step 2: Select Window Managers to configure" "Paso 2: Selecciona los Entornos de Ventana a configurar")" \
-    "MangoWM (Wayland + Waybar + Fuzzel + Mako)" \
-    "BSPWM (X11 + Polybar + Rofi + Dunst + Picom)" \
-    "$(_t "Both (MangoWM and BSPWM)" "Ambos (MangoWM y BSPWM)")" \
-    "$(_t "None (Terminal only / Bring your own WM)" "Ninguno (Solo terminal / Ya poseo mi propio gestor)")"
-
-  case "$wm_choice" in
-    0) append_unique WMS "mangowm" ;;
-    1) append_unique WMS "bspwm" ;;
-    2) append_unique WMS "mangowm"; append_unique WMS "bspwm" ;;
-    3) ;;
-  esac
-
-  local add_walls=0
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 3: Wallpaper Collection (dotfiles add walls)" "Paso 3: Colección de Fondos de Pantalla (dotfiles add walls)")" "$C_RESET"
-  if prompt_yes_no "$(_t "Add the wallpaper collection (walls, pinned in components.conf)?" "¿Añadir la colección de wallpapers (walls, fijada en components.conf)?")" Y; then
-    add_walls=1
-  fi
-
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 4: Optional System Layer (Ly, Limine & DNS-over-TLS, needs sudo)" "Paso 4: Capa de Sistema Opcional (Ly, Limine y DNS-over-TLS, requiere sudo)")" "$C_RESET"
-  if prompt_yes_no "$(_t "Run the system layer installer now? (sudo; also later with 'dotfiles system')" "¿Ejecutar ahora el instalador de la capa system? (sudo; también luego con 'dotfiles system')")" N; then
-    ( cmd_system setup ) || \
-      warn "$(_t "The system layer was not applied" "La capa system no se aplicó")"
-  fi
-
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 5: Private Overlay (your own layers: identity, SSH, work)" "Paso 5: Overlay Privado (tus propias capas: identidad, SSH, trabajo)")" "$C_RESET"
-  if ! wizard_choose_overlay; then
-    if prompt_yes_no "$(_t "Configure local Git identity (user.name and user.email)?" "¿Deseas configurar tu identidad Git local (user.name y user.email)?")" Y; then
-      local git_name="" git_email=""
-      prompt_input "$(_t "Git Name" "Nombre para Git")" "" git_name
-      prompt_input "$(_t "Git Email" "Email para Git")" "" git_email
-      if [[ -n "$git_name" && -n "$git_email" ]]; then
-        mkdir -p "$TARGET_DIR/.config/git"
-        git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.name "$git_name"
-        git config --file "$TARGET_DIR/.config/git/local.gitconfig" user.email "$git_email"
-        info "$(_t "Git identity saved to ~/.config/git/local.gitconfig" "Identidad Git guardada en ~/.config/git/local.gitconfig")"
-      fi
-    fi
-  fi
-
-  local mode_choice=0
-  prompt_choice mode_choice "$(_t "Step 6: Select Base System Installation Scope" "Paso 6: Selecciona el Alcance de la Instalación Base")" \
-    "$(_t "Complete: Install base packages (repo/AUR) + Deploy Stow symlinks [Recommended]" "Completo: Instalar paquetes del sistema (repo/AUR) + Enlaces Stow [Recomendado]")" \
-    "$(_t "Symlinks only: Deploy Stow dotfiles symlinks only (No package install / No sudo)" "Solo enlaces: Enlazar dotfiles con Stow (Sin tocar paquetes / Sin sudo)")"
-  if (( mode_choice == 1 )); then
-    MODE_SELECTION="stow"
-    SYSTEM_ENABLED=0
-    STOW_ENABLED=1
+  # 1. Profile.
+  wizard_select profile_choice desktop "$(_t "Choose a profile" "Elige un perfil")" \
+    server "$(_t "Terminal only: shell, Git and CLI tools (VPS, headless)" "Solo terminal: shell, Git y herramientas CLI (VPS, sin pantalla)")" \
+    desktop "$(_t "Server plus the graphical session (theme, fonts, audio, portals)" "Servidor más la sesión gráfica (tema, fuentes, audio, portales)")"
+  if [[ "$profile_choice" == server ]]; then
+    PROFILE=cli
   else
-    MODE_SELECTION="both"
-    SYSTEM_ENABLED=1
-    STOW_ENABLED=1
+    PROFILE=desktop
   fi
 
-  printf '\n%b' "$C_BLUE"
-  cat <<EOF
-╭─────────────────────────────────────────────────────────────╮
-│               BASE REPO INSTALLATION SUMMARY                │
-├─────────────────────────────────────────────────────────────┤
-EOF
-  printf '│  • %-20s %-33s│\n' "$(_t "Base Profile:" "Perfil Base:")" "$PROFILE"
-  local wms_str="${WMS[*]:-(none)}"
-  printf '│  • %-20s %-33s│\n' "$(_t "Window Managers:" "Window Managers:")" "$wms_str"
-  local walls_str="No"
-  (( add_walls == 1 )) && walls_str="$(_t "Yes" "Sí")"
-  printf '│  • %-20s %-33s│\n' "$(_t "Wallpapers:" "Wallpapers:")" "$walls_str"
-  local overlay_str="No"
-  [[ -z "$OVERLAY_PATH" ]] || overlay_str=$(prettify_path "$OVERLAY_PATH")
-  printf '│  • %-20s %-33s│\n' "$(_t "Private Overlay:" "Overlay Privado:")" "$overlay_str"
-  printf '│  • %-20s %-33s│\n' "$(_t "Operation Mode:" "Modo de Operación:")" "$MODE_SELECTION"
-  printf '│  • %-20s %-33s│\n' "$(_t "Target Home:" "Directorio Target:")" "$(prettify_path "$TARGET_DIR")"
-  cat <<'EOF'
-╰─────────────────────────────────────────────────────────────╯
-EOF
-  printf '%b\n' "$C_RESET"
+  # 2. Window managers, only on desktop.
+  WMS=()
+  if [[ "$PROFILE" == desktop ]]; then
+    for wm_dir in "$LAYERS_DIR"/wm/*/; do
+      [[ -f "$wm_dir/layer.conf" ]] || continue
+      wm_dir=${wm_dir%/}
+      wm_names+=("${wm_dir##*/}")
+      wm_descriptions+=("$(wizard_layer_description "$wm_dir" description)")
+    done
+    if (( ${#wm_names[@]} > 0 )); then
+      wizard_multiselect picked "$(_t "Window managers (none, one or several)" "Gestores de ventanas (ninguno, uno o varios)")" \
+        wm_names wm_descriptions
+      for index in "${picked[@]}"; do
+        WMS+=("${wm_names[index]}")
+      done
+    fi
+  fi
+  WM=${WMS[0]:-}
 
-  local final_choice=0
-  prompt_choice final_choice "$(_t "Step 7: How would you like to proceed with Base?" "Paso 7: ¿Cómo deseas proceder con la Base?")" \
-    "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
-    "$(_t "Dry-run simulation (Check actions without modifying)" "Simulación previa (Dry-Run: ver qué se tocaría sin modificar)")" \
-    "$(_t "Cancel and exit" "Cancelar y salir")"
+  # 3. Extras that fit the profile and WMs.
+  wizard_collect_extras
+  picked=()
+  if (( ${#WIZARD_EXTRA_NAMES[@]} > 0 )); then
+    wizard_multiselect picked "$(_t "Extras (optional, none selected by default)" "Extras (opcionales, ninguno marcado por defecto)")" \
+      WIZARD_EXTRA_NAMES WIZARD_EXTRA_DESCRIPTIONS
+  fi
+  FEATURES=() OPTIONAL_LAYERS=()
+  for index in "${picked[@]}"; do
+    case "${WIZARD_EXTRA_KINDS[index]}" in
+      layer) OPTIONAL_LAYERS+=("${WIZARD_EXTRA_NAMES[index]}") ;;
+      feature) FEATURES+=("${WIZARD_EXTRA_NAMES[index]}") ;;
+      component) components+=("${WIZARD_EXTRA_NAMES[index]}") ;;
+    esac
+  done
 
+  # 4. Overlay.
+  wizard_choose_overlay
+
+  case "$MODE_SELECTION" in
+    stow) mode=$(_t "links only (no packages)" "solo enlaces (sin paquetes)") ;;
+    packages) mode=$(_t "packages only" "solo paquetes") ;;
+    *) mode=$(_t "packages and links" "paquetes y enlaces") ;;
+  esac
+  overlay_text=$(_t "none" "ninguno")
+  [[ -z "$OVERLAY_PATH" ]] || overlay_text=$(prettify_path "$OVERLAY_PATH")
+  [[ -z "$WIZARD_OVERLAY_URL" ]] || overlay_text="$WIZARD_OVERLAY_URL ($(_t "cloned on apply" "se clona al aplicar"))"
+  local -a extras=("${OPTIONAL_LAYERS[@]}" "${FEATURES[@]}" "${components[@]}")
+  wizard_heading "Plan"
+  if [[ "$PROFILE" == cli ]]; then
+    wizard_plan_line "$(_t "Profile:" "Perfil:")" "$profile_choice (cli)"
+  else
+    wizard_plan_line "$(_t "Profile:" "Perfil:")" "$profile_choice"
+  fi
+  [[ "$PROFILE" != desktop ]] || wizard_plan_line "WMs:" "${WMS[*]:-$(_t "none" "ninguno")}"
+  wizard_plan_line "Extras:" "${extras[*]:-$(_t "none" "ninguno")}"
+  wizard_plan_line "Overlay:" "$overlay_text"
+  wizard_plan_line "$(_t "Mode:" "Modo:")" "$mode"
+  wizard_plan_line "Target:" "$(prettify_path "$TARGET_DIR")"
+
+  wizard_select final_choice cancel "$(_t "How do you want to continue?" "¿Cómo deseas continuar?")" \
+    apply "$(_t "Apply the plan now" "Aplicar el plan ahora")" \
+    dry-run "$(_t "Show what would change without modifying anything" "Mostrar qué cambiaría sin modificar nada")" \
+    cancel "$(_t "Exit without changes" "Salir sin cambios")"
   case "$final_choice" in
-    0) APPLY=1 ;;
-    1) APPLY=0 ;;
-    2)
-      info "$(_t "Operation cancelled by user." "Operación cancelada por el usuario.")"
+    cancel)
+      info "$(_t "Setup cancelled; nothing was changed." "Configuración cancelada; no se modificó nada.")"
       return 0
+      ;;
+    apply)
+      APPLY=1
+      [[ -z "$WIZARD_OVERLAY_URL" ]] || wizard_clone_overlay
+      ;;
+    dry-run)
+      APPLY=0
+      [[ -z "$WIZARD_OVERLAY_URL" ]] || \
+        info "$(_t "The dry-run plans without the overlay; it is cloned from $WIZARD_OVERLAY_URL only on apply." "El dry-run planifica sin el overlay; se clona desde $WIZARD_OVERLAY_URL solo al aplicar.")"
       ;;
   esac
 
   COMMAND="bootstrap"
   resolve_wm_layers
   bootstrap_with_optional_components
-  (( add_walls == 0 )) || wizard_add_walls "$APPLY"
-}
-
-# Adds (apply mode $1 = 1) or plans the walls component like `dotfiles add walls`.
-# A subshell keeps a refused add from ending the wizard.
-wizard_add_walls() {
-  local -a add_args=(walls --target "$TARGET_DIR")
-  (( $1 == 1 )) || add_args+=(--dry-run)
-  ( cmd_add "${add_args[@]}" ) || \
-    warn "$(_t "The walls component was not added" "El componente walls no se añadió")"
+  for component in "${components[@]}"; do
+    wizard_add_component "$component" "$APPLY"
+  done
+  info "$(_t "Optional system layer (Ly, Limine, DNS-over-TLS, needs sudo): run 'dotfiles system' when you want it." "Capa de sistema opcional (Ly, Limine, DNS-over-TLS, requiere sudo): ejecute 'dotfiles system' cuando la quiera.")"
 }

@@ -119,14 +119,14 @@ Despliega el ecosistema completo con un comando interactivo. Clona el repositori
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
 
-El asistente detectará automáticamente los repositorios existentes en `$HOME/.dotfiles/`, clonará los faltantes si lo deseas, configurará los gestores de ventanas seleccionados (MangoWM, BSPWM o ambos), el componente de wallpapers (`dotfiles add walls`) y la capa privada (o su fallback de identidad Git local).
+El asistente es un único flujo guiado corto (ver abajo): perfil, gestores de ventanas, extras y overlay, y luego el plan.
 
 ### 2. Si ya Clonaste el Repositorio
 
-Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el menú orquestador interactivo:
+Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el asistente guiado:
 
 ```bash
-# Opción A: Abrir el menú interactivo (por defecto en inglés o pregunta interactiva de idioma)
+# Opción A: Abrir el asistente guiado (el idioma sigue a $LANG: es_* es español, lo demás inglés)
 ./bin/dotfiles setup
 
 # Opción B: Ejecutar directamente en español
@@ -136,9 +136,14 @@ Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el menú o
 ./install.sh
 ```
 
-El menú principal te permite elegir entre:
-- **Asistente de Configuración Guiada:** Onboarding paso a paso para el sistema base que ofrece los componentes opcionales (wallpapers con `dotfiles add walls`, la capa de sistema con `dotfiles system`).
-- **Configuración Modular Individual:** Lanzar directamente el asistente guiado de cualquier componente por separado o realizar tareas de mantenimiento del entorno (`sync`, `update`, `doctor`, `unlink`).
+`setup` hace cuatro preguntas y luego muestra el plan:
+
+1. **Perfil:** `server` (shell, Git y herramientas CLI, la capa `cli`) o `desktop` (añade la sesión gráfica).
+2. **Gestores de ventanas** (solo desktop): ninguno, uno o varios de las capas de `layers/wm/`.
+3. **Extras:** ninguno viene marcado. La lista se genera al ejecutar a partir de las capas opcionales, las features declaradas en `layer.conf` y los componentes de `components.conf`, cada uno con su `description`, y solo muestra lo compatible con el perfil y los gestores elegidos. Una capa, feature o componente nuevo aparece sin tocar el asistente.
+4. **Overlay:** un overlay con `layers/` en `~/.dotfiles-private` (o guardado en el recibo) se ofrece con Sí por defecto; si no, pega una URL Git, que se clona en `~/.dotfiles-private` solo al aplicar, o pulsa Enter para omitirlo. Sin overlay, la configuración Git pública queda fail-closed hasta que configures una identidad.
+
+Después elige `apply`, `dry-run` o `cancel` (el valor por defecto). Aplicar sigue el mismo camino que `bootstrap --apply` y luego añade los componentes elegidos. Responde con números o nombres; una respuesta vacía o el fin de la entrada toman el valor por defecto, así que el asistente también se puede guiar con entrada por tubería. Los flags como `--stow-only`, `--target` y `--lang` siguen aplicando. El mantenimiento sigue en sus propios comandos (`sync`, `update`, `doctor`, `unlink`) y la capa de sistema se aplica aparte con `dotfiles system`.
 
 ### 3. Orquestación Manual por Línea de Comandos
 
@@ -163,19 +168,21 @@ También puedes orquestar los componentes directamente mediante flags explícito
     --overlay "$HOME/.dotfiles-private" \
     --apply
   ```
-- **Componentes Externos (`add`):** Los repositorios que no son capas, como la colección de fondos [walls](https://github.com/anthonyportugal/walls), se declaran en [`components.conf`](components.conf), uno por línea: `nombre url ref [src=dst ...]`, donde `ref` es el SHA completo del commit fijado, `src` una ruta dentro del componente y `dst` una ruta dentro de tu home. `add` clona el componente en `~/.local/share/dotfiles/<nombre>`, fija el commit y enlaza cada `dst` a su `src`. Un enlace simbólico existente en `dst` (como el antiguo `~/.local/share/wallpapers`) se reemplaza; un archivo o directorio real se rechaza antes de cambiar nada. El componente queda registrado en `~/.local/state/dotfiles/components.receipt`, así `sync` lo re-aplica y `update` lo mueve al commit que fije el `components.conf` descargado. `--wallpapers` y `--wallpapers-path` se retiraron en favor de este comando:
+- **Componentes Externos (`add`):** Los repositorios que no son capas, como la colección de fondos [walls](https://github.com/anthonyportugal/walls), se declaran en [`components.conf`](components.conf), uno por línea: `nombre url ref [src=dst ...] [-- descripción]`, donde `ref` es el SHA completo del commit fijado, `src` una ruta dentro del componente y `dst` una ruta dentro de tu home. `add` clona el componente en `~/.local/share/dotfiles/<nombre>`, fija el commit y enlaza cada `dst` a su `src`. Un enlace simbólico existente en `dst` (como el antiguo `~/.local/share/wallpapers`) se reemplaza; un archivo o directorio real se rechaza antes de cambiar nada. El componente queda registrado en `~/.local/state/dotfiles/components.receipt`, así `sync` lo re-aplica y `update` lo mueve al commit que fije el `components.conf` descargado. `--wallpapers` y `--wallpapers-path` se retiraron en favor de este comando:
   ```bash
   ./bin/dotfiles add walls --dry-run  # solo muestra el plan
   ./bin/dotfiles add walls
   ```
 
-### 4. Gestión del Ciclo de Vida: Los 5 Comandos Canónicos
+### 4. Gestión del Ciclo de Vida: Comandos
 
-- **Asistente de Configuración Guiada (`setup`):** Lanza el asistente interactivo con soporte bilingüe:
+- **Asistente Guiado (`setup`):** El flujo guiado corto descrito arriba, en inglés o español:
   ```bash
-  ./bin/dotfiles setup            # Inglés por defecto
+  ./bin/dotfiles setup            # idioma según $LANG
   ./bin/dotfiles setup --lang es  # Interfaz en español
   ```
+- **Instalación por flags (`bootstrap`):** La misma instalación sin preguntas; sin `--apply` solo muestra el plan. Ver los ejemplos de la sección 3.
+- **Autocompletado (`completion`):** `./bin/dotfiles completion zsh` (o `bash`) imprime el script de autocompletado.
 - **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features, capas opcionales y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado, más los componentes añadidos con `add`), y valida paquetes sin tocar Git. La única excepción es un componente: sync lo descarga (fetch) cuando el commit fijado en `components.conf` aún no está en su checkout local (por ejemplo, tras un pull que cambió `components.conf`). Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
   ```bash
   ./bin/dotfiles sync

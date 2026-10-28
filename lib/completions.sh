@@ -28,12 +28,15 @@ _dotfiles() {
 
   local -a commands
   commands=(
-    'setup:Interactive guided assistant to configure and install by layers'
+    'setup:Short guided setup (profile, WMs, extras, overlay), then apply, dry-run or cancel'
+    'bootstrap:Installs the selection given by flags without the wizard (--apply to apply)'
     'sync:Re-synchronizes local symlinks and packages without touching Git'
     'update:Pulls updates from remote repositories (fast-forward) and syncs'
     'doctor:Verifies dependencies, syntax, and symlinks without modifying'
     'unlink:Removes GNU Stow symlinks from the system'
     'add:Adds an external component from components.conf at its pinned commit'
+    'system:Optional system layer (Ly, Limine, DNS-over-TLS) under sudo'
+    'completion:Prints the shell completion script (zsh or bash)'
     'help:Shows help'
   )
 
@@ -50,6 +53,10 @@ _dotfiles() {
     '--target[Target directory]:directory:_files -/'
     '--base-only[Run diagnostics solely for base repository]'
     '--all[Diagnose or synchronize all available components]'
+    '--apply[Apply bootstrap or unlink instead of printing the plan]'
+    '(--packages-only)--stow-only[Links only, no packages]'
+    '(--stow-only)--packages-only[Packages only, no links]'
+    '*--wm[Window manager layer]:wm:(bspwm mangowm all)'
     '(-y --yes)'{-y,--yes}'[Automatic yes to prompts]'
     '(-h --help)'{-h,--help}'[Shows help]'
   )
@@ -64,8 +71,11 @@ _dotfiles() {
       ;;
     args)
       case "$line[1]" in
-        setup|sync|update|doctor|unlink)
+        setup|bootstrap|sync|update|doctor|unlink)
           _arguments -s $common_options
+          ;;
+        completion)
+          _arguments '1:shell:(zsh bash)'
           ;;
         add)
           _arguments -s \
@@ -90,7 +100,7 @@ _dotfiles_completion() {
   local cur prev words cword
   _init_completion || return
 
-  local commands="setup sync update bootstrap doctor unlink add completion help"
+  local commands="setup bootstrap sync update doctor unlink add system completion help"
   local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --overlay --no-overlay --apply --dry-run -h --help"
 
   if (( cword == 1 )); then
