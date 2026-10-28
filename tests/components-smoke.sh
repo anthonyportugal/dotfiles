@@ -249,6 +249,51 @@ grep -q 'tiene cambios locales' "$TEST_ROOT/order.out" || fail "bootstrap no exp
 grep -Fxq 'PROFILE="core"' "$RO/.local/state/dotfiles/dotfiles.receipt" || \
   fail "un componente fallido impidió guardar la selección ya aplicada"
 
+# An applied unlink that filters components out keeps their links and the
+# receipt that tracks them: --packages-only is refused, and a recorded
+# component no longer declared in components.conf is neither unlinked nor
+# forgotten.
+F="$TEST_ROOT/filtered-unlink"
+mkdir -p "$F"
+HOME="$F" "$DOTFILES" bootstrap --profile core --stow-only --apply --target "$F" > /dev/null || fail "bootstrap (filtrado) falló"
+HOME="$F" "$DOTFILES" add walls --target "$F" > /dev/null || fail "add (filtrado) falló"
+filtered_kept() {
+  [[ -L "$F/.local/share/wallpapers" && -L "$F/.local/bin/walls" ]] || fail "$1 retiró los enlaces del componente: $output"
+  grep -Fxq 'COMPONENTS="walls"' "$F/.local/state/dotfiles/components.receipt" 2>/dev/null || \
+    fail "$1 borró el recibo de componentes: $output"
+}
+status=0
+output=$(HOME="$F" "$DOTFILES" unlink --profile core --target "$F" --apply --packages-only 2>&1) || status=$?
+(( status == 2 )) || fail "unlink --packages-only terminó con $status: $output"
+filtered_kept "unlink --apply --packages-only"
+printf '# empty\n' > "$TEST_ROOT/empty.conf"
+output=$(DOTFILES_COMPONENTS_FILE="$TEST_ROOT/empty.conf" HOME="$F" "$DOTFILES" unlink --profile core --target "$F" --apply 2>&1) || \
+  fail "unlink con el componente filtrado falló: $output"
+[[ ! -L "$F/.zshrc" ]] || fail "unlink con el componente filtrado no retiró la base: $output"
+filtered_kept "un unlink con el componente filtrado"
+
+# A target reached through symlinked directories (the home itself and its
+# .local/share) still finds the checkout: sync, doctor and unlink neither
+# re-clone, refuse nor fail.
+SR="$TEST_ROOT/symlinked-real"
+SL="$TEST_ROOT/symlinked-home"
+mkdir -p "$SR/.local" "$TEST_ROOT/symlinked-share"
+ln -s "$SR" "$SL"
+ln -s "$TEST_ROOT/symlinked-share" "$SR/.local/share"
+HOME="$SR" "$DOTFILES" bootstrap --profile core --stow-only --apply --target "$SR" > /dev/null || fail "bootstrap (symlink) falló"
+HOME="$SR" "$DOTFILES" add walls --target "$SR" > /dev/null || fail "add (symlink) falló"
+SYM_INODE=$(stat -c %i -- "$SR/.local/share/dotfiles/walls/.git")
+output=$(HOME="$SL" "$DOTFILES" sync --stow-only --target "$SL" 2>&1) || fail "sync con --target enlazado falló: $output"
+[[ "$(stat -c %i -- "$SR/.local/share/dotfiles/walls/.git")" == "$SYM_INODE" ]] || fail "sync con --target enlazado re-clonó: $output"
+output=$(HOME="$SL" "$DOTFILES" doctor --profile core --stow-only --target "$SL" 2>&1) || \
+  fail "doctor con --target enlazado falló: $output"
+[[ "$output" == *'Component (walls): OK'* && "$output" != *'FAIL'* ]] || fail "doctor con --target enlazado no validó el componente: $output"
+output=$(HOME="$SL" "$DOTFILES" unlink --profile core --target "$SL" --apply 2>&1) || \
+  fail "unlink con --target enlazado falló: $output"
+[[ ! -L "$SR/.local/share/wallpapers" && ! -L "$SR/.local/bin/walls" ]] || fail "unlink con --target enlazado conservó los enlaces: $output"
+[[ ! -e "$SR/.local/state/dotfiles/components.receipt" && -d "$SR/.local/share/dotfiles/walls/.git" ]] || \
+  fail "unlink con --target enlazado no limpió el recibo o borró el checkout: $output"
+
 # unlink: the dry run keeps everything; --apply removes only links into the
 # checkout, keeps the checkout and clears the components receipt.
 ln -sfn "$TEST_ROOT/elsewhere/walls" "$H/.local/bin/walls"

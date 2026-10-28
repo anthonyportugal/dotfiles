@@ -98,11 +98,15 @@ recorded_components() {
 # Returns 1 when the checkout of $1 does not exist yet; stops when it exists
 # but is not a clean clone of the declared URL.
 component_checkout_ready() {
-  local name=$1 dir origin changes
+  local name=$1 dir toplevel origin changes
 
   dir=$(component_dir "$name")
   [[ -e "$dir" || -L "$dir" ]] || return 1
-  if [[ -L "$dir" || ! -d "$dir" || "$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" != "$dir" ]]; then
+  # Git prints the physical toplevel; TARGET_DIR or one of its parents (such
+  # as ~/.local/share) may be a symlink, so both sides are compared canonical.
+  toplevel=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)
+  if [[ -L "$dir" || ! -d "$dir" || -z "$toplevel" || \
+        "$(realpath -e -- "$toplevel")" != "$(realpath -e -- "$dir")" ]]; then
     die "$dir existe pero no es un checkout Git de $name; muévalo antes de continuar"
   fi
   origin=$(git -C "$dir" remote get-url origin 2>/dev/null || true)
@@ -271,14 +275,17 @@ doctor_component() {
 }
 
 # Removes (apply mode $1 = 1) the links of the components in array $2 that
-# point into their checkout, keeps the checkouts and clears the receipt.
+# point into their checkout, keeps the checkouts and forgets them in the receipt.
 unlink_components() {
   local apply_mode=$1 name dir link path destination
   local -n unlink_components_ref=$2
   local -a links=()
 
   for name in "${unlink_components_ref[@]}"; do
-    dir=$(component_dir "$name")
+    # Canonical on both sides: the link may spell the checkout through a
+    # symlinked parent; only the parent of the destination is resolved, so a
+    # src that is itself a symlink still counts as inside the checkout.
+    dir=$(realpath -m -- "$(component_dir "$name")")
     read -r -a links <<< "${COMPONENT_LINKS[$name]}"
     for link in "${links[@]}"; do
       path="$TARGET_DIR/${link#*=}"
@@ -286,6 +293,7 @@ unlink_components() {
       destination=$(readlink -- "$path")
       [[ "$destination" == /* ]] || destination="${path%/*}/$destination"
       destination=$(realpath -m -s -- "$destination")
+      destination="$(realpath -m -- "${destination%/*}")/${destination##*/}"
       if [[ "$destination" != "$dir/"* ]]; then
         warn "$path enlaza fuera del checkout de $name ($destination); se conserva"
         continue
@@ -299,7 +307,27 @@ unlink_components() {
     done
     info "El checkout de $name se conserva en $dir"
   done
-  (( apply_mode == 0 )) || rm -f -- "$(receipt_path components)"
+  (( apply_mode == 0 )) || forget_unlinked_components "$2"
+}
+
+# Drops from the receipt only the components in array $1, which were just
+# unlinked; recorded components that were filtered out stay tracked.
+forget_unlinked_components() {
+  local -A saved=()
+  local -a entries=() remaining=()
+  local entry
+
+  read_receipt components saved || return 0
+  read -r -a entries <<< "${saved[COMPONENTS]:-}"
+  for entry in "${entries[@]}"; do
+    array_contains "$1" "$entry" || remaining+=("$entry")
+  done
+  (( ${#remaining[@]} < ${#entries[@]} )) || return 0
+  if (( ${#remaining[@]} == 0 )); then
+    rm -f -- "$(receipt_path components)"
+  else
+    write_receipt components COMPONENTS="${remaining[*]}"
+  fi
 }
 
 cmd_add() {

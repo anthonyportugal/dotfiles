@@ -176,7 +176,7 @@ You can also orchestrate components directly using explicit flags:
   ./bin/dotfiles setup            # English by default
   ./bin/dotfiles setup --lang es  # Spanish interface
   ```
-- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap, plus the components added with `add`), and validates packages without touching Git. Explicit flags such as `--profile` override the saved values:
+- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap, plus the components added with `add`), and validates packages without touching Git. The one exception is a component: sync fetches it when the commit pinned in `components.conf` is not in its local checkout yet (for example after a pull changed `components.conf`). Explicit flags such as `--profile` override the saved values:
   ```bash
   ./bin/dotfiles sync
   ```

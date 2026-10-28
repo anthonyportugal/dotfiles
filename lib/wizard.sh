@@ -284,7 +284,7 @@ EOF
     6) # Wallpapers: the walls component of components.conf
       local w_act=0
       prompt_choice w_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
-        "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
+        "$(_t "Add the component now" "Añadir el componente ahora mismo")" \
         "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
         "$(_t "Cancel and exit" "Cancelar y salir")"
       case "$w_act" in

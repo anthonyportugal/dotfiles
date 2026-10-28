@@ -176,7 +176,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ./bin/dotfiles setup            # Inglés por defecto
   ./bin/dotfiles setup --lang es  # Interfaz en español
   ```
-- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features, capas opcionales y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado, más los componentes añadidos con `add`), y valida paquetes sin tocar Git. Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
+- **Sincronización Local (`sync`):** Re-aplica la selección guardada en esta máquina (perfil, features, capas opcionales y capas de WM, registrada en `~/.local/state/dotfiles/dotfiles.receipt` por cada bootstrap aplicado, más los componentes añadidos con `add`), y valida paquetes sin tocar Git. La única excepción es un componente: sync lo descarga (fetch) cuando el commit fijado en `components.conf` aún no está en su checkout local (por ejemplo, tras un pull que cambió `components.conf`). Los flags explícitos como `--profile` tienen prioridad sobre lo guardado:
   ```bash
   ./bin/dotfiles sync
   ```
