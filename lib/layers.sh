@@ -3,7 +3,9 @@
 #
 # A layer is a directory under layers/ with a layer.conf made of key=value
 # lines. The file is parsed, never sourced. Optional executables in
-# layers/<name>/hooks/ run as separate processes. Requires lib/colors.sh and
+# layers/<name>/hooks/ run as separate processes. `description=` is one line
+# of free text shown by `dotfiles setup`, and `description.<feature>=` does the
+# same for a feature the layer declares in features=. Requires lib/colors.sh and
 # lib/core.sh.
 #
 # Internal locals use the _lyr_ prefix so they cannot shadow the array names
@@ -19,7 +21,8 @@ unset _layers_source
 
 # Both lists are read through array_contains by name.
 # shellcheck disable=SC2034
-LAYER_CONF_KEYS=(requires profiles receipt features prune_dirs prune_links)
+LAYER_CONF_KEYS=(requires profiles receipt features prune_dirs prune_links description)
+LAYER_FEATURE_DESCRIPTION_PATTERN='^description\.[a-z0-9][a-z0-9._-]*$'
 # shellcheck disable=SC2034
 LAYER_HOOK_PHASES=(validate post-link)
 LAYER_NAME_PATTERN='^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$'
@@ -45,6 +48,9 @@ _lyr_validate_value() {
       prune_dirs|prune_links)
         # Relative to TARGET_DIR and never climbing out of it.
         [[ "$_lyr_word" =~ $LAYER_PATH_PATTERN && "/$_lyr_word/" != */../* && "/$_lyr_word/" != */./* ]] ;;
+      description|description.*)
+        # Free text, only ever printed.
+        true ;;
     esac || die "valor inválido para $_lyr_key en $_lyr_file: $_lyr_word"
   done
 }
@@ -59,7 +65,7 @@ read_layer_conf() {
   local -n _lyr_conf_ref=$2
   local _lyr_file="$_lyr_layer_dir/layer.conf"
   local _lyr_raw _lyr_line _lyr_key _lyr_value
-  local -a _lyr_words=()
+  local -a _lyr_words=() _lyr_features=()
   local IFS=$' \t\n'
 
   _lyr_conf_ref=()
@@ -71,13 +77,22 @@ read_layer_conf() {
     [[ "$_lyr_line" == *=* ]] || die "línea inválida en $_lyr_file: $_lyr_line"
     _lyr_key=$(trim_line "${_lyr_line%%=*}")
     _lyr_value=$(trim_line "${_lyr_line#*=}")
-    array_contains LAYER_CONF_KEYS "$_lyr_key" || die "clave desconocida en $_lyr_file: $_lyr_key"
+    array_contains LAYER_CONF_KEYS "$_lyr_key" || [[ "$_lyr_key" =~ $LAYER_FEATURE_DESCRIPTION_PATTERN ]] || \
+      die "clave desconocida en $_lyr_file: $_lyr_key"
     [[ ! -v "_lyr_conf_ref[$_lyr_key]" ]] || die "clave duplicada en $_lyr_file: $_lyr_key"
 
     read -r -a _lyr_words <<< "$_lyr_value"
     _lyr_validate_value "$_lyr_key" "$_lyr_file" "${_lyr_words[@]}"
     _lyr_conf_ref["$_lyr_key"]="${_lyr_words[*]}"
   done < "$_lyr_file"
+
+  # A feature description must name a feature this layer declares.
+  read -r -a _lyr_features <<< "${_lyr_conf_ref[features]:-}"
+  for _lyr_key in "${!_lyr_conf_ref[@]}"; do
+    [[ "$_lyr_key" == description.* ]] || continue
+    array_contains _lyr_features "${_lyr_key#description.}" || \
+      die "$_lyr_key en $_lyr_file describe una feature que no está en features="
+  done
 }
 
 # Optional second layers root (an overlay's layers/). Its layers resolve,

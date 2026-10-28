@@ -2,7 +2,7 @@
 # lib/components.sh - External components declared in components.conf.
 #
 # components.conf is parsed, never sourced. Each entry line is
-#   name url ref [src=dst ...]
+#   name url ref [src=dst ...] [-- description]
 # where ref is the full pinned commit SHA, src a path inside the component
 # checkout and dst a path inside the target home. `dotfiles add <name>` clones
 # the component into ~/.local/share/dotfiles/<name>, checks out the pinned ref
@@ -17,7 +17,7 @@ COMPONENTS_FILE=${DOTFILES_COMPONENTS_FILE:-$REPO_ROOT/components.conf}
 COMPONENT_NAME_PATTERN='^[a-z0-9][a-z0-9-]*$'
 COMPONENTS_LOADED=0
 declare -a COMPONENT_NAMES=()
-declare -A COMPONENT_URLS=() COMPONENT_REFS=() COMPONENT_LINKS=()
+declare -A COMPONENT_URLS=() COMPONENT_REFS=() COMPONENT_LINKS=() COMPONENT_DESCRIPTIONS=()
 
 # True when $1 is a relative path without empty, '.' or '..' segments.
 component_path_valid() {
@@ -33,7 +33,7 @@ component_path_valid() {
 
 # Parses components.conf once; any invalid entry stops the command.
 load_components() {
-  local raw line where name url ref link src dst lineno=0
+  local raw line where name url ref link src dst description lineno=0
   local -a fields=()
   local -A declared_by=()
 
@@ -46,6 +46,14 @@ load_components() {
     line=$(trim_line "$raw")
     [[ -n "$line" && "$line" != \#* ]] || continue
     where="$COMPONENTS_FILE:$lineno"
+    # Everything after a standalone `--` is a free-text description.
+    description=""
+    if [[ "$line" == *" --" ]]; then
+      line=$(trim_line "${line% --}")
+    elif [[ "$line" == *" -- "* ]]; then
+      description=$(trim_line "${line#*" -- "}")
+      line=$(trim_line "${line%%" -- "*}")
+    fi
     read -r -a fields <<< "$line"
     (( ${#fields[@]} >= 3 )) || die "$where: entrada incompleta, se espera: nombre url ref [src=dst ...]"
     name=${fields[0]} url=${fields[1]} ref=${fields[2]}
@@ -67,6 +75,9 @@ load_components() {
     COMPONENT_URLS["$name"]=$url
     COMPONENT_REFS["$name"]=$ref
     COMPONENT_LINKS["$name"]="${fields[*]:3}"
+    # Read by `dotfiles setup` (lib/wizard.sh).
+    # shellcheck disable=SC2034
+    COMPONENT_DESCRIPTIONS["$name"]=$description
   done < "$COMPONENTS_FILE"
 }
 

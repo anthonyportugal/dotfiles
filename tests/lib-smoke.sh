@@ -245,6 +245,17 @@ done
 make_layer bad-feature 'features=Bad_Feature\n'
 expect_fail "valor inválido para features" "declare -A conf=(); read_layer_conf '$LAYERS/bad-feature' conf"
 
+# --- layers: description= and description.<feature>= (free text, never run) ---
+# The $(...) below is meant literally: it must never run.
+# shellcheck disable=SC2016
+make_layer described 'features=extra-feat\ndescription=Tools: $(touch pwned) and   more\ndescription.extra-feat=Feature text\n'
+output=$(cd "$TEST_ROOT" && run_engine "declare -A conf=(); read_layer_conf '$LAYERS/described' conf; printf '%s|%s' \"\${conf[description]}\" \"\${conf[description.extra-feat]}\"")
+# shellcheck disable=SC2016
+[[ "$output" == 'Tools: $(touch pwned) and more|Feature text' ]] || fail "read_layer_conf no leyó las descripciones: '$output'"
+[[ ! -e "$TEST_ROOT/pwned" ]] || fail "read_layer_conf ejecutó una descripción"
+make_layer undeclared-description 'features=extra-feat\ndescription.other=Text\n'
+expect_fail "describe una feature que no está en features=" "declare -A conf=(); read_layer_conf '$LAYERS/undeclared-description' conf"
+
 # --- layer operations: feature manifests, root links and target checks ---------
 OPS_ROOT="$TEST_ROOT/ops-layers"
 OPS_LAYER="$OPS_ROOT/feat"
