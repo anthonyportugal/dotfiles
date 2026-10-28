@@ -31,9 +31,9 @@ WM_PROFILE_SET=0
 declare -a WMS=()
 declare -A WM_PROFILES=()
 
-WALLPAPERS=0
-WALLPAPERS_PATH=""
-WALLPAPERS_ENTRYPOINT=""
+# External components (components.conf) recorded in the target's receipt.
+declare -a RECORDED_COMPONENTS=()
+ADD_ARGS=()
 
 # Overlay: a second layers root (--overlay DIR), usually a private repository.
 OVERLAY_PATH=""
@@ -96,6 +96,8 @@ source "$LIB_DIR/packages.sh"
 source "$LIB_DIR/links.sh"
 # shellcheck source=../lib/receipts.sh
 source "$LIB_DIR/receipts.sh"
+# shellcheck source=../lib/components.sh
+source "$LIB_DIR/components.sh"
 # shellcheck source=../lib/layers.sh
 source "$LIB_DIR/layers.sh"
 # shellcheck source=../lib/layer_ops.sh
@@ -143,15 +145,19 @@ Uso:
   $PROGRAM_NAME update [opciones]
   $PROGRAM_NAME doctor [opciones]
   $PROGRAM_NAME unlink [opciones]
+  $PROGRAM_NAME add NOMBRE [--target DIR] [-n|--dry-run]
   $PROGRAM_NAME system [setup|doctor] [opciones]
   $PROGRAM_NAME help
 
 Comandos:
   setup       Asistente interactivo guiado para configurar e instalar por capas.
-  sync        Re-aplica la selección guardada (perfil, capas, WMs) sin tocar Git.
-  update      Descarga actualizaciones (fast-forward) y re-aplica la selección guardada.
-  doctor      Comprueba dependencias, sintaxis y enlaces sin modificar nada.
-  unlink      Retira únicamente los enlaces Stow del sistema.
+  sync        Re-aplica la selección guardada (perfil, capas, WMs, componentes) sin tocar Git.
+  update      Descarga el repositorio público y el overlay (fast-forward) y re-aplica la
+              selección guardada; los componentes pasan a su nueva ref fijada.
+  doctor      Comprueba dependencias, sintaxis, enlaces y componentes sin modificar nada.
+  unlink      Retira los enlaces Stow y los de los componentes (conserva sus checkouts).
+  add         Añade un componente externo de components.conf (p. ej. walls): lo clona en
+              ~/.local/share/dotfiles/NOMBRE en su commit fijado y crea sus enlaces.
   system      Capa opcional de sistema (Ly, Limine, DNS-over-TLS) con sudo explícito;
               nunca la ejecutan bootstrap, sync ni update. Ver '$PROGRAM_NAME system help'.
 
@@ -182,6 +188,7 @@ Ejemplos:
   $PROGRAM_NAME update
   $PROGRAM_NAME doctor
   $PROGRAM_NAME unlink
+  $PROGRAM_NAME add walls
 EOF
   else
     cat <<EOF
@@ -191,15 +198,19 @@ Usage:
   $PROGRAM_NAME update [options]
   $PROGRAM_NAME doctor [options]
   $PROGRAM_NAME unlink [options]
+  $PROGRAM_NAME add NAME [--target DIR] [-n|--dry-run]
   $PROGRAM_NAME system [setup|doctor] [options]
   $PROGRAM_NAME help
 
 Commands:
   setup       Interactive guided assistant to configure and install by layers.
-  sync        Re-applies the saved selection (profile, layers, WMs) without touching Git.
-  update      Pulls updates (fast-forward) and re-applies the saved selection.
-  doctor      Verifies dependencies, syntax, and symlinks without modifying anything.
-  unlink      Removes GNU Stow symlinks from the system.
+  sync        Re-applies the saved selection (profile, layers, WMs, components) without touching Git.
+  update      Pulls the public repository and the overlay (fast-forward) and re-applies the
+              saved selection; components move to their newly pinned ref.
+  doctor      Verifies dependencies, syntax, symlinks, and components without modifying anything.
+  unlink      Removes GNU Stow symlinks and component links (component checkouts are kept).
+  add         Adds an external component from components.conf (e.g. walls): clones it into
+              ~/.local/share/dotfiles/NAME at its pinned commit and creates its links.
   system      Optional system layer (Ly, Limine, DNS-over-TLS) under an explicit sudo;
               bootstrap, sync and update never run it. See '$PROGRAM_NAME system help'.
 
@@ -230,6 +241,7 @@ Examples:
   $PROGRAM_NAME update
   $PROGRAM_NAME doctor
   $PROGRAM_NAME unlink
+  $PROGRAM_NAME add walls
 EOF
   fi
 }
@@ -290,6 +302,11 @@ parse_args() {
     system)
       # The system layer parses its own options (see lib/system.sh).
       SYSTEM_ARGS=("$@")
+      return 0
+      ;;
+    add)
+      # add parses its own options (see lib/components.sh).
+      ADD_ARGS=("$@")
       return 0
       ;;
     help|-h|--help)
@@ -427,24 +444,8 @@ parse_args() {
         warn "el flag --wm-feature está deprecado; las capacidades están integradas en el perfil desktop del WM"
         shift
         ;;
-      --wallpapers)
-        WALLPAPERS=1
-        COMPONENT_EXPLICIT=1
-        shift
-        ;;
-      --wallpapers-path)
-        require_option_value "$1" "${2-}"
-        WALLPAPERS_PATH=$2
-        WALLPAPERS=1
-        COMPONENT_EXPLICIT=1
-        shift 2
-        ;;
-      --wallpapers-path=*)
-        WALLPAPERS_PATH=${1#*=}
-        require_option_value "--wallpapers-path" "$WALLPAPERS_PATH"
-        WALLPAPERS=1
-        COMPONENT_EXPLICIT=1
-        shift
+      --wallpapers|--wallpapers=*|--wallpapers-path|--wallpapers-path=*)
+        usage_error "${1%%=*} ya no existe: walls es un componente externo de components.conf; use 'dotfiles add walls'"
         ;;
       --overlay)
         require_option_value "$1" "${2-}"
@@ -605,15 +606,6 @@ detect_active_environment() {
       append_unique WMS "bspwm"
     fi
   fi
-
-  if (( WALLPAPERS == 0 )); then
-    if [[ -L "$TARGET_DIR/.local/share/wallpapers" || -L "$TARGET_DIR/Pictures/Wallpapers" || "$COMMAND" == "sync" ]]; then
-      if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
-        WALLPAPERS=1
-      fi
-    fi
-  fi
-
 }
 
 detect_all_environment() {
@@ -623,9 +615,6 @@ detect_all_environment() {
     wm_layer=${wm_layer%/}
     append_unique WMS "${wm_layer##*/}"
   done
-  if [[ -d "$TARGET_DIR/.dotfiles/walls" || -d "$REPO_ROOT/../walls" ]]; then
-    WALLPAPERS=1
-  fi
 }
 
 resolve_wm_layers() {
@@ -655,86 +644,6 @@ resolve_wm_layers() {
   WM="${WMS[0]}"
 }
 
-
-validate_wallpapers_checkout() {
-  local base_root walls_root
-
-  (( WALLPAPERS == 1 )) || return 0
-  command_exists realpath || die "falta el comando requerido: realpath"
-
-  if [[ -z "$WALLPAPERS_PATH" ]]; then
-    if [[ -d "$TARGET_DIR/.dotfiles/walls" ]]; then
-      WALLPAPERS_PATH="$TARGET_DIR/.dotfiles/walls"
-    elif [[ -d "$REPO_ROOT/../walls" ]]; then
-      WALLPAPERS_PATH="$REPO_ROOT/../walls"
-    elif [[ -L "$TARGET_DIR/.local/share/wallpapers" ]]; then
-      local link_dest
-      link_dest=$(readlink -f "$TARGET_DIR/.local/share/wallpapers" || true)
-      if [[ -f "$link_dest/bin/walls" ]]; then
-        WALLPAPERS_PATH=$link_dest
-      elif [[ -f "${link_dest%/*}/bin/walls" ]]; then
-        WALLPAPERS_PATH=${link_dest%/*}
-      fi
-    elif [[ -L "$TARGET_DIR/Pictures/Wallpapers" ]]; then
-      local link_dest
-      link_dest=$(readlink -f "$TARGET_DIR/Pictures/Wallpapers" || true)
-      if [[ -f "$link_dest/bin/walls" ]]; then
-        WALLPAPERS_PATH=$link_dest
-      elif [[ -f "${link_dest%/*}/bin/walls" ]]; then
-        WALLPAPERS_PATH=${link_dest%/*}
-      fi
-    fi
-  fi
-
-  [[ -n "$WALLPAPERS_PATH" ]] || die "--wallpapers requiere un checkout disponible o la opción --wallpapers-path DIR"
-
-  base_root=$(realpath -m -- "$REPO_ROOT")
-  walls_root=$(realpath -m -- "$WALLPAPERS_PATH")
-  [[ -d "$walls_root" ]] || die "el checkout de wallpapers no existe: $walls_root"
-  [[ "$walls_root" != "$base_root" && "$walls_root" != "$base_root/"* ]] || \
-    die "el checkout de wallpapers debe estar fuera del repositorio base: $walls_root"
-
-  WALLPAPERS_ENTRYPOINT="$walls_root/bin/walls"
-  [[ -f "$WALLPAPERS_ENTRYPOINT" && -x "$WALLPAPERS_ENTRYPOINT" ]] || \
-    die "el checkout de wallpapers no expone el entrypoint ejecutable esperado: $WALLPAPERS_ENTRYPOINT"
-  WALLPAPERS_PATH=$walls_root
-}
-
-run_wallpapers_operation() {
-  local operation=$1
-  local apply_mode=$2
-  local -a walls_command=()
-
-  (( WALLPAPERS == 1 )) || return 0
-
-  case "$operation" in
-    doctor)
-      walls_command=("$WALLPAPERS_ENTRYPOINT" doctor --target "$TARGET_DIR")
-      ;;
-    bootstrap)
-      if [[ "$apply_mode" == 1 ]]; then
-        walls_command=("$WALLPAPERS_ENTRYPOINT" link --target "$TARGET_DIR")
-      else
-        info "Simulando enlace de wallpapers (ejecute con --apply para aplicar)"
-        format_command "$WALLPAPERS_ENTRYPOINT" link --target "$TARGET_DIR"
-        return 0
-      fi
-      ;;
-    unlink)
-      if [[ "$apply_mode" == 1 ]]; then
-        walls_command=("$WALLPAPERS_ENTRYPOINT" unlink --target "$TARGET_DIR")
-      else
-        info "Simulando desvinculación de wallpapers (ejecute con --apply para aplicar)"
-        format_command "$WALLPAPERS_ENTRYPOINT" unlink --target "$TARGET_DIR"
-        return 0
-      fi
-      ;;
-  esac
-
-  info "Operando sobre repositorio de wallpapers ($WALLPAPERS_PATH)"
-  format_command "${walls_command[@]}"
-  "${walls_command[@]}"
-}
 
 # Validates the selected overlay and adds its layers and features to the
 # discovered ones. Runs once; a recorded overlay that is gone stops here.
@@ -767,7 +676,7 @@ prepare_overlay() {
     read_layer_conf "$LAYER_OVERLAY_ROOT/$name" conf
     # Each layer keeps its own receipt; the public ones are never shared.
     receipt=${conf[receipt]:-$name}
-    if [[ "$receipt" == dotfiles || -e "$LAYERS_DIR/$receipt" || -e "$LAYERS_DIR/wm/$receipt" ]]; then
+    if [[ "$receipt" == dotfiles || "$receipt" == components || -e "$LAYERS_DIR/$receipt" || -e "$LAYERS_DIR/wm/$receipt" ]]; then
       die "la capa $name del overlay usa un recibo reservado: $receipt"
     fi
     read -r -a declared <<< "${conf[features]:-}"
@@ -986,9 +895,12 @@ prepare_selection() {
   done
   printf '  %-24s %s\n' 'Target:' "$TARGET_DIR"
 
-  if (( WALLPAPERS == 1 )); then
-    printf '  %-24s %s\n' 'Wallpapers:' "$WALLPAPERS_PATH"
+  # Components are links: --packages-only and doctor --base-only skip them.
+  RECORDED_COMPONENTS=()
+  if (( STOW_ENABLED == 1 && BASE_ONLY == 0 )); then
+    recorded_components RECORDED_COMPONENTS
   fi
+  (( ${#RECORDED_COMPONENTS[@]} == 0 )) || print_array "Componentes" RECORDED_COMPONENTS
 
   if [[ -n "$OVERLAY_PATH" ]]; then
     printf '  %-24s %s\n' 'Overlay:' "$OVERLAY_PATH"
@@ -1036,7 +948,7 @@ bootstrap_with_optional_components() {
     save_selection_receipt
     (( STOW_ENABLED == 0 )) || link_cli_command
   fi
-  run_wallpapers_operation bootstrap "$APPLY" || die "falló la vinculación del repositorio de wallpapers"
+  apply_components "$APPLY" RECORDED_COMPONENTS
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
     local -a sys_flags=()
@@ -1074,15 +986,15 @@ doctor_with_optional_components() {
     validate_cli_command || result=1
   fi
 
-  if (( WALLPAPERS == 1 )); then
-    if run_wallpapers_operation doctor 0; then
-      report_items+=("  ✓ Wallpapers (walls): OK")
+  local name
+  for name in "${RECORDED_COMPONENTS[@]}"; do
+    if doctor_component "$name"; then
+      report_items+=("  ✓ Component ($name): OK")
     else
-      report_items+=("  ✗ Wallpapers (walls): FAIL")
-      error "Doctor: falló la validación del repositorio de wallpapers"
+      report_items+=("  ✗ Component ($name): FAIL")
       result=1
     fi
-  fi
+  done
 
   printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "=== Composite Doctor Summary ===" "=== Resumen del Doctor Compuesto ===")" "$C_RESET"
   local item
@@ -1114,7 +1026,7 @@ unlink_with_optional_components() {
 
   run_selected_layers unlink "$APPLY" reverse || die "falló el unlink de la capa $FAILED_LAYER"
   (( APPLY == 0 )) || unlink_cli_command
-  run_wallpapers_operation unlink "$APPLY" || die "falló el unlink del repositorio de wallpapers"
+  unlink_components "$APPLY" RECORDED_COMPONENTS
   # Only once every component is gone, so a failed unlink can be retried
   # with the same saved selection.
   (( APPLY == 0 )) || rm -f -- "$(receipt_path dotfiles)"
@@ -1204,7 +1116,6 @@ sync_environment() {
   fi
 
   resolve_wm_layers
-  validate_wallpapers_checkout
 
   APPLY=1
   bootstrap_with_optional_components
@@ -1234,19 +1145,15 @@ update_from_remote() {
   repos_to_update+=("$REPO_ROOT")
 
   # The overlay of the command line or of the saved selection is pulled too.
-  local candidate overlay=$OVERLAY_PATH
+  # Components are not pulled: the sync below moves them to their pinned ref.
+  local overlay=$OVERLAY_PATH
   local -A saved_selection=()
   if [[ -z "$overlay" ]] && (( NO_OVERLAY == 0 )) && read_receipt dotfiles saved_selection; then
     overlay=${saved_selection[OVERLAY]:-}
   fi
-  for candidate in ${overlay:+"$overlay"} \
-    "$REPO_ROOT/../walls" "$TARGET_DIR/.dotfiles/walls"; do
-    if [[ -d "$candidate/.git" ]]; then
-      local real_cand
-      real_cand=$(realpath -m "$candidate")
-      append_unique repos_to_update "$real_cand"
-    fi
-  done
+  if [[ -n "$overlay" && -d "$overlay/.git" ]]; then
+    append_unique repos_to_update "$(realpath -m -- "$overlay")"
+  fi
 
   local -a updated_repos=()
   local repo system_range=""
@@ -1312,7 +1219,6 @@ cmd_doctor() {
   fi
 
   resolve_wm_layers
-  validate_wallpapers_checkout
   doctor_with_optional_components
 }
 
@@ -1336,7 +1242,6 @@ main() {
       ;;
     bootstrap)
       resolve_wm_layers
-      validate_wallpapers_checkout
       bootstrap_with_optional_components
       ;;
     doctor)
@@ -1344,7 +1249,6 @@ main() {
       ;;
     unlink)
       resolve_wm_layers
-      validate_wallpapers_checkout
       cmd_unlink
       ;;
     completion)
@@ -1352,6 +1256,9 @@ main() {
       ;;
     system)
       cmd_system "${SYSTEM_ARGS[@]}"
+      ;;
+    add)
+      cmd_add "${ADD_ARGS[@]}"
       ;;
   esac
 }

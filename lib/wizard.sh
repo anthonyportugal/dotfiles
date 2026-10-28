@@ -84,40 +84,6 @@ prompt_input() {
   fi
 }
 
-wizard_clone_if_missing() {
-  local repo_name=$1
-  local default_url_https=$2
-  local default_url_ssh=$3
-  local target_dest=$4
-
-  if [[ -d "$target_dest" ]]; then
-    return 0
-  fi
-
-  printf '\n%b%s no está presente en %s.%b\n' "$C_YELLOW" "$repo_name" "$target_dest" "$C_RESET"
-  if prompt_yes_no "¿Deseas clonarlo automáticamente desde GitHub?" Y; then
-    local proto_choice=0
-    prompt_choice proto_choice "¿Qué protocolo deseas usar?" \
-      "HTTPS (Recomendado / Sin llaves SSH previas)" \
-      "SSH (Requiere claves SSH activas en GitHub)"
-    local clone_url="$default_url_https"
-    if (( proto_choice == 1 )); then
-      clone_url="$default_url_ssh"
-    fi
-
-    info "Clonando $repo_name ($clone_url) en $target_dest..."
-    mkdir -p "$(dirname "$target_dest")"
-    if git clone "$clone_url" "$target_dest"; then
-      info "$repo_name clonado exitosamente."
-      return 0
-    else
-      warn "No se pudo clonar $repo_name automáticamente."
-      return 1
-    fi
-  fi
-  return 1
-}
-
 prettify_path() {
   local p=${1:-}
   local clean
@@ -202,15 +168,11 @@ EOF
   [[ -n "$bspwm_dir" ]] && bspwm_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
   printf '  • BSPWM:    %b\n' "$bspwm_status"
 
-  local walls_dir=""
-  if [[ -d "$REPO_ROOT/../walls" ]]; then
-    walls_dir="$REPO_ROOT/../walls"
-  elif [[ -d "$TARGET_DIR/.dotfiles/walls" ]]; then
-    walls_dir="$TARGET_DIR/.dotfiles/walls"
-  fi
+  # walls is an external component (components.conf), added with `dotfiles add walls`.
   local walls_status
-  walls_status="${C_SUBTEXT}[$(_t "Not present" "No presente")]${C_RESET}"
-  [[ -n "$walls_dir" ]] && walls_status="${C_GREEN}[✓ $(_t "Present" "Presente")]${C_RESET}"
+  walls_status="${C_SUBTEXT}[$(_t "Not added (dotfiles add walls)" "Sin añadir (dotfiles add walls)")]${C_RESET}"
+  [[ ! -e "$TARGET_DIR/.local/share/dotfiles/walls/.git" ]] || \
+    walls_status="${C_GREEN}[✓ $(_t "Added" "Añadido")]${C_RESET}"
   printf '  • Walls:    %b\n' "$walls_status"
 
   # The system layer ships in this repository; show whether it was applied.
@@ -238,7 +200,7 @@ EOF
     "$(_t "Configure BSPWM (X11 Environment)" "Configurar BSPWM (Entorno X11)")" \
     "$(_t "Configure System Layer (Ly, Limine, DNS-over-TLS)" "Configurar Capa del Sistema (Ly, Limine, DNS)")" \
     "$(_t "Configure Private Overlay (Identity, SSH, Work)" "Configurar Overlay Privado (Identidad, SSH, Laboral)")" \
-    "$(_t "Configure Wallpapers (walls)" "Configurar Fondos de Pantalla (walls)")" \
+    "$(_t "Add Wallpapers (dotfiles add walls)" "Añadir Fondos de Pantalla (dotfiles add walls)")" \
     "$(_t "Re-sync Local Environment (Sync links and packages)" "Re-sincronizar Entorno Local (Sync enlaces y paquetes)")" \
     "$(_t "Update from GitHub (Remote Update + Sync)" "Actualizar desde GitHub (Remote Update + Sync)")" \
     "$(_t "Health Diagnostics (Doctor)" "Diagnóstico de Salud (Doctor)")" \
@@ -319,19 +281,16 @@ EOF
       fi
       return 0
       ;;
-    6) # Wallpapers setup
-      local w_path="${walls_dir:-$TARGET_DIR/.dotfiles/walls}"
-      if [[ ! -d "$w_path" ]]; then
-        wizard_clone_if_missing "walls" \
-          "https://github.com/anthonyportugal/walls.git" \
-          "git@github.com:anthonyportugal/walls.git" \
-          "$w_path" || return 1
-      fi
-      if [[ -x "$w_path/bin/walls" ]]; then
-        "$w_path/bin/walls" setup --lang "$DOTFILES_LANG"
-      else
-        error "$(_t "Walls executable not found in $w_path" "Ejecutable walls no encontrado en $w_path")"
-      fi
+    6) # Wallpapers: the walls component of components.conf
+      local w_act=0
+      prompt_choice w_act "$(_t "How would you like to proceed?" "¿Cómo deseas proceder?")" \
+        "$(_t "Apply changes now (--apply)" "Aplicar los cambios ahora mismo (--apply)")" \
+        "$(_t "Dry-run simulation" "Simulación previa (Dry-Run)")" \
+        "$(_t "Cancel and exit" "Cancelar y salir")"
+      case "$w_act" in
+        0) wizard_add_walls 1 ;;
+        1) wizard_add_walls 0 ;;
+      esac
       return 0
       ;;
     7)
@@ -384,20 +343,10 @@ EOF
     3) ;;
   esac
 
-  WALLPAPERS=0
-  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 3: Wallpaper Collection (walls)" "Paso 3: Colección de Fondos de Pantalla (walls)")" "$C_RESET"
-  if prompt_yes_no "$(_t "Integrate wallpaper collection (anthonyportugal/walls)?" "¿Deseas integrar la colección de wallpapers (anthonyportugal/walls)?")" Y; then
-    WALLPAPERS=1
-    local walls_dest="$TARGET_DIR/.dotfiles/walls"
-    wizard_clone_if_missing "walls" \
-      "https://github.com/anthonyportugal/walls.git" \
-      "git@github.com:anthonyportugal/walls.git" \
-      "$walls_dest" || true
-    if [[ -x "$walls_dest/bin/walls" ]]; then
-      if prompt_yes_no "$(_t "Run Wallpapers setup wizard now?" "¿Ejecutar el asistente de wallpapers ahora?")" Y; then
-        "$walls_dest/bin/walls" setup --lang "$DOTFILES_LANG" || true
-      fi
-    fi
+  local add_walls=0
+  printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 3: Wallpaper Collection (dotfiles add walls)" "Paso 3: Colección de Fondos de Pantalla (dotfiles add walls)")" "$C_RESET"
+  if prompt_yes_no "$(_t "Add the wallpaper collection (walls, pinned in components.conf)?" "¿Añadir la colección de wallpapers (walls, fijada en components.conf)?")" Y; then
+    add_walls=1
   fi
 
   printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$(_t "Step 4: Optional System Layer (Ly, Limine & DNS-over-TLS, needs sudo)" "Paso 4: Capa de Sistema Opcional (Ly, Limine y DNS-over-TLS, requiere sudo)")" "$C_RESET"
@@ -445,7 +394,7 @@ EOF
   local wms_str="${WMS[*]:-(none)}"
   printf '│  • %-20s %-33s│\n' "$(_t "Window Managers:" "Window Managers:")" "$wms_str"
   local walls_str="No"
-  (( WALLPAPERS == 1 )) && walls_str="$(_t "Yes" "Sí")"
+  (( add_walls == 1 )) && walls_str="$(_t "Yes" "Sí")"
   printf '│  • %-20s %-33s│\n' "$(_t "Wallpapers:" "Wallpapers:")" "$walls_str"
   local overlay_str="No"
   [[ -z "$OVERLAY_PATH" ]] || overlay_str=$(prettify_path "$OVERLAY_PATH")
@@ -473,7 +422,16 @@ EOF
   esac
 
   COMMAND="bootstrap"
-  validate_wm_checkout
-  validate_wallpapers_checkout
+  resolve_wm_layers
   bootstrap_with_optional_components
+  (( add_walls == 0 )) || wizard_add_walls "$APPLY"
+}
+
+# Adds (apply mode $1 = 1) or plans the walls component like `dotfiles add walls`.
+# A subshell keeps a refused add from ending the wizard.
+wizard_add_walls() {
+  local -a add_args=(walls --target "$TARGET_DIR")
+  (( $1 == 1 )) || add_args+=(--dry-run)
+  ( cmd_add "${add_args[@]}" ) || \
+    warn "$(_t "The walls component was not added" "El componente walls no se añadió")"
 }

@@ -119,7 +119,7 @@ Deploy the entire ecosystem with a single command. It automatically clones the b
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
 
-The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone missing ones, configures selected Window Managers (MangoWM, BSPWM, both, or none), the wallpapers layer, and the private layer (or local Git identity fallback).
+The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone missing ones, configures selected Window Managers (MangoWM, BSPWM, both, or none), the wallpapers component (`dotfiles add walls`), and the private layer (or local Git identity fallback).
 
 ### 2. If You Already Cloned the Repository
 
@@ -137,7 +137,7 @@ If you already have `~/.dotfiles/base` locally, run the interactive orchestrator
 ```
 
 The setup menu allows you to choose between:
-- **Guided Full Setup:** Step-by-step onboarding for the base system and delegates automatically to sub-module wizards (`mango setup`, `bspwm setup`, `walls setup`, `install.sh`).
+- **Guided Full Setup:** Step-by-step onboarding for the base system and offers the optional components (wallpapers through `dotfiles add walls`, the system layer through `dotfiles system`).
 - **Individual Module Configuration:** Directly launch any component's standalone setup wizard or perform environment lifecycle maintenance (`sync`, `update`, `doctor`, `unlink`).
 
 ### 3. Manual Command-Line Orchestration
@@ -156,13 +156,17 @@ You can also orchestrate components directly using explicit flags:
   ```bash
   ./bin/dotfiles bootstrap --profile desktop --layer dev --feature dev-containers --apply
   ```
-- **Compose with WMs, Wallpapers, and the Private Overlay:**
+- **Compose with WMs and the Private Overlay:**
   ```bash
   ./bin/dotfiles bootstrap --profile desktop \
     --wm mangowm --wm bspwm \
-    --wallpapers --wallpapers-path "$HOME/.dotfiles/walls" \
     --overlay "$HOME/.dotfiles-private" \
     --apply
+  ```
+- **External Components (`add`):** Repositories that are not layers, such as the [walls](https://github.com/anthonyportugal/walls) wallpaper collection, are declared in [`components.conf`](components.conf), one per line: `name url ref [src=dst ...]`, where `ref` is the full commit SHA the component is pinned to, `src` a path inside the component and `dst` a path inside your home. `add` clones the component into `~/.local/share/dotfiles/<name>`, checks out the pinned commit and links every `dst` to its `src`. An existing symlink at `dst` (such as the old `~/.local/share/wallpapers` link) is replaced; a real file or directory is refused before anything changes. The component is recorded in `~/.local/state/dotfiles/components.receipt`, so `sync` re-applies it and `update` moves it to the commit a pulled `components.conf` pins. `--wallpapers` and `--wallpapers-path` were removed in favour of this command:
+  ```bash
+  ./bin/dotfiles add walls --dry-run  # print the plan only
+  ./bin/dotfiles add walls
   ```
 
 ### 4. Lifecycle Management: The 5 Canonical Commands
@@ -172,22 +176,22 @@ You can also orchestrate components directly using explicit flags:
   ./bin/dotfiles setup            # English by default
   ./bin/dotfiles setup --lang es  # Spanish interface
   ```
-- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap), and validates packages without touching Git. Explicit flags such as `--profile` override the saved values:
+- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap, plus the components added with `add`), and validates packages without touching Git. Explicit flags such as `--profile` override the saved values:
   ```bash
   ./bin/dotfiles sync
   ```
-- **Remote Update (`update`):** Safely checks Git status across all local repositories under `$HOME/.dotfiles/` (`base`, `walls`, plus the overlay of the saved selection; the WM and system layers live inside `base` under `layers/`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
+- **Remote Update (`update`):** Safely checks Git status of the public repository and of the overlay of the saved selection (the WM and system layers live inside it under `layers/`; components are never pulled, they follow the commit pinned in `components.conf`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
   ```bash
   ./bin/dotfiles update
   ./bin/dotfiles update -y
   ```
-- **System Diagnostics (`doctor`):** Inspects link integrity, shells, and dependencies for base and auto-detects active components (WM, wallpapers) to produce a composite diagnostics report:
+- **System Diagnostics (`doctor`):** Inspects link integrity, shells, and dependencies for base, auto-detects active WM layers and checks every added component (checkout present, at its pinned commit, links in place; a failure suggests `dotfiles add <name>`) to produce a composite diagnostics report:
   ```bash
   ./bin/dotfiles doctor             # Composite diagnostics across active layers
   ./bin/dotfiles doctor --base-only # Isolated diagnostics for base repository only
   ./bin/dotfiles doctor --all       # Audit all repositories available on disk
   ```
-- **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks from the system:
+- **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks and the links of added components that point into their checkout; component checkouts stay in `~/.local/share/dotfiles/`:
   ```bash
   ./bin/dotfiles unlink --apply
   ```
@@ -205,7 +209,7 @@ You can also orchestrate components directly using explicit flags:
 | :--- | :--- | :--- |
 | **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Modern Wayland dynamic tiling session (featured in official MangoWM showcase) | Wayland |
 | **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Standalone classic tiling session (Polybar + Rofi + Picom + Dunst) | X11 |
-| **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection and management CLI | Multi-display |
+| **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection, added with `dotfiles add walls` (see `components.conf`) | Multi-display |
 | **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | System-level configurations (Ly display manager, Limine bootloader, DNS-over-TLS) | Linux System |
 | **`dotfiles-private`** | Private layer for identities, signing keys, and work profiles | Local / Secure |
 | **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | Independent project (AI coding agent harness); installed with its own installer, not by these dotfiles | AI Engineering |

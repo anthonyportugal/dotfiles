@@ -40,12 +40,9 @@ PARENT_DESTINATION="$TEST_ROOT/parent-destination"
 FAKE_BIN="$TEST_ROOT/fake-bin"
 WM_TARGET="$TEST_ROOT/wm target"
 WM_FAILURE_TARGET="$TEST_ROOT/wm failure target"
-WALLS_REPO="$TEST_ROOT/external walls"
-WALLS_LOG="$TEST_ROOT/walls.log"
 mkdir "$TARGET_DIR" "$CONFLICT_DIR" "$PARENT_CONFLICT_DIR" \
   "$PARENT_DESTINATION" "$FAKE_BIN" "$WM_TARGET" \
-  "$WM_FAILURE_TARGET" "$WALLS_REPO" "$WALLS_REPO/bin"
-ln -s "$SCRIPT_DIR/fakes/walls-entrypoint" "$WALLS_REPO/bin/walls"
+  "$WM_FAILURE_TARGET"
 
 # Dry-run, aplicación, doctor e idempotencia sobre un home desechable.
 "$DOTFILES" bootstrap --profile desktop --stow-only --target "$TARGET_DIR"
@@ -242,68 +239,8 @@ grep -q 'no soportado' "$TEST_ROOT/wm-unknown.out" || fail "el rechazo de un WM 
 grep -q 'deprecado' "$TEST_ROOT/wm-feature-deprecate.out" || \
   fail "la opción --wm-feature no produjo advertencia de deprecación"
 
-# A failing optional component after the layers were linked must still leave the
-# selection recorded, so a later sync can restore what is on disk. The walls
-# double fails when its log variable is missing.
-RECEIPT_ORDER_TARGET="$TEST_ROOT/receipt order target"
-mkdir -p "$RECEIPT_ORDER_TARGET"
-if env -u DOTFILES_WALLS_TEST_LOG "$DOTFILES" bootstrap --profile core --stow-only \
-    --target "$RECEIPT_ORDER_TARGET" --wallpapers --wallpapers-path "$WALLS_REPO" --apply \
-    > "$TEST_ROOT/receipt-order.out" 2>&1; then
-  fail "bootstrap ignoró el fallo del componente de wallpapers"
-fi
-[[ -L "$RECEIPT_ORDER_TARGET/.zshrc" ]] || fail "las capas no se enlazaron antes del componente opcional"
-grep -qx 'PROFILE="core"' "$RECEIPT_ORDER_TARGET/.local/state/dotfiles/dotfiles.receipt" 2>/dev/null || \
-  fail "un componente opcional fallido impidió guardar la selección ya aplicada"
-
-# Integración con repositorio de wallpapers (anthonyportugal/walls)
-: > "$WALLS_LOG"
-DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" bootstrap \
-  --profile core --stow-only --target "$TARGET_DIR" \
-  --wallpapers --wallpapers-path "$WALLS_REPO"
-[[ ! -s "$WALLS_LOG" ]] || fail "bootstrap dry-run no debió ejecutar la vinculación de wallpapers"
-
-DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" bootstrap \
-  --profile core --stow-only --target "$TARGET_DIR" \
-  --wallpapers --wallpapers-path "$WALLS_REPO" --apply
-grep -q -- 'link --target' "$WALLS_LOG" || \
-  fail "bootstrap --wallpapers --apply no invocó el comando link"
-
-: > "$WALLS_LOG"
-DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" doctor \
-  --profile core --stow-only --target "$TARGET_DIR" \
-  --wallpapers --wallpapers-path "$WALLS_REPO"
-grep -q -- 'doctor --target' "$WALLS_LOG" || \
-  fail "doctor --wallpapers no invocó el comando doctor"
-
-: > "$WALLS_LOG"
-DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" unlink \
-  --profile core --target "$TARGET_DIR" \
-  --wallpapers --wallpapers-path "$WALLS_REPO"
-[[ ! -s "$WALLS_LOG" ]] || fail "unlink dry-run no debió ejecutar el desvinculado de wallpapers"
-
-DOTFILES_WALLS_TEST_LOG="$WALLS_LOG" "$DOTFILES" unlink \
-  --profile core --target "$TARGET_DIR" \
-  --wallpapers --wallpapers-path "$WALLS_REPO" --apply
-grep -q -- 'unlink --target' "$WALLS_LOG" || \
-  fail "unlink --wallpapers --apply no invocó el comando unlink"
-
-# Validaciones de límites para wallpapers
-if "$DOTFILES" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
-    --wallpapers --wallpapers-path "$REPO_ROOT" > "$TEST_ROOT/walls-nested.out" 2>&1; then
-  fail "se aceptó un checkout de wallpapers dentro del repositorio base"
-fi
-grep -q 'debe estar fuera del repositorio base' "$TEST_ROOT/walls-nested.out" || \
-  fail "no se explicó el límite de independencia del checkout de wallpapers"
-
-BAD_WALLS="$TEST_ROOT/bad walls"
-mkdir "$BAD_WALLS"
-if "$DOTFILES" bootstrap --profile core --stow-only --target "$TARGET_DIR" \
-    --wallpapers --wallpapers-path "$BAD_WALLS" > "$TEST_ROOT/walls-bad-entrypoint.out" 2>&1; then
-  fail "se aceptó un checkout de wallpapers sin bin/walls ejecutable"
-fi
-grep -q 'no expone el entrypoint ejecutable esperado' "$TEST_ROOT/walls-bad-entrypoint.out" || \
-  fail "no se explicó la falta del bin/walls en el checkout de wallpapers"
+# A failing recorded component after the layers were linked must still leave
+# the selection recorded: covered by tests/components-smoke.sh.
 
 # Una colisión debe detenerse antes de modificar el archivo existente.
 touch "$CONFLICT_DIR/.zshrc"

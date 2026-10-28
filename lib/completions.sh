@@ -6,7 +6,16 @@
 # Fallback defaults for standalone execution / linting
 COMPLETION_SHELL=${COMPLETION_SHELL:-zsh}
 
+# Component names come from components.conf when the script is generated, so
+# a new component completes without editing this file.
 cmd_completion() {
+  local names script
+  names=$( (load_components && printf '%s' "${COMPONENT_NAMES[*]}") 2>/dev/null || true)
+  script=$(completion_script)
+  printf '%s\n' "${script//@COMPONENTS@/$names}"
+}
+
+completion_script() {
   local shell_target=${COMPLETION_SHELL:-zsh}
   case "$shell_target" in
     zsh)
@@ -24,6 +33,7 @@ _dotfiles() {
     'update:Pulls updates from remote repositories (fast-forward) and syncs'
     'doctor:Verifies dependencies, syntax, and symlinks without modifying'
     'unlink:Removes GNU Stow symlinks from the system'
+    'add:Adds an external component from components.conf at its pinned commit'
     'help:Shows help'
   )
 
@@ -57,6 +67,12 @@ _dotfiles() {
         setup|sync|update|doctor|unlink)
           _arguments -s $common_options
           ;;
+        add)
+          _arguments -s \
+            '1:component:(@COMPONENTS@)' \
+            '--target[Target directory]:directory:_files -/' \
+            '(-n --dry-run)'{-n,--dry-run}'[Print the plan only]'
+          ;;
         help)
           _describe -t commands 'command' commands
           ;;
@@ -74,8 +90,8 @@ _dotfiles_completion() {
   local cur prev words cword
   _init_completion || return
 
-  local commands="setup sync update bootstrap doctor unlink completion help"
-  local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --wallpapers --wallpapers-path --overlay --no-overlay --apply -h --help"
+  local commands="setup sync update bootstrap doctor unlink add completion help"
+  local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --overlay --no-overlay --apply --dry-run -h --help"
 
   if (( cword == 1 )); then
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -111,12 +127,16 @@ _dotfiles_completion() {
       COMPREPLY=( $(compgen -W "core desktop" -- "$cur") )
       return 0
       ;;
-    --target|--wallpapers-path|--overlay)
+    --target|--overlay)
       COMPREPLY=( $(compgen -d -- "$cur") )
       return 0
       ;;
     completion)
       COMPREPLY=( $(compgen -W "bash zsh" -- "$cur") )
+      return 0
+      ;;
+    add)
+      COMPREPLY=( $(compgen -W "@COMPONENTS@" -- "$cur") )
       return 0
       ;;
   esac
