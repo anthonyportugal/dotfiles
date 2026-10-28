@@ -564,6 +564,11 @@ parse_args() {
     usage_error "--overlay y --no-overlay son mutuamente excluyentes"
   fi
 
+  # setup asks for the selection itself; refuse it instead of dropping it.
+  if [[ "$COMMAND" == "setup" ]] && (( PROFILE_EXPLICIT == 1 || ${#WMS[@]} > 0 || ${#FEATURES[@]} > 0 || ${#OPTIONAL_LAYERS[@]} > 0 )); then
+    usage_error "setup pregunta el perfil, los WMs y los extras; para pasarlos como opciones use bootstrap"
+  fi
+
 
   if [[ "$COMMAND" == "doctor" && "$APPLY" == 1 ]]; then
     usage_error "doctor siempre es read-only y no acepta --apply"

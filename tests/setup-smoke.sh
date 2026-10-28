@@ -188,6 +188,18 @@ SETUP_DOTFILES="$SCRATCH/bin/dotfiles" setup_run "$TEST_ROOT/discover-server" 's
 [[ "$output" != *'gui-extra'* ]] || fail "server ofreció un extra que requiere desktop: $output"
 [[ "$output" == *'cli-extra'*'Fixture terminal extra'* ]] || fail "server no ofreció el extra de terminal: $output"
 
+# Selection options are asked by setup itself, so passing them is refused
+# instead of being dropped silently; bootstrap is the non-interactive path.
+for option in '--feature dev-js' '--layer dev' '--profile cli' '--wm bspwm' '--feature=dev-js'; do
+  refused_home="$TEST_ROOT/refused-$RANDOM"
+  mkdir -p "$refused_home"
+  # shellcheck disable=SC2086 # each option is one flag and its value
+  setup_run "$refused_home" 'server\n\n\napply\n' $option
+  (( status == 2 )) || fail "setup $option no fue rechazado como error de uso (salida $status): $output"
+  [[ "$output" == *bootstrap* ]] || fail "setup $option no remitió a bootstrap: $output"
+  [[ -z "$(ls -A "$refused_home")" ]] || fail "setup $option modificó el target"
+done
+
 # 8. Help cleanup: bootstrap and completion documented, install removed.
 for lang in en es; do
   output=$(DOTFILES_LANG=$lang "$DOTFILES" help)
