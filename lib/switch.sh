@@ -516,21 +516,32 @@ _sw_resolve_overlay() {
     die "el overlay no contiene layers/: $SW_OVERLAY"
 }
 
-# Locates the current install: --from $1, the dotfiles command link, or the
-# legacy ~/.dotfiles ecosystem.
-_sw_detect() {
-  local from=$1 root="" dest cli="$TARGET_DIR/.local/bin/dotfiles"
+# Prints where the current install of TARGET_DIR lives: --from $1, the
+# dotfiles command link, or the legacy ~/.dotfiles ecosystem; fails when
+# none of them is there.
+switch_install_root() {
+  local from=$1 dest cli="$TARGET_DIR/.local/bin/dotfiles"
 
   if [[ -n "$from" ]]; then
-    root=$(realpath -m -- "$from")
-  elif [[ -L "$cli" ]]; then
+    realpath -m -- "$from"
+    return 0
+  fi
+  if [[ -L "$cli" ]]; then
     dest=$(realpath -m -- "$cli")
-    [[ "$dest" != */bin/dotfiles ]] || root=${dest%/bin/dotfiles}
+    if [[ "$dest" == */bin/dotfiles ]]; then
+      printf '%s\n' "${dest%/bin/dotfiles}"
+      return 0
+    fi
   fi
-  if [[ -z "$root" && -d "$TARGET_DIR/.dotfiles/base/home" ]]; then
-    root="$TARGET_DIR/.dotfiles"
-  fi
-  [[ -n "$root" ]] || \
+  [[ -d "$TARGET_DIR/.dotfiles/base/home" ]] || return 1
+  printf '%s\n' "$TARGET_DIR/.dotfiles"
+}
+
+# Locates the current install (switch_install_root) and its kind.
+_sw_detect() {
+  local from=$1 root
+
+  root=$(switch_install_root "$from") || \
     die "no se detectó la instalación actual en $TARGET_DIR (ni $TARGET_DIR/.local/bin/dotfiles ni $TARGET_DIR/.dotfiles/base); indíquela con --from RUTA"
 
   if [[ -d "$root/layers" ]]; then
@@ -927,25 +938,45 @@ _sw_apply() {
   success "Checkout activo: $SW_NEW. Para deshacerlo: $PROGRAM_NAME switch --rollback --apply"
 }
 
-# Restores the last switch (or a change left unfinished) with apply mode $1.
-_sw_rollback() {
-  local apply=$1 dir="" header
+# Prints the transaction a rollback with apply mode $1 restores: a change left
+# unfinished, otherwise the last switch. Stops when there is none.
+switch_rollback_dir() {
+  local apply=$1 dir=""
   dir=$(txn_pending "$apply") || dir="$(txn_root)/switch-last"
   [[ -f "$dir/manifest" ]] || die "no hay ningún cambio que revertir en $TARGET_DIR"
+  printf '%s\n' "$dir"
+}
 
+# Prints the plan of the rollback of transaction $1 in mode $2 (no mode line
+# when empty).
+switch_print_rollback_plan() {
+  local dir=$1 mode=$2 header
   info "Plan de la reversión"
-  printf '  %-24s %s\n' 'Modo:' "$( (( apply == 1 )) && echo apply || echo dry-run)" 'Target:' "$TARGET_DIR" 'Manifiesto:' "$dir/manifest"
+  [[ -z "$mode" ]] || printf '  %-24s %s\n' 'Modo:' "$mode"
+  printf '  %-24s %s\n' 'Target:' "$TARGET_DIR" 'Manifiesto:' "$dir/manifest"
   while IFS= read -r header; do
     [[ "$header" == \#* ]] || continue
     header=${header#\#}
     printf '  %-24s %s\n' "${header%%=*}:" "${header#*=}"
   done < "$dir/manifest"
+}
+
+# Restores the target from transaction $1.
+switch_rollback_apply() {
+  txn_rollback "$1" keep || die "la reversión quedó incompleta; revise los errores y reintente"
+  success "Se restauró el estado anterior al cambio"
+}
+
+# Restores the last switch (or a change left unfinished) with apply mode $1.
+_sw_rollback() {
+  local apply=$1 dir
+  dir=$(switch_rollback_dir "$apply") || exit 1
+  switch_print_rollback_plan "$dir" "$( (( apply == 1 )) && echo apply || echo dry-run)"
   if (( apply == 0 )); then
     info "Dry-run: nada cambió; use --apply para revertir"
     return 0
   fi
-  txn_rollback "$dir" keep || die "la reversión quedó incompleta; revise los errores y reintente"
-  success "Se restauró el estado anterior al cambio"
+  switch_rollback_apply "$dir"
 }
 
 # Detects the current install of TARGET_DIR (realpath) and translates its
@@ -955,7 +986,7 @@ _sw_rollback() {
 # when $1 is not a checkout, nothing is detected or a change is unfinished.
 # Shared by `dotfiles switch` and the setup wizard's migration offer.
 switch_prepare() {
-  local new=$1 from=$2 overlay_arg=$3 no_overlay=$4 with_packages=$5 apply=$6 pending
+  local new=$1 from=$2 overlay_arg=$3 no_overlay=$4 with_packages=$5 apply=$6
 
   SW_ALREADY_ACTIVE=0
   SW_NEW=$(realpath -m -- "$new")
@@ -963,9 +994,7 @@ switch_prepare() {
     die "$SW_NEW no es un checkout de dotfiles (faltan layers/ o bin/dotfiles)"
   grep -q DOTFILES_REPLACEABLE_ROOTS "$SW_NEW/lib/links.sh" 2>/dev/null || \
     die "el checkout $SW_NEW es anterior a 'switch'; actualícelo antes de cambiar a él"
-  if pending=$(txn_pending "$apply"); then
-    die "quedó un cambio sin cerrar en $pending; reviértalo con '$PROGRAM_NAME switch --rollback --apply' antes de continuar"
-  fi
+  switch_check_pending "$apply"
 
   # The new checkout's components.conf decides which components exist (both
   # are read by load_components).
@@ -989,12 +1018,22 @@ switch_prepare() {
   _sw_build_args "$with_packages"
 }
 
+# Stops when a change was left unfinished; with apply mode $1 = 1 one that
+# was stopped before its manifest is discarded first (txn_pending).
+switch_check_pending() {
+  local pending
+  if pending=$(txn_pending "$1"); then
+    die "quedó un cambio sin cerrar en $pending; reviértalo con '$PROGRAM_NAME switch --rollback --apply' antes de continuar"
+  fi
+}
+
 # Checks the prepared switch for collisions and, with apply mode $1 = 1,
-# runs it inside its transaction.
+# runs it inside its transaction. A dry-run ends with the hint to pass
+# --apply unless $2 = 0 (setup gives its own).
 switch_run() {
   _sw_preflight
   if (( $1 == 0 )); then
-    info "Dry-run: nada cambió; use --apply para cambiar de checkout"
+    (( ${2:-1} == 0 )) || info "Dry-run: nada cambió; use --apply para cambiar de checkout"
     return 0
   fi
   _sw_apply

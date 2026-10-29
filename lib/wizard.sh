@@ -473,27 +473,121 @@ _wizard_migrate() {
       info "$(_t "Setup cancelled; nothing was changed." "Configuración cancelada; no se modificó nada.")"
       ;;
     dry-run)
-      switch_run 0 </dev/null
+      switch_run 0 0 </dev/null
       info "$(_t "Dry-run: nothing changed. Run setup again and choose apply to migrate." "Dry-run: nada cambió. Vuelva a ejecutar setup y elija apply para migrar.")"
       ;;
     apply)
+      # Checked again as `dotfiles switch --apply` does before its preflight:
+      # the plan was shown in dry-run mode.
+      switch_check_pending 1
       switch_run 1 </dev/null
       info "$(_t "Migration done; setup starts from this selection next time. To undo it: dotfiles switch --rollback --apply" "Migración hecha; setup partirá de esta selección la próxima vez. Para deshacerla: dotfiles switch --rollback --apply")"
       ;;
   esac
 }
 
+# Prints what keeps the switch from being prepared, when the target is worth
+# telling about: "pending" for a change left unfinished, "install" for another
+# install that is there; nothing otherwise (a fresh home). Only ever run in a
+# subshell.
+_wizard_prepare_blocker() {
+  TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
+  if txn_pending 0 >/dev/null 2>&1; then
+    printf 'pending'
+  elif switch_install_root "" >/dev/null; then
+    printf 'install'
+  fi
+}
+
+# The rollback of the change left unfinished, only ever run in a subshell with
+# errexit: its plan, then apply or cancel (the default), like
+# `dotfiles switch --rollback --apply`.
+_wizard_rollback() {
+  local choice dir
+
+  TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
+  dir=$(switch_rollback_dir 0)
+  switch_print_rollback_plan "$dir" ""
+  wizard_select choice cancel "$(_t "How do you want to continue?" "¿Cómo deseas continuar?")" \
+    apply "$(_t "Undo it now" "Deshacerlo ahora")" \
+    cancel "$(_t "Exit without changes" "Salir sin cambios")"
+  if [[ "$choice" == cancel ]]; then
+    info "$(_t "Setup cancelled; nothing was changed." "Configuración cancelada; no se modificó nada.")"
+    return 0
+  fi
+  dir=$(switch_rollback_dir 1)
+  switch_rollback_apply "$dir"
+  info "$(_t "Run setup again to continue from the restored install." "Vuelva a ejecutar setup para seguir desde la instalación restaurada.")"
+}
+
+# Runs the subshell step $1 with errexit and exits with its status when it
+# failed; sets WIZARD_ENDED otherwise.
+_wizard_end_with() {
+  local status=0
+  set +e
+  ( set -e; "$1" )
+  status=$?
+  set -e
+  (( status == 0 )) || exit "$status"
+  WIZARD_ENDED=1
+}
+
+# When another install or an unfinished change is there but the switch cannot
+# be prepared: shows the switch's own error and what to do, then asks to
+# continue to the questions or cancel (the default, also at the end of
+# input), and offers the rollback first for an unfinished change.
+_wizard_explain_blocker() {
+  local blocker=$1 errors choice
+  local -a choices=()
+
+  errors=$( (_wizard_switch_prepare) 2>&1 >/dev/null ) || true
+  if [[ "$blocker" == pending ]]; then
+    wizard_heading "$(_t "An unfinished change was left in this home" "Quedó un cambio sin cerrar en este home")"
+  else
+    wizard_heading "$(_t "Another install was found, but it cannot be migrated" "Se encontró otra instalación, pero no se puede migrar")"
+  fi
+  [[ -z "$errors" ]] || printf '%s\n' "$errors"
+  if [[ "$blocker" == pending ]]; then
+    printf '%s\n' "$(_t "rollback shows its plan and restores the home as it was before that change; run setup again afterwards." \
+      "rollback muestra su plan y deja el home como estaba antes de ese cambio; después vuelva a ejecutar setup.")"
+    choices=(rollback "$(_t "Undo the unfinished change (its plan first)" "Deshacer el cambio sin cerrar (primero su plan)")")
+  else
+    printf '%s\n' "$(_t "Fix what the error says and run setup again to migrate it, or continue without migrating." \
+      "Corrija lo que indica el error y vuelva a ejecutar setup para migrarla, o siga sin migrar.")"
+  fi
+  wizard_select choice cancel "$(_t "What do you want to do?" "¿Qué deseas hacer?")" \
+    "${choices[@]}" \
+    continue "$(_t "Continue to the questions without migrating (its links stay)" "Seguir con las preguntas sin migrar (sus enlaces se conservan)")" \
+    cancel "$(_t "Exit without changes" "Salir sin cambios")"
+  case "$choice" in
+    continue) return 0 ;;
+    cancel)
+      info "$(_t "Setup cancelled; nothing was changed." "Configuración cancelada; no se modificó nada.")"
+      WIZARD_ENDED=1
+      ;;
+    rollback) _wizard_end_with _wizard_rollback ;;
+  esac
+}
+
 # Before the questions: when the target has links of another install, shows
 # what was found and asks to migrate it now (the switch logic), continue to
 # the questions without migrating, or cancel (the default, also at the end of
-# input). Sets WIZARD_ENDED when setup ends here instead of asking the
-# questions; exits with the migration's status when it failed.
+# input). When it is there but cannot be prepared, or a change was left
+# unfinished, says why instead (_wizard_explain_blocker). Sets WIZARD_ENDED
+# when setup ends here instead of asking the questions; exits with the
+# migration's status when it failed.
 wizard_offer_migration() {
-  local summary choice status=0
+  local summary choice blocker status=0
 
   set +e
   summary=$( ( set -e; _wizard_migration_summary ) 3>&1 >/dev/null 2>&1 )
+  status=$?
   set -e
+  if (( status != 0 )); then
+    blocker=$( (_wizard_prepare_blocker) )
+    [[ -z "$blocker" ]] || _wizard_explain_blocker "$blocker"
+    return 0
+  fi
   [[ -n "$summary" ]] || return 0
   printf '%s\n' "$summary"
   wizard_select choice cancel "$(_t "What do you want to do with it?" "¿Qué deseas hacer con ella?")" \
@@ -508,12 +602,7 @@ wizard_offer_migration() {
       return 0
       ;;
   esac
-  set +e
-  ( set -e; _wizard_migrate )
-  status=$?
-  set -e
-  (( status == 0 )) || exit "$status"
-  WIZARD_ENDED=1
+  _wizard_end_with _wizard_migrate
 }
 
 run_interactive_wizard() {

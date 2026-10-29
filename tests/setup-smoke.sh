@@ -350,13 +350,16 @@ copy_checkout "$MIG"
 make_legacy_overlay "$TEST_ROOT/mig/dotfiles-private"
 MIG_STATE=$(hash_tree "$MIG")
 
-# Runs setup from the copy on a fresh legacy home $1 with stdin $2; H, LEGACY
-# and the hashes before the run ($home_before, $legacy_before) are left set.
+# Runs setup from the copy on a fresh legacy home $1 with stdin $2 and the
+# remaining setup options; H, LEGACY and the hashes before the run
+# ($home_before, $legacy_before) are left set.
 migrate_run() {
-  new_legacy_home "$1"
+  local name=$1 input=$2
+  shift 2
+  new_legacy_home "$name"
   home_before=$(hash_tree "$H")
   legacy_before=$(hash_tree "$LEGACY")
-  SETUP_DOTFILES="${MIGRATE_DOTFILES:-$MIG/bin/dotfiles}" setup_run "$H" "$2"
+  SETUP_DOTFILES="${MIGRATE_DOTFILES:-$MIG/bin/dotfiles}" setup_run "$H" "$input" "$@"
 }
 
 # 9a. The summary names what was found and one question comes first;
@@ -402,6 +405,9 @@ migrate_run migrate-dry 'migrate\ndry-run\n'
 [[ "$(hash_tree "$H")" == "$home_before" ]] || fail "migrar + dry-run modificó el target"
 [[ "$output" == *'Plan del cambio de checkout'*'sin colisiones'* ]] || fail "el dry-run de la migración no mostró el plan y el preflight: $output"
 [[ "$output" == *'Dry-run: nothing changed'* ]] || fail "el dry-run de la migración no dijo que nada cambió: $output"
+# Inside setup only the wizard's own hint: never the switch's --apply one.
+[[ "$output" != *'use --apply'* && "$(grep -c 'Dry-run:' <<< "$output")" == 1 ]] || \
+  fail "el dry-run de la migración mostró más de una indicación o la de --apply: $output"
 migrate_run migrate-plan-cancel 'migrate\ncancel\n'
 (( status == 0 )) || fail "migrar + cancel terminó con $status: $output"
 [[ "$(hash_tree "$H")" == "$home_before" ]] || fail "migrar + cancel modificó el target"
@@ -446,6 +452,89 @@ MIGRATE_DOTFILES="$BROKEN/bin/dotfiles" migrate_run migrate-fail 'migrate\napply
 [[ "$(hash_tree "$MIG")" == "$MIG_STATE" ]] || fail "la migración modificó el checkout copiado"
 [[ "$(DOTFILES_LANG=en "$DOTFILES" help)" == *'offers to migrate'*'switch logic'* ]] || fail "la ayuda (en) no documenta la migración de setup"
 [[ "$(DOTFILES_LANG=es "$DOTFILES" help)" == *'ofrece antes migrarla'*'lógica de switch'* ]] || fail "la ayuda (es) no documenta la migración de setup"
+
+# 9h. An explicit --overlay or --no-overlay of setup carries into the
+# migration summary and the switch plan.
+OTHER_OVERLAY="$TEST_ROOT/mig/other-private"
+make_legacy_overlay "$OTHER_OVERLAY"
+migrate_run migrate-overlay 'migrate\ncancel\n' --overlay "$OTHER_OVERLAY"
+(( status == 0 )) || fail "migrar con --overlay + cancel terminó con $status: $output"
+[[ "$output" == *'Overlay:'*'other-private'*"Overlay:                 $OTHER_OVERLAY (--overlay)"* ]] || \
+  fail "el --overlay de setup no llegó al resumen y al plan de la migración: $output"
+migrate_run migrate-no-overlay 'migrate\ncancel\n' --no-overlay
+(( status == 0 )) || fail "migrar con --no-overlay + cancel terminó con $status: $output"
+[[ "$output" == *'Overlay:'*'none'*'Overlay:                 ninguno (--no-overlay)'* ]] || \
+  fail "el --no-overlay de setup no llegó al resumen y al plan de la migración: $output"
+
+# 9i. An old install that cannot be prepared (here a bad --overlay) is not
+# skipped silently: setup shows the switch's error and asks continue or
+# cancel (the default); continue runs today's questions.
+migrate_run migrate-bad-overlay 'cancel\n' --overlay "$TEST_ROOT/no-such-overlay"
+(( status == 0 )) || fail "setup con un --overlay inválido y cancel terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "cancel tras el aviso de migración modificó el target"
+[[ "$output" == *'cannot be migrated'*"el overlay no contiene layers/: $TEST_ROOT/no-such-overlay"*'continue'*'cancel'*'Setup cancelled'* ]] || \
+  fail "setup no explicó por qué no puede migrar con un --overlay inválido: $output"
+[[ "$output" != *'Choose a profile'* && "$output" != *'rollback'* ]] || fail "el aviso de migración siguió con las preguntas u ofreció rollback: $output"
+
+# A home linked to another monorepo checkout without its selection receipt.
+OLD_CO="$TEST_ROOT/mig/old-dotfiles"
+copy_checkout "$OLD_CO"
+H="$TEST_ROOT/migrate-no-receipt"
+mkdir -p "$H"
+HOME="$H" "$OLD_CO/bin/dotfiles" bootstrap --profile cli --stow-only --target "$H" --apply >/dev/null 2>&1 || \
+  fail "el bootstrap del checkout viejo falló"
+rm -f -- "$(receipt "$H" dotfiles)"
+home_before=$(hash_tree "$H")
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" ''
+(( status == 0 )) || fail "EOF tras el aviso de migración terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "EOF tras el aviso de migración modificó el target"
+[[ "$output" == *'cannot be migrated'*'no hay recibo de selección'*'Setup cancelled'* && "$output" != *'Choose a profile'* ]] || \
+  fail "setup no avisó del checkout sin recibo o no canceló con EOF: $output"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'continue\nserver\n\n\ncancel\n'
+(( status == 0 )) || fail "continuar tras el aviso de migración terminó con $status: $output"
+[[ "$output" == *'no hay recibo de selección'*'Choose a profile'*'Setup cancelled'* ]] || \
+  fail "continuar tras el aviso de migración no siguió con las preguntas: $output"
+
+# 9j. A change left unfinished (its manifest written) is named before
+# anything else, with rollback offered by setup itself: its plan first, then
+# apply or cancel; applied, the home is back as before that change.
+migrate_run migrate-pending 'migrate\napply\n'
+(( status == 0 )) || fail "migrar + apply (para el cambio sin cerrar) terminó con $status: $output"
+txns="$H/.local/state/dotfiles/transactions"
+mv -T -- "$txns/switch-last" "$txns/switch.pending"
+after_migration=$(hash_tree "$H")
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'cancel\n'
+(( status == 0 )) || fail "cancel ante un cambio sin cerrar terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$after_migration" ]] || fail "cancel ante un cambio sin cerrar modificó el target"
+[[ "$output" == *'unfinished change'*"sin cerrar en $txns/switch.pending"*'rollback'*'continue'*'cancel'*'Setup cancelled'* ]] || \
+  fail "setup no avisó del cambio sin cerrar ni ofreció rollback: $output"
+[[ "$output" != *'Choose a profile'* ]] || fail "cancel ante un cambio sin cerrar siguió con las preguntas: $output"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'rollback\ncancel\n'
+(( status == 0 )) || fail "rollback + cancel terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$after_migration" ]] || fail "rollback + cancel modificó el target"
+[[ "$output" == *'Plan de la reversión'*"$txns/switch.pending/manifest"*'apply'*'cancel'*'Setup cancelled'* ]] || \
+  fail "rollback no mostró su plan antes de apply / cancel: $output"
+[[ "$output" != *'use --apply'* ]] || fail "el plan de rollback en setup mostró la indicación de --apply: $output"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'rollback\napply\n'
+(( status == 0 )) || fail "rollback + apply terminó con $status: $output"
+[[ "$output" == *'Se restauró el estado anterior'*'Run setup again'* && "$output" != *'Choose a profile'* ]] || \
+  fail "rollback + apply no restauró ni terminó setup: $output"
+[[ "$(readlink -- "$H/.zshrc")" == *.dotfiles/base/home/zsh/.zshrc ]] || fail "rollback no devolvió los enlaces del checkout anterior"
+[[ ! -e "$txns/switch.pending" ]] || fail "rollback dejó el cambio sin cerrar pendiente"
+[[ "$(hash_tree "$LEGACY")" == "$legacy_before" ]] || fail "rollback modificó el checkout anterior"
+# Afterwards setup offers the migration again.
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'cancel\n'
+[[ "$output" == *'Previous install detected'* && "$output" != *'unfinished change'* ]] || \
+  fail "tras el rollback setup no volvió a ofrecer la migración: $output"
+
+# Migrate + apply discards a change stopped before its manifest (it changed
+# nothing), as switch --apply does, and migrates.
+new_legacy_home migrate-stale
+mkdir -p "$H/.local/state/dotfiles/transactions/switch.pending/files"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'migrate\napply\n'
+(( status == 0 )) || fail "migrar con un cambio sin manifiesto terminó con $status: $output"
+[[ "$output" == *'se descartó'* && ! -e "$H/.local/state/dotfiles/transactions/switch.pending" ]] || \
+  fail "migrar no descartó el cambio sin manifiesto: $output"
 
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || fail "las pruebas modificaron el checkout"
 echo "OK: dotfiles setup (perfil, WMs, overlay, extras, plan) validado"
