@@ -238,6 +238,65 @@ rm -rf -- "$H/.local/state/dotfiles/transactions"
 run_switch --rollback
 (( status == 1 )) || fail "--rollback sin manifiesto debería fallar: $status $output"
 
+# Switches home $1 to the new checkout; the hashes of both checkouts before
+# it are in $legacy_before and $new_before.
+switch_for_rollback() {
+  new_legacy_home "$1"
+  legacy_before=$(hash_tree "$LEGACY")
+  new_before=$(hash_tree "$NEW")
+  run_switch "$NEW" --apply
+  (( status == 0 )) || fail "switch --apply ($1) terminó con $status: $output"
+}
+
+# Checks that the rollback of scenario $1 succeeded and wrote into neither
+# checkout; the set-aside directory is left in $displaced.
+check_rollback() {
+  (( status == 0 )) || fail "switch --rollback --apply ($1) terminó con $status: $output"
+  [[ "$(hash_tree "$LEGACY")" == "$legacy_before" ]] || fail "--rollback ($1) escribió en el checkout anterior"
+  [[ "$(hash_tree "$NEW")" == "$new_before" ]] || fail "--rollback ($1) escribió en el checkout nuevo"
+  displaced=$(find "$H/.local/state/dotfiles/transactions" -mindepth 1 -maxdepth 1 -name 'displaced-*' -print -quit 2>/dev/null)
+}
+
+# 3b. A later rollback never deletes a file written inside a directory the
+# switch created (the walls clone): it is set aside, the directory goes.
+switch_for_rollback rollback-tree
+walls_dir="$H/.local/share/dotfiles/walls"
+[[ -d "$walls_dir/.git" ]] || fail "el switch no clonó walls en $walls_dir"
+printf 'mine\n' > "$walls_dir/wallpapers/mine.jpg"
+run_switch --rollback --apply
+check_rollback rollback-tree
+[[ "$(<"$displaced/.local/share/dotfiles/walls/wallpapers/mine.jpg")" == mine ]] 2>/dev/null || \
+  fail "--rollback borró un archivo escrito en el clon de walls: $output"
+grep -Fq "se apartó el contenido de $walls_dir" <<< "$output" || fail "--rollback no avisó del contenido apartado: $output"
+[[ ! -e "$walls_dir" ]] || fail "--rollback dejó el clon de walls que no estaba antes"
+[[ "$(readlink -- "$H/.local/share/wallpapers")" == "$LEGACY/walls/wallpapers" ]] || fail "--rollback no restauró el enlace de wallpapers"
+
+# 3c. A directory folded into a link to the checkout after the switch is put
+# back as the directory it was; the rollback never writes through it.
+switch_for_rollback rollback-folded
+rm -rf -- "$H/.config/mango"
+ln -s "$NEW/layers/wm/mangowm/home/mango/.config/mango" "$H/.config/mango"
+run_switch --rollback --apply
+check_rollback rollback-folded
+[[ -d "$H/.config/mango" && ! -L "$H/.config/mango" ]] || fail "--rollback no devolvió .config/mango como directorio: $output"
+[[ -L "$H/.config/mango/config.conf" && "$(realpath -- "$H/.config/mango/config.conf")" == "$LEGACY/wm/mangowm/home/mango/.config/mango/config.conf" ]] || \
+  fail "--rollback no restauró el enlace de MangoWM: $output"
+
+# 3d. A non-empty directory where the snapshot had a link: its content is set
+# aside and the link comes back.
+switch_for_rollback rollback-dir
+rm -f -- "$H/.local/share/wallpapers"
+mkdir -p "$H/.local/share/wallpapers"
+printf 'mine\n' > "$H/.local/share/wallpapers/mine.jpg"
+run_switch --rollback --apply
+check_rollback rollback-dir
+[[ "$(<"$displaced/.local/share/wallpapers/mine.jpg")" == mine ]] 2>/dev/null || \
+  fail "--rollback no apartó el contenido del directorio que ocupaba un enlace: $output"
+grep -Fq "se reemplazó el directorio $H/.local/share/wallpapers" <<< "$output" || \
+  fail "--rollback no avisó del directorio reemplazado: $output"
+[[ "$(readlink -- "$H/.local/share/wallpapers")" == "$LEGACY/walls/wallpapers" ]] || \
+  fail "--rollback no restauró el enlace sobre el directorio: $output"
+
 # 4. A foreign file or link where the new checkout links aborts before any
 # change and names every colliding path.
 new_legacy_home collision
@@ -291,8 +350,14 @@ mkdir -p "$H"
 status=0
 output=$(HOME="$H" "$OLD_CO/bin/dotfiles" bootstrap --profile cli --layer dev --stow-only --target "$H" --apply 2>&1) || status=$?
 (( status == 0 )) || fail "el bootstrap del checkout viejo falló: $output"
+# A change killed before its manifest was written changed nothing: it is
+# discarded with a warning instead of blocking every later switch.
+stale="$H/.local/state/dotfiles/transactions/switch.pending"
+mkdir -p "$stale/files"
 run_switch "$NEW" --apply
 (( status == 0 )) || fail "switch entre monorepos terminó con $status: $output"
+grep -Fq "se descartó $stale" <<< "$output" || fail "switch no avisó del cambio sin manifiesto descartado: $output"
+[[ ! -e "$stale" ]] || fail "switch dejó el cambio sin manifiesto en $stale"
 grep -Fq 'Overlay:                 ninguno (recibo de selección)' <<< "$output" || fail "switch añadió un overlay que el recibo no tenía: $output"
 [[ -z "$(links_into "$OLD_CO")" ]] || fail "quedaron enlaces hacia el checkout viejo: $(links_into "$OLD_CO")"
 [[ "$(realpath -- "$H/.config/bat/config")" == "$NEW/"* ]] || fail "cli no quedó enlazado al checkout nuevo"

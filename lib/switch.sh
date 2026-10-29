@@ -8,10 +8,15 @@
 # ~/.local/state/dotfiles except its transactions/. txn_rollback puts back
 # exactly that snapshot: it removes what appeared at a tracked path, restores
 # the old links, files and directories, the state directory, and removes the
-# directories the change created. A later rollback (mode keep) only replaces
-# the state entries the snapshot holds or the change created, setting their
-# current copies aside; state others wrote since stays. The snapshot lives in
-# ~/.local/state/dotfiles/transactions/<name>.pending while the change runs.
+# directories the change created. A later rollback (mode keep) never deletes
+# what may be the user's: files and directories found where the snapshot had
+# something else are set aside under transactions/displaced-<time>, and only
+# the state entries the snapshot holds or the change created are replaced;
+# state others wrote since stays. A rollback never reads or writes through a
+# parent directory that is a symlink now: the parent is put back first. The
+# snapshot lives in ~/.local/state/dotfiles/transactions/<name>.pending while
+# the change runs; its manifest is written last, so a pending one without a
+# manifest changed nothing and is discarded.
 #
 # `dotfiles switch DIR` makes the checkout at DIR the active one for the
 # target: it detects the current install (the pre-monorepo ecosystem under
@@ -27,7 +32,7 @@
 # shellcheck shell=bash
 
 TXN_DIR=""
-declare -a TXN_PATHS=() TXN_TREES=()
+declare -a TXN_PATHS=() TXN_TREES=() TXN_CHECKOUTS=()
 
 txn_root() {
   printf '%s/transactions' "$(receipt_dir)"
@@ -73,13 +78,36 @@ txn_track_engine_outputs() {
   txn_track_tree .cache/bat
 }
 
+# Prints the first transaction left unfinished. One without a manifest was
+# stopped before it changed anything (the manifest is written last, whole),
+# so it is discarded with a warning instead of blocking later changes; with
+# $1 = 0 (a dry-run) it is only reported.
+txn_pending() {
+  local discard=${1:-1} pending
+  for pending in "$(txn_root)"/*.pending; do
+    [[ -e "$pending" || -L "$pending" ]] || continue
+    if [[ -d "$pending" && ! -L "$pending" && ! -e "$pending/manifest" ]]; then
+      if (( discard == 1 )); then
+        # One that cannot be removed is still unfinished: callers stop on it.
+        rm -rf -- "$pending" || { printf '%s\n' "$pending"; return 0; }
+        warn "se descartó $pending: un cambio interrumpido antes de modificar nada (sin manifiesto)"
+      else
+        warn "se descartará $pending con --apply: un cambio interrumpido antes de modificar nada (sin manifiesto)"
+      fi
+      continue
+    fi
+    printf '%s\n' "$pending"
+    return 0
+  done
+  return 1
+}
+
 # Starts transaction $1; stops when an earlier one was left unfinished.
 txn_begin() {
   local pending
-  for pending in "$(txn_root)"/*.pending; do
-    [[ -e "$pending" ]] || continue
+  if pending=$(txn_pending); then
     die "quedó un cambio sin cerrar en $pending; reviértalo con '$PROGRAM_NAME switch --rollback --apply' antes de continuar"
-  done
+  fi
   TXN_DIR="$(txn_root)/$1.pending"
   TXN_PATHS=()
   TXN_TREES=()
@@ -145,7 +173,8 @@ txn_snapshot() {
     printf '#created=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     printf '#%s\n' "$@"
     printf '%s\n' "${lines[@]}" | LC_ALL=C sort -t $'\t' -k2,2
-  } > "$TXN_DIR/manifest"
+  } > "$TXN_DIR/manifest.tmp"
+  mv -T -- "$TXN_DIR/manifest.tmp" "$TXN_DIR/manifest"
 }
 
 # Removes the node at $1 for a rollback in mode $2: a regular file is moved
@@ -159,6 +188,54 @@ _txn_remove() {
     return 0
   fi
   rm -f -- "$path"
+}
+
+# Succeeds when link $1 resolves into one of the checkouts in TXN_CHECKOUTS.
+_txn_checkout_link() {
+  local resolved checkout
+  resolved=$(realpath -m -- "$1")
+  for checkout in "${TXN_CHECKOUTS[@]}"; do
+    [[ -n "$checkout" && "$resolved" == "$checkout"/* ]] && return 0
+  done
+  return 1
+}
+
+# Removes directory $1, which the snapshot did not hold as a directory, for a
+# rollback in mode $2. In mode keep its content may be the user's: links into
+# a checkout go, anything else is set aside under the displaced directory $3,
+# and the directories go once empty. In mode discard the change just created
+# it, so it goes whole.
+_txn_remove_dir() {
+  local path=$1 mode=$2 displaced=$3 entry rel moved=0
+  if [[ "$mode" != keep ]]; then
+    rm -rf -- "$path"
+    return
+  fi
+  while IFS= read -r -d '' entry; do
+    if [[ -L "$entry" ]] && _txn_checkout_link "$entry"; then
+      rm -f -- "$entry" || return 1
+    elif [[ -d "$entry" && ! -L "$entry" ]]; then
+      rmdir -- "$entry" || return 1
+    else
+      rel=${entry#"$TARGET_DIR"/}
+      mkdir -p -- "$displaced/$(dirname -- "$rel")" && mv -- "$entry" "$displaced/$rel" || return 1
+      moved=1
+    fi
+  done < <(find "$path" -mindepth 1 -depth -print0)
+  rmdir -- "$path" || return 1
+  (( moved == 0 )) || warn "se apartó el contenido de $path en $displaced/${path#"$TARGET_DIR"/}"
+}
+
+# Prints the shallowest parent of target-relative path $1 that is a symlink
+# now; a rollback never reads or writes through one.
+_txn_linked_parent() {
+  local parent=$1 linked=""
+  while [[ "$parent" == */* ]]; do
+    parent=${parent%/*}
+    [[ ! -L "$TARGET_DIR/$parent" ]] || linked=$parent
+  done
+  [[ -n "$linked" ]] || return 1
+  printf '%s\n' "$linked"
 }
 
 # Prints the top-level entries of the state snapshot in transaction $1.
@@ -196,44 +273,47 @@ _txn_restore_state() {
 # regular files that appeared are set aside, never deleted). Removes the
 # transaction directory when everything was restored.
 txn_rollback() {
-  local dir=$1 mode=$2 failed=0 index type rel value path state_dir displaced
+  local dir=$1 mode=$2 failed=0 index type rel value path state_dir displaced linked
   local -a types=() rels=() values=()
+  local -A recorded_types=()
 
   [[ -f "$dir/manifest" ]] || { error "no existe el manifiesto $dir/manifest"; return 1; }
+  TXN_CHECKOUTS=("${REPO_ROOT:-}")
   while IFS=$'\t' read -r type rel value; do
+    case "$type" in
+      '#to='*|'#from='*) TXN_CHECKOUTS+=("${type#*=}") ;;
+    esac
     [[ -n "$type" && "$type" != \#* ]] || continue
     types+=("$type") rels+=("$rel") values+=("${value:-}")
+    recorded_types["$rel"]=$type
   done < "$dir/manifest"
   displaced="$(txn_root)/displaced-$(date -u +%Y%m%dT%H%M%SZ)"
 
-  # Deepest first: whatever is not what the snapshot recorded goes.
+  # Deepest first: whatever is not what the snapshot recorded goes. A path
+  # under a parent that is a symlink now is left alone: the parent comes
+  # later and is put back as recorded, so nothing is touched through it.
   for (( index = ${#rels[@]} - 1; index >= 0; index-- )); do
     type=${types[index]} rel=${rels[index]} value=${values[index]}
     path="$TARGET_DIR/$rel"
+    ! _txn_linked_parent "$rel" >/dev/null || continue
     case "$type" in
       absent|absent-tree)
         if [[ -L "$path" || ( -e "$path" && ! -d "$path" ) ]]; then
           _txn_remove "$path" "$mode" "$displaced" || failed=1
         elif [[ "$type" == absent-tree && -d "$path" ]]; then
-          rm -rf -- "$path" || failed=1
+          _txn_remove_dir "$path" "$mode" "$displaced" || failed=1
         fi
         ;;
-      link)
-        if [[ -L "$path" && "$(readlink -- "$path")" == "$value" ]]; then
+      link|file)
+        if [[ "$type" == link && -L "$path" && "$(readlink -- "$path")" == "$value" ]]; then
+          :
+        elif [[ "$type" == file && -f "$path" && ! -L "$path" ]] && cmp -s -- "$dir/files/$rel" "$path"; then
           :
         elif [[ -L "$path" || -f "$path" ]]; then
           _txn_remove "$path" "$mode" "$displaced" || failed=1
         elif [[ -d "$path" ]]; then
-          rmdir -- "$path" || failed=1
-        fi
-        ;;
-      file)
-        if [[ -f "$path" && ! -L "$path" ]] && cmp -s -- "$dir/files/$rel" "$path"; then
-          :
-        elif [[ -L "$path" || -f "$path" ]]; then
-          _txn_remove "$path" "$mode" "$displaced" || failed=1
-        elif [[ -d "$path" ]]; then
-          rmdir -- "$path" || failed=1
+          _txn_remove_dir "$path" "$mode" "$displaced" || failed=1
+          [[ -e "$path" ]] || warn "se reemplazó el directorio $path por lo que había antes del cambio ($type)"
         fi
         ;;
       dir)
@@ -244,19 +324,30 @@ txn_rollback() {
     esac
   done
 
-  # Shallowest first: directories, links and files come back.
+  # Shallowest first: directories, links and files come back. Under a parent
+  # that is a link the snapshot recorded, the content comes with the link;
+  # under any other link nothing is written and the rollback fails.
   for index in "${!rels[@]}"; do
     type=${types[index]} rel=${rels[index]} value=${values[index]}
     path="$TARGET_DIR/$rel"
+    if linked=$(_txn_linked_parent "$rel"); then
+      [[ "${recorded_types[$linked]:-}" == link ]] && continue
+      error "no se restaura $path: $TARGET_DIR/$linked es un enlace que el cambio no tenía"
+      failed=1
+      continue
+    fi
     case "$type" in
       dir) [[ -d "$path" ]] || mkdir -- "$path" || failed=1 ;;
-      link) [[ -L "$path" ]] || ln -s -- "$value" "$path" || failed=1 ;;
-      file) [[ -e "$path" || -L "$path" ]] || cp -a -- "$dir/files/$rel" "$path" || failed=1 ;;
+      link) [[ -L "$path" ]] || ln -sT -- "$value" "$path" || failed=1 ;;
+      file) [[ -e "$path" || -L "$path" ]] || cp -a -T -- "$dir/files/$rel" "$path" || failed=1 ;;
     esac
   done
 
   state_dir=$(receipt_dir)
-  if [[ -d "$state_dir" && ! -L "$state_dir" ]]; then
+  if _txn_linked_parent "${state_dir#"$TARGET_DIR"/}" >/dev/null; then
+    error "no se restaura el estado: un directorio padre de $state_dir es un enlace"
+    failed=1
+  elif [[ -d "$state_dir" && ! -L "$state_dir" ]]; then
     _txn_restore_state "$dir" "$mode" "$state_dir" "$displaced" || failed=1
   fi
 
@@ -272,6 +363,7 @@ txn_rollback() {
     [[ "${types[index]}" == absent* ]] || continue
     path="$TARGET_DIR/${rels[index]}"
     [[ -d "$path" && ! -L "$path" ]] || continue
+    ! _txn_linked_parent "${rels[index]}" >/dev/null || continue
     rmdir -- "$path" 2>/dev/null || warn "se conserva $path: no estaba antes del cambio y no quedó vacío"
   done
   return 0
@@ -826,13 +918,8 @@ _sw_apply() {
 
 # Restores the last switch (or a change left unfinished) with apply mode $1.
 _sw_rollback() {
-  local apply=$1 dir="" pending header
-  for pending in "$(txn_root)"/*.pending; do
-    [[ -d "$pending" ]] || continue
-    dir=$pending
-    break
-  done
-  [[ -n "$dir" ]] || dir="$(txn_root)/switch-last"
+  local apply=$1 dir="" header
+  dir=$(txn_pending "$apply") || dir="$(txn_root)/switch-last"
   [[ -f "$dir/manifest" ]] || die "no hay ningún cambio que revertir en $TARGET_DIR"
 
   info "Plan de la reversión"
@@ -905,10 +992,9 @@ cmd_switch() {
     die "$SW_NEW no es un checkout de dotfiles (faltan layers/ o bin/dotfiles)"
   grep -q DOTFILES_REPLACEABLE_ROOTS "$SW_NEW/lib/links.sh" 2>/dev/null || \
     die "el checkout $SW_NEW es anterior a 'switch'; actualícelo antes de cambiar a él"
-  for pending in "$(txn_root)"/*.pending; do
-    [[ -e "$pending" ]] || continue
+  if pending=$(txn_pending "$apply"); then
     die "quedó un cambio sin cerrar en $pending; reviértalo con '$PROGRAM_NAME switch --rollback --apply' antes de continuar"
-  done
+  fi
 
   # The new checkout's components.conf decides which components exist (both
   # are read by load_components).
