@@ -117,6 +117,9 @@ source "$LIB_DIR/layers.sh"
 # shellcheck source=../lib/layer_ops.sh
 source "$LIB_DIR/layer_ops.sh"
 
+# shellcheck source=../lib/switch.sh
+source "$LIB_DIR/switch.sh"
+
 # shellcheck source=../lib/completions.sh
 source "$LIB_DIR/completions.sh"
 
@@ -1179,16 +1182,36 @@ run_selected_layers() {
 
 
 
-bootstrap_with_optional_components() {
-  prepare_selection
+# Prints the Stow homes (or packages) the RETIRE_* units remove links from,
+# separated by ':' (the DOTFILES_REPLACEABLE_ROOTS of the preflight).
+retired_link_roots() {
+  local index entry home roots=""
+  local -a entries=()
 
-  if (( APPLY == 1 )); then
-    info "Preflight de todas las capas antes de modificar nada"
-    retire_dropped_selection 0
-    run_selected_layers bootstrap 0 || \
-      die "falló el preflight de la capa $FAILED_LAYER; no se modificó la base"
-  fi
+  for index in "${!RETIRE_LAYERS[@]}"; do
+    home=$(realpath -m -- "${RETIRE_ROOTS[index]}/${RETIRE_LAYERS[index]}/home")
+    if [[ -z "${RETIRE_PACKAGE_LISTS[index]}" ]]; then
+      roots+="$home:"
+    else
+      read -r -a entries <<< "${RETIRE_PACKAGE_LISTS[index]}"
+      for entry in "${entries[@]}"; do
+        roots+="$home/$entry:"
+      done
+    fi
+  done
+  printf '%s' "${roots%:}"
+}
 
+# Preflight of every selected layer; the links being retired first count as
+# replaceable, so a layer may take over a path a retired one linked.
+preflight_selected_layers() {
+  local -x DOTFILES_REPLACEABLE_ROOTS
+  DOTFILES_REPLACEABLE_ROOTS=$(retired_link_roots)
+  run_selected_layers bootstrap 0
+}
+
+# The changes of a bootstrap or sync, in order.
+apply_selection() {
   retire_dropped_selection "$APPLY"
   run_selected_layers bootstrap "$APPLY" || die "falló el bootstrap de la capa $FAILED_LAYER"
   if (( APPLY == 1 )); then
@@ -1198,6 +1221,60 @@ bootstrap_with_optional_components() {
     (( STOW_ENABLED == 0 )) || link_cli_command
   fi
   apply_components "$APPLY" RECORDED_COMPONENTS
+}
+
+# Applies a selection that retires something inside a transaction (see
+# lib/switch.sh): when any step fails, the retired links come back and
+# whatever the run linked goes, so the target is left as it was.
+apply_selection_transaction() {
+  local index layer name dir token status=0
+
+  txn_begin bootstrap
+  for index in "${!RETIRE_LAYERS[@]}"; do
+    txn_track_packages "${RETIRE_ROOTS[index]}/${RETIRE_LAYERS[index]}/home"
+  done
+  for layer in "${SELECTED_LAYERS[@]}"; do
+    txn_track_packages "$(layer_root "$LAYERS_DIR" "$layer")/$layer/home"
+  done
+  txn_track_engine_outputs
+  for name in "${RECORDED_COMPONENTS[@]}" "${RETIRED_COMPONENTS[@]}"; do
+    dir=$(component_dir "$name")
+    txn_track_tree "${dir#"$TARGET_DIR"/}"
+    for token in ${COMPONENT_LINKS[$name]:-}; do
+      txn_track "${token#*=}"
+    done
+  done
+  txn_snapshot kind=bootstrap
+  info "Retiro transaccional: si algo falla se restauran los enlaces retirados"
+
+  set +e
+  ( set -e; apply_selection )
+  status=$?
+  set -e
+  if (( status != 0 )); then
+    error "el bootstrap falló después de retirar la selección descartada; restaurando el estado anterior"
+    txn_rollback "$TXN_DIR" discard || \
+      die "la reversión quedó incompleta; reintente con '$PROGRAM_NAME switch --rollback --apply'"
+    die "falló el bootstrap; se restauraron los enlaces retirados y el target quedó como antes"
+  fi
+  txn_commit
+}
+
+bootstrap_with_optional_components() {
+  prepare_selection
+
+  if (( APPLY == 1 )); then
+    info "Preflight de todas las capas antes de modificar nada"
+    retire_dropped_selection 0
+    preflight_selected_layers || \
+      die "falló el preflight de la capa $FAILED_LAYER; no se modificó la base"
+  fi
+
+  if (( APPLY == 1 )) && (( ${#RETIRE_LAYERS[@]} > 0 || ${#RETIRED_COMPONENTS[@]} > 0 )); then
+    apply_selection_transaction
+  else
+    apply_selection
+  fi
 
   if (( APPLY == 1 )) && (( ${SYSTEM_INSTALL:-0} == 1 )) && [[ -n "${SYSTEM_PATH:-}" && -f "$SYSTEM_PATH/install.sh" ]]; then
     local -a sys_flags=()

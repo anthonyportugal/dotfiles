@@ -219,6 +219,44 @@ expect_retired desktop
 [[ "$(readlink -- "$foreign_link")" == "$foreign_target" ]] || fail "el retiro tocó un enlace ajeno"
 [[ "$(<"$foreign_target")" == theirs ]] || fail "el retiro modificó el destino de un enlace ajeno"
 
+# 7. The preflight counts the links being retired as replaceable: a new
+# overlay layer may take over a path the retired overlay layer linked.
+TWIN_OVERLAY="$TEST_ROOT/twin-overlay"
+mkdir -p "$TWIN_OVERLAY/layers/twin/packages/stow" "$TWIN_OVERLAY/layers/twin/home/twin/.config/overlay"
+printf '%s\n' requires=core profiles=twin prune_dirs=.config/overlay > "$TWIN_OVERLAY/layers/twin/layer.conf"
+printf 'twin\n' > "$TWIN_OVERLAY/layers/twin/packages/stow/twin.txt"
+printf 'twin\n' > "$TWIN_OVERLAY/layers/twin/home/twin/.config/overlay/ident"
+: > "$TWIN_OVERLAY/layers/twin/home/.stow"
+new_home twin
+apply --profile core --overlay "$OVERLAY"
+apply --profile core --overlay "$TWIN_OVERLAY"
+expect_retired ident
+[[ "$(realpath -- "$H/.config/overlay/ident")" == "$TWIN_OVERLAY/"* ]] || fail "la capa nueva no tomó la ruta de la capa retirada"
+
+# 8. Retire and apply are one transaction: when a layer fails after the
+# retire, the retired links come back and the target is byte-identical.
+# Prints every entry under $1 (type, path, link value) and its file hashes.
+hash_tree() {
+  (cd "$1" && find . -printf '%y %p %l\n' | LC_ALL=C sort
+   find . -type f -exec sha256sum {} + | LC_ALL=C sort) | sha256sum
+}
+BROKEN="$TEST_ROOT/broken"
+mkdir -p "$BROKEN"
+cp -a "$REPO_ROOT"/{bin,lib,layers,themes,packages,components.conf} "$BROKEN/"
+new_home transaction
+status=0
+output=$(HOME="$H" "$BROKEN/bin/dotfiles" bootstrap --stow-only --target "$H" --apply --profile desktop 2>&1) || status=$?
+(( status == 0 )) || fail "bootstrap --profile desktop con la copia terminó con $status: $output"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$BROKEN/layers/cli/hooks/post-link"
+before=$(hash_tree "$H")
+status=0
+output=$(HOME="$H" "$BROKEN/bin/dotfiles" bootstrap --stow-only --target "$H" --apply --profile cli 2>&1) || status=$?
+(( status != 0 )) || fail "bootstrap con un post-link roto no falló: $output"
+expect_retired desktop
+grep -Fq 'Retirando enlaces GNU Stow' <<< "$output" || fail "el fallo no ocurrió después del retiro: $output"
+[[ -L "$H/.config/alacritty/alacritty.toml" ]] || fail "el fallo no restauró los enlaces retirados de desktop"
+[[ "$(hash_tree "$H")" == "$before" ]] || fail "el fallo después del retiro no dejó el target idéntico"
+
 # The help documents the retire line in both languages.
 [[ "$(DOTFILES_LANG=en "$DOTFILES" help)" == *"'Retiring:'"* ]] || fail "la ayuda (en) no documenta el retiro"
 [[ "$(DOTFILES_LANG=es "$DOTFILES" help)" == *"'Se retiran:'"* ]] || fail "la ayuda (es) no documenta el retiro"
