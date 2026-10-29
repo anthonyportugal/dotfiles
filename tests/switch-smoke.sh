@@ -220,10 +220,19 @@ after_switch=$(hash_tree "$H")
 run_switch --rollback
 (( status == 0 )) || fail "el plan de --rollback terminó con $status: $output"
 [[ "$(hash_tree "$H")" == "$after_switch" ]] || fail "--rollback sin --apply modificó el target"
+# State written after the switch by something else (dotfiles system setup)
+# stays in place; state the switch owned that changed since is set aside.
+printf 'COMPONENTS="ly"\n' > "$H/.local/state/dotfiles/system.receipt"
+printf 'catppuccin-mocha-pink\n' > "$H/.local/state/dotfiles/theme/selected"
 run_switch --rollback --apply
 (( status == 0 )) || fail "switch --rollback --apply terminó con $status: $output"
 displaced=$(find "$H/.local/state/dotfiles/transactions" -mindepth 1 -maxdepth 1 -name 'displaced-*' -print -quit)
 [[ -f "$displaced/.config/mimeapps.list" ]] || fail "--rollback no apartó el mimeapps.list generado: $output"
+[[ "$(<"$H/.local/state/dotfiles/system.receipt")" == 'COMPONENTS="ly"' ]] || \
+  fail "--rollback borró un recibo que el switch no creó: $output"
+[[ "$(<"$displaced/.local/state/dotfiles/theme/selected")" == catppuccin-mocha-pink ]] || \
+  fail "--rollback no apartó el estado del switch que cambió después: $output"
+rm -f -- "$H/.local/state/dotfiles/system.receipt"
 rm -rf -- "$H/.local/state/dotfiles/transactions"
 [[ "$(hash_tree "$H")" == "$home_before" ]] || fail "--rollback no dejó el target como antes del switch"
 run_switch --rollback

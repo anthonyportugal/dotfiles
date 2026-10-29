@@ -8,7 +8,9 @@
 # ~/.local/state/dotfiles except its transactions/. txn_rollback puts back
 # exactly that snapshot: it removes what appeared at a tracked path, restores
 # the old links, files and directories, the state directory, and removes the
-# directories the change created. The snapshot lives in
+# directories the change created. A later rollback (mode keep) only replaces
+# the state entries the snapshot holds or the change created, setting their
+# current copies aside; state others wrote since stays. The snapshot lives in
 # ~/.local/state/dotfiles/transactions/<name>.pending while the change runs.
 #
 # `dotfiles switch DIR` makes the checkout at DIR the active one for the
@@ -159,6 +161,36 @@ _txn_remove() {
   rm -f -- "$path"
 }
 
+# Prints the top-level entries of the state snapshot in transaction $1.
+_txn_state_entries() {
+  [[ -f "$1/state.tar" ]] || return 0
+  tar -tf "$1/state.tar" | sed -e 's|^\./||' -e 's|/.*||' | grep -v '^$' | sort -u
+}
+
+# Puts the state snapshot of transaction $1 back into $3. In mode discard
+# everything else goes (the change just ran). In mode keep only entries the
+# snapshot holds or the change created are replaced, and their current
+# copies are set aside under $4; anything else written since stays.
+_txn_restore_state() {
+  local dir=$1 mode=$2 state_dir=$3 displaced=$4 entry
+  local -A owned=()
+
+  if [[ "$mode" == discard ]]; then
+    find "$state_dir" -mindepth 1 -maxdepth 1 ! -name transactions -exec rm -rf -- {} + || return 1
+  else
+    while IFS= read -r entry; do owned[$entry]=1; done < <(_txn_state_entries "$dir")
+    if [[ -f "$dir/state-created" ]]; then
+      while IFS= read -r entry; do [[ -z "$entry" ]] || owned[$entry]=1; done < "$dir/state-created"
+    fi
+    for entry in "${!owned[@]}"; do
+      [[ -e "$state_dir/$entry" || -L "$state_dir/$entry" ]] || continue
+      mkdir -p -- "$displaced/${state_dir#"$TARGET_DIR"/}" || return 1
+      mv -- "$state_dir/$entry" "$displaced/${state_dir#"$TARGET_DIR"/}/$entry" || return 1
+    done
+  fi
+  [[ ! -f "$dir/state.tar" ]] || tar -C "$state_dir" -xf "$dir/state.tar" || return 1
+}
+
 # Restores the snapshot of transaction directory $1. Mode $2 is discard (the
 # change just failed: what appeared is removed) or keep (a later rollback:
 # regular files that appeared are set aside, never deleted). Removes the
@@ -225,10 +257,7 @@ txn_rollback() {
 
   state_dir=$(receipt_dir)
   if [[ -d "$state_dir" && ! -L "$state_dir" ]]; then
-    find "$state_dir" -mindepth 1 -maxdepth 1 ! -name transactions -exec rm -rf -- {} + || failed=1
-    if [[ -f "$dir/state.tar" ]]; then
-      tar -C "$state_dir" -xf "$dir/state.tar" || failed=1
-    fi
+    _txn_restore_state "$dir" "$mode" "$state_dir" "$displaced" || failed=1
   fi
 
   if (( failed == 1 )); then
@@ -248,10 +277,27 @@ txn_rollback() {
   return 0
 }
 
+# Records in transaction $1 the top-level state entries the change created,
+# so a later rollback replaces them but keeps what others wrote since.
+_txn_record_created_state() {
+  local dir=$1 state_dir entry
+  local -A before=()
+  state_dir=$(receipt_dir)
+  [[ -d "$state_dir" ]] || return 0
+  while IFS= read -r entry; do before[$entry]=1; done < <(_txn_state_entries "$dir")
+  : > "$dir/state-created"
+  for entry in "$state_dir"/* "$state_dir"/.[!.]*; do
+    [[ -e "$entry" || -L "$entry" ]] || continue
+    entry=${entry##*/}
+    [[ "$entry" == transactions || -n "${before[$entry]:-}" ]] || printf '%s\n' "$entry" >> "$dir/state-created"
+  done
+}
+
 # Closes the pending transaction: kept as $1 (for a later rollback) or removed.
 txn_commit() {
   local keep=${1-}
   if [[ -n "$keep" ]]; then
+    _txn_record_created_state "$TXN_DIR"
     rm -rf -- "$(txn_root)/${keep:?}"
     mv -T -- "$TXN_DIR" "$(txn_root)/$keep"
   else
