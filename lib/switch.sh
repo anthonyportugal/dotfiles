@@ -227,12 +227,20 @@ _txn_remove_dir() {
 }
 
 # Prints the shallowest parent of target-relative path $1 that is a symlink
-# now; a rollback never reads or writes through one.
+# now but not the very link the snapshot recorded there (same value); a
+# rollback never reads or writes through one. A parent that was already that
+# link before the change (state or cache on another disk) is used as is.
+# Reads txn_rollback's recorded_types and recorded_values.
 _txn_linked_parent() {
   local parent=$1 linked=""
   while [[ "$parent" == */* ]]; do
     parent=${parent%/*}
-    [[ ! -L "$TARGET_DIR/$parent" ]] || linked=$parent
+    [[ -L "$TARGET_DIR/$parent" ]] || continue
+    if [[ "${recorded_types[$parent]:-}" == link && \
+          "$(readlink -- "$TARGET_DIR/$parent")" == "${recorded_values[$parent]:-}" ]]; then
+      continue
+    fi
+    linked=$parent
   done
   [[ -n "$linked" ]] || return 1
   printf '%s\n' "$linked"
@@ -275,7 +283,7 @@ _txn_restore_state() {
 txn_rollback() {
   local dir=$1 mode=$2 failed=0 index type rel value path state_dir displaced linked
   local -a types=() rels=() values=()
-  local -A recorded_types=()
+  local -A recorded_types=() recorded_values=()
 
   [[ -f "$dir/manifest" ]] || { error "no existe el manifiesto $dir/manifest"; return 1; }
   TXN_CHECKOUTS=("${REPO_ROOT:-}")
@@ -286,6 +294,7 @@ txn_rollback() {
     [[ -n "$type" && "$type" != \#* ]] || continue
     types+=("$type") rels+=("$rel") values+=("${value:-}")
     recorded_types["$rel"]=$type
+    recorded_values["$rel"]=${value:-}
   done < "$dir/manifest"
   displaced="$(txn_root)/displaced-$(date -u +%Y%m%dT%H%M%SZ)"
 

@@ -341,6 +341,25 @@ grep -Fq 'Enlaces del checkout anterior retirados' <<< "$output" || fail "el fal
 grep -Fq 'se restauró el estado anterior' <<< "$output" || fail "el fallo no anunció la reversión: $output"
 [[ "$(hash_tree "$H")" == "$before" ]] || fail "la reversión no dejó el target idéntico"
 
+# 5b. Parents that were already links before the switch (state and cache on
+# another disk) are used as recorded: the failed switch still rolls back to
+# an identical target, through them.
+new_legacy_home failure-linked
+EXTERNAL="$TEST_ROOT/external-disk"
+mkdir -p "$EXTERNAL/cache" "$H/.local"
+mv -- "$H/.local/state" "$EXTERNAL/state"
+ln -s -- "$EXTERNAL/state" "$H/.local/state"
+ln -s -- "$EXTERNAL/cache" "$H/.cache"
+before=$(hash_tree "$H")
+before_external=$(hash_tree "$EXTERNAL")
+run_switch "$BROKEN" --overlay "$OVERLAY" --apply
+(( status != 0 )) || fail "switch con un post-link roto no falló (padres enlazados): $output"
+grep -Fq 'se restauró el estado anterior' <<< "$output" || \
+  fail "la reversión con padres ya enlazados no terminó: $output"
+[[ "$(hash_tree "$H")" == "$before" ]] || fail "la reversión con padres ya enlazados cambió el target"
+[[ "$(hash_tree "$EXTERNAL")" == "$before_external" ]] || \
+  fail "la reversión dejó restos detrás de los padres ya enlazados: $(find "$EXTERNAL" -newer "$H/.cache")"
+
 # 6. Monorepo to monorepo: the selection receipt moves to the new checkout.
 OLD_CO="$TEST_ROOT/old/dotfiles"
 copy_checkout "$OLD_CO"
