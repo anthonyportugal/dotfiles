@@ -166,7 +166,7 @@ Uso:
   $PROGRAM_NAME help
 
 Comandos:
-  setup       Asistente guiado corto: perfil (servidor o escritorio), WMs, extras y overlay;
+  setup       Asistente guiado corto: perfil (servidor o escritorio), WMs, overlay y extras;
               parte de la selección guardada (Enter la conserva) y luego muestra el plan
               y pregunta aplicar, simular (dry-run) o cancelar.
   bootstrap   Instala la selección indicada por flags sin asistente; sin --apply solo
@@ -232,7 +232,7 @@ Usage:
   $PROGRAM_NAME help
 
 Commands:
-  setup       Short guided setup: profile (server or desktop), WMs, extras and overlay;
+  setup       Short guided setup: profile (server or desktop), WMs, overlay and extras;
               starts from the saved selection (Enter keeps it), then shows the plan
               and asks to apply, dry-run or cancel.
   bootstrap   Installs the selection given by flags without the wizard; without --apply

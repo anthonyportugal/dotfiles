@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `dotfiles setup`: the short guided flow (profile, WMs, extras, overlay, then
+# `dotfiles setup`: the short guided flow (profile, WMs, overlay, extras, then
 # plan and apply / dry-run / cancel) driven with piped input. Every run uses a
 # home in mktemp, --stow-only and file:// fixtures; never the network. Also
 # covers the help cleanup (bootstrap, completion, no install alias).
@@ -30,6 +30,7 @@ command -v git >/dev/null 2>&1 || fail "git es necesario para este smoke test"
 TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-setup-smoke.XXXXXX")
 TEST_ROOT=$(realpath -e -- "$TEST_ROOT")
 CHECKOUT_STATE=$(git -C "$REPO_ROOT" status --porcelain)
+
 
 # Git never reads the host configuration (signing, hooks, default branch).
 export GIT_CONFIG_NOSYSTEM=1
@@ -101,7 +102,7 @@ grep -qx 'OVERLAY=""' "$(receipt "$H" dotfiles)" || fail "Enter no omitió el ov
 
 # 2. Desktop + bspwm + dev + dev-containers + walls, applied.
 H="$TEST_ROOT/desktop"
-setup_run "$H" 'desktop\nbspwm\ndev dev-containers walls\n\napply\n'
+setup_run "$H" 'desktop\nbspwm\n\ndev dev-containers walls\napply\n'
 (( status == 0 )) || fail "setup desktop terminó con $status: $output"
 [[ "$output" == *'Window managers'* && "$output" == *'mangowm'* ]] || fail "desktop no ofreció los WMs: $output"
 [[ -L "$H/.config/bspwm/bspwmrc" ]] || fail "setup no enlazó bspwm"
@@ -132,7 +133,7 @@ make_overlay "$OVERLAY_SRC"
 git -C "$OVERLAY_SRC" init -q
 commit_all "$OVERLAY_SRC" overlay
 H="$TEST_ROOT/overlay-url"
-setup_run "$H" "server\n\nfile://$OVERLAY_SRC\napply\n"
+setup_run "$H" "server\nfile://$OVERLAY_SRC\n\napply\n"
 (( status == 0 )) || fail "setup con URL de overlay terminó con $status: $output"
 [[ -d "$H/.dotfiles-private/.git" ]] || fail "setup no clonó el overlay en ~/.dotfiles-private"
 [[ -L "$H/.config/overlay/ident" ]] || fail "setup no aplicó el overlay clonado"
@@ -177,13 +178,13 @@ dev_link="$H/.config/zsh/conf.d/50-dev.zsh"
 [[ -L "$dev_link" ]] || fail "la capa dev no estaba enlazada"
 
 # Unchecking dev and dev-containers: the dry-run names them and changes nothing.
-setup_run "$H" '\n\nwalls\n\ndry-run\n'
+setup_run "$H" '\n\n\nwalls\ndry-run\n'
 (( status == 0 )) || fail "setup dry-run desmarcando dev terminó con $status: $output"
 expect_wizard_retired 'Retiring:' 'dev dev-containers'
 [[ -L "$dev_link" && "$(selection_of "$R")" == "$selection_before" ]] || fail "el dry-run de setup retiró algo"
 
 # Applied (in Spanish), the links of dev go and the receipt forgets them.
-SETUP_LANG=es_PE.UTF-8 setup_run "$H" '\n\nwalls\n\napply\n'
+SETUP_LANG=es_PE.UTF-8 setup_run "$H" '\n\n\nwalls\napply\n'
 (( status == 0 )) || fail "setup desmarcando dev terminó con $status: $output"
 expect_wizard_retired 'Se retiran:' 'dev dev-containers'
 [[ ! -e "$dev_link" && ! -L "$dev_link" ]] || fail "setup no retiró los enlaces de la capa dev"
@@ -192,7 +193,7 @@ grep -qx 'FEATURES=""' "$R" || fail "el recibo conserva dev-containers: $(<"$R")
 [[ -L "$H/.local/share/wallpapers" && -L "$H/.config/bspwm/bspwmrc" ]] || fail "desmarcar dev retiró walls o bspwm"
 
 # "-" clears the extras: the component is unlinked and forgotten, its checkout kept.
-setup_run "$H" '\n\n-\n\napply\n'
+setup_run "$H" '\n\n\n-\napply\n'
 (( status == 0 )) || fail "setup vaciando los extras terminó con $status: $output"
 expect_wizard_retired 'Retiring:' 'walls'
 [[ ! -L "$H/.local/share/wallpapers" ]] || fail "setup no retiró el enlace de walls"
@@ -212,16 +213,47 @@ setup_run "$H" '\n\n\napply\n'
 (( status == 0 )) || fail "setup con Enter sobre el overlay terminó con $status: $output"
 [[ "$output" == *'Choose [server]'* ]] || fail "setup no propuso el perfil server guardado: $output"
 [[ -z "$(retire_line 'Retiring:')" && -L "$H/.config/overlay/ident" ]] || fail "Enter no conservó el overlay: $output"
-setup_run "$H" '\n\nn\napply\n'
+setup_run "$H" '\nn\n\napply\n'
 (( status == 0 )) || fail "setup sin el overlay terminó con $status: $output"
 expect_wizard_retired 'Retiring:' 'ident'
 [[ ! -L "$H/.config/overlay/ident" ]] || fail "setup no retiró la capa del overlay descartado"
 grep -qx 'OVERLAY=""' "$(receipt "$H" dotfiles)" || fail "el recibo conserva el overlay descartado"
 
+# The recorded overlay's features are extras too: the overlay is asked before
+# the extras, so Enter keeps them marked, and unchecking one retires only it.
+H="$TEST_ROOT/overlay-features"
+OVERLAY_FEAT="$TEST_ROOT/overlay-feat"
+make_overlay "$OVERLAY_FEAT"
+printf 'features=work play\ndescription.work=Fixture work identity\n' >> "$OVERLAY_FEAT/layers/ident/layer.conf"
+for feature in work play; do
+  mkdir -p "$OVERLAY_FEAT/layers/ident/home/$feature/.config/overlay"
+  printf '%s\n' "$feature" > "$OVERLAY_FEAT/layers/ident/packages/stow/$feature.txt"
+  printf '%s\n' "$feature" > "$OVERLAY_FEAT/layers/ident/home/$feature/.config/overlay/$feature"
+done
+mkdir -p "$H"
+HOME="$H" "$DOTFILES" bootstrap --stow-only --target "$H" --profile cli --overlay "$OVERLAY_FEAT" \
+  --feature work --feature play --apply >/dev/null 2>&1 || fail "no se pudo preparar el overlay con features"
+R=$(receipt "$H" dotfiles)
+grep -qx 'FEATURES="work play"' "$R" || fail "el recibo no guardó las features del overlay: $(<"$R")"
+selection_before=$(selection_of "$R")
+setup_run "$H" '\n\n\napply\n'
+(( status == 0 )) || fail "setup con Enter sobre features del overlay terminó con $status: $output"
+[[ "$output" == *'[x] work - Fixture work identity'* && "$output" == *'[x] play'* ]] || \
+  fail "setup no ofreció marcadas las features del overlay: $output"
+[[ -z "$(retire_line 'Retiring:')" ]] || fail "Enter en todas las preguntas retiró una feature del overlay: $output"
+[[ -L "$H/.config/overlay/work" && -L "$H/.config/overlay/play" ]] || fail "Enter retiró el enlace de una feature del overlay"
+[[ "$(selection_of "$R")" == "$selection_before" ]] || fail "Enter cambió la selección con features del overlay: $(<"$R")"
+setup_run "$H" '\n\nplay\napply\n'
+(( status == 0 )) || fail "setup desmarcando work terminó con $status: $output"
+expect_wizard_retired 'Retiring:' 'work'
+[[ ! -L "$H/.config/overlay/work" ]] || fail "setup no retiró el enlace de la feature work"
+[[ -L "$H/.config/overlay/play" && -L "$H/.config/overlay/ident" ]] || fail "desmarcar work retiró play o la capa del overlay"
+grep -qx 'FEATURES="play"' "$R" || fail "el recibo conserva la feature work: $(<"$R")"
+
 # 4. Dry-run and cancel change nothing (not even the overlay clone).
 for final in dry-run cancel; do
   H="$TEST_ROOT/$final"
-  setup_run "$H" "desktop\nbspwm\ndev walls\nfile://$OVERLAY_SRC\n$final\n"
+  setup_run "$H" "desktop\nbspwm\nfile://$OVERLAY_SRC\ndev walls\n$final\n"
   (( status == 0 )) || fail "setup $final terminó con $status: $output"
   [[ -z "$(find "$H" -mindepth 1 -print -quit)" ]] || fail "setup $final modificó el home: $(find "$H" -mindepth 1)"
 done
@@ -299,4 +331,4 @@ if "$DOTFILES" completion bash | grep -qw install; then
 fi
 
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || fail "las pruebas modificaron el checkout"
-echo "OK: dotfiles setup (perfil, WMs, extras, overlay, plan) validado"
+echo "OK: dotfiles setup (perfil, WMs, overlay, extras, plan) validado"

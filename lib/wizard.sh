@@ -4,13 +4,14 @@
 # The flow asks four questions, prints the plan and runs the normal bootstrap:
 #   1. profile: server (cli) or desktop;
 #   2. WMs (desktop only): any of layers/wm/*/layer.conf, none included;
-#   3. extras: opt-in layers, features and components.conf entries that fit
-#      the chosen profile and WMs, discovered at run time, none checked;
-#      on a target with a selection receipt every question starts from the
-#      recorded selection (Enter keeps it) and the plan names what an
-#      unchecked answer retires;
-#   4. overlay: an existing checkout with layers/, or a Git URL cloned into
+#   3. overlay: an existing checkout with layers/, or a Git URL cloned into
 #      the target's .dotfiles-private on apply, or Enter to skip;
+#   4. extras: opt-in layers, features (the chosen overlay's included) and
+#      components.conf entries that fit the chosen profile and WMs,
+#      discovered at run time, none checked;
+# on a target with a selection receipt every question starts from the
+# recorded selection (Enter keeps it) and the plan names what an unchecked
+# answer retires;
 # then apply, dry-run or cancel (the default). Answers are read one line at a
 # time; an empty line or the end of input takes the default, so piped input
 # always ends. Maintenance (sync, update, doctor, unlink) and the system layer
@@ -259,8 +260,9 @@ wizard_layer_fits() {
   done
 }
 
-# Fills WIZARD_EXTRA_* with the opt-in layers, the features of base and
-# opt-in layers, and the components that fit the chosen profile and WMs.
+# Fills WIZARD_EXTRA_* with the opt-in layers, the features of base, opt-in
+# and chosen overlay layers, and the components that fit the chosen profile
+# and WMs.
 wizard_collect_extras() {
   local name layer
 
@@ -278,11 +280,42 @@ wizard_collect_extras() {
     WIZARD_EXTRA_NAMES+=("$name")
     WIZARD_EXTRA_DESCRIPTIONS+=("$(wizard_layer_description "$LAYERS_DIR/$layer" "description.$name")")
   done
+  wizard_collect_overlay_features
   load_components
   for name in "${COMPONENT_NAMES[@]}"; do
     WIZARD_EXTRA_KINDS+=(component)
     WIZARD_EXTRA_NAMES+=("$name")
     WIZARD_EXTRA_DESCRIPTIONS+=("${COMPONENT_DESCRIPTIONS[$name]:-}")
+  done
+}
+
+# Adds to WIZARD_EXTRA_* the features declared by the layers of the chosen
+# overlay (OVERLAY_PATH) whose requirements fit the profile and WMs. Only
+# reads the overlay: the engine validates it in prepare_overlay, so a layer it
+# would refuse (a bad name, a missing requirement, a repeated feature) is
+# skipped here and fails in the bootstrap itself.
+wizard_collect_overlay_features() {
+  local layer_dir layer feature
+  local -A conf=()
+  local -a declared=()
+
+  [[ -n "$OVERLAY_PATH" && -d "$OVERLAY_PATH/layers" ]] || return 0
+  for layer_dir in "$OVERLAY_PATH"/layers/*/; do
+    layer_dir=${layer_dir%/}
+    layer=${layer_dir##*/}
+    [[ "$layer" =~ ^[a-z0-9][a-z0-9-]*$ && -f "$layer_dir/layer.conf" && ! -e "$LAYERS_DIR/$layer" ]] || continue
+    # The fit check resolves the layer's requirements through the overlay; a
+    # subshell keeps a requirement the engine would refuse from ending setup.
+    ( LAYER_OVERLAY_ROOT="$OVERLAY_PATH/layers"; wizard_layer_fits "$layer" ) >/dev/null 2>&1 || continue
+    read_layer_conf "$layer_dir" conf
+    read -r -a declared <<< "${conf[features]:-}"
+    for feature in "${declared[@]}"; do
+      ! array_contains SUPPORTED_FEATURES "$feature" || continue
+      ! array_contains WIZARD_EXTRA_NAMES "$feature" || continue
+      WIZARD_EXTRA_KINDS+=(feature)
+      WIZARD_EXTRA_NAMES+=("$feature")
+      WIZARD_EXTRA_DESCRIPTIONS+=("${conf[description.$feature]:-}")
+    done
   done
 }
 
@@ -426,7 +459,10 @@ run_interactive_wizard() {
   fi
   WM=${WMS[0]:-}
 
-  # 3. Extras that fit the profile and WMs.
+  # 3. Overlay, before the extras so they can offer its features.
+  wizard_choose_overlay
+
+  # 4. Extras that fit the profile, WMs and overlay.
   wizard_collect_extras
   picked=()
   if (( ${#WIZARD_EXTRA_NAMES[@]} > 0 )); then
@@ -453,9 +489,6 @@ run_interactive_wizard() {
   for component in "${recorded_components_list[@]}"; do
     array_contains components "$component" || RETIRED_COMPONENTS+=("$component")
   done
-
-  # 4. Overlay.
-  wizard_choose_overlay
 
   case "$MODE_SELECTION" in
     stow) mode=$(_t "links only (no packages)" "solo enlaces (sin paquetes)") ;;

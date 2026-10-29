@@ -318,7 +318,7 @@ output=$(HOME="$N" "$DOTFILES" unlink --profile core --target "$N" --apply 2>&1)
 # A component chosen among the setup extras is added at its pinned ref.
 W="$TEST_ROOT/wizard-home"
 mkdir -p "$W"
-output=$(printf 'server\nwalls\n\napply\n' | HOME="$W" "$DOTFILES" setup --stow-only --target "$W" 2>&1) || \
+output=$(printf 'server\n\nwalls\napply\n' | HOME="$W" "$DOTFILES" setup --stow-only --target "$W" 2>&1) || \
   fail "el asistente falló: $output"
 [[ -L "$W/.local/share/wallpapers" && "$(git -C "$W/.local/share/dotfiles/walls" rev-parse HEAD)" == "$REF1" ]] || \
   fail "el extra walls del asistente no añadió el componente: $output"

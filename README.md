@@ -119,7 +119,7 @@ Deploy the entire ecosystem with a single command. It automatically clones the b
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
 
-The wizard is one short guided flow (see below): profile, window managers, extras and overlay, then the plan.
+The wizard is one short guided flow (see below): profile, window managers, overlay and extras, then the plan.
 
 ### 2. If You Already Cloned the Repository
 
@@ -140,8 +140,8 @@ If you already have `~/.dotfiles/base` locally, run the guided setup directly:
 
 1. **Profile:** `server` (shell, Git and CLI tools, the `cli` layer) or `desktop` (adds the graphical session).
 2. **Window managers** (desktop only): none, one or several of the layers under `layers/wm/`.
-3. **Extras:** nothing is checked by default. The list is built at run time from the opt-in layers, the features declared in `layer.conf` and the components in `components.conf`, each with its `description`, and only shows what fits the chosen profile and window managers. A new layer, feature or component appears without changing the wizard.
-4. **Overlay:** an overlay with `layers/` found at `~/.dotfiles-private` (or recorded in the receipt) is offered with Yes by default; otherwise paste a Git URL, cloned into `~/.dotfiles-private` only when you apply, or press Enter to skip. Without an overlay the public Git config stays fail-closed until you configure an identity.
+3. **Overlay:** an overlay with `layers/` found at `~/.dotfiles-private` (or recorded in the receipt) is offered with Yes by default; otherwise paste a Git URL, cloned into `~/.dotfiles-private` only when you apply, or press Enter to skip. Without an overlay the public Git config stays fail-closed until you configure an identity.
+4. **Extras:** nothing is checked by default. The list is built at run time from the opt-in layers, the features declared in `layer.conf` and the components in `components.conf`, each with its `description`, plus the features of the overlay chosen in the previous question (an overlay given by URL is cloned on apply, so its features are offered on the next run), and only shows what fits the chosen profile and window managers. A new layer, feature or component appears without changing the wizard.
 
 On a machine set up before, every question starts from the selection saved in the receipt: the saved profile is the default, saved WMs and extras are marked `[x]`, and the saved overlay is offered with Yes. Enter keeps the marked entries, `-` clears them and any other answer replaces them, so pressing Enter on every question changes nothing. Whatever you uncheck (an extra, a WM, the overlay, or `server` instead of `desktop`) is retired: the plan lists it in a `Retiring:` line (`Se retiran:` in Spanish) and apply removes its links.
 
