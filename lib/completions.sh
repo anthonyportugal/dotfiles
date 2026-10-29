@@ -35,6 +35,7 @@ _dotfiles() {
     'doctor:Verifies dependencies, syntax, and symlinks without modifying'
     'unlink:Removes GNU Stow symlinks from the system'
     'add:Adds an external component from components.conf at its pinned commit'
+    'switch:Makes another checkout the active one (plan; --apply; --rollback undoes it)'
     'system:Optional system layer (Ly, Limine, DNS-over-TLS) under sudo'
     'completion:Prints the shell completion script (zsh or bash)'
     'help:Shows help'
@@ -83,6 +84,17 @@ _dotfiles() {
             '--target[Target directory]:directory:_files -/' \
             '(-n --dry-run)'{-n,--dry-run}'[Print the plan only]'
           ;;
+        switch)
+          _arguments -s \
+            '1:checkout:_files -/' \
+            '(--no-overlay)--overlay[Overlay repository with its own layers/]:directory:_files -/' \
+            '(--overlay)--no-overlay[Apply no overlay]' \
+            '--from[Current install when it cannot be detected]:directory:_files -/' \
+            '--with-packages[Also install packages (default: links only)]' \
+            '--rollback[Undo the last switch]' \
+            '--target[Target directory]:directory:_files -/' \
+            '--apply[Apply instead of printing the plan]'
+          ;;
         help)
           _describe -t commands 'command' commands
           ;;
@@ -100,7 +112,7 @@ _dotfiles_completion() {
   local cur prev words cword
   _init_completion || return
 
-  local commands="setup bootstrap sync update doctor unlink add system completion help"
+  local commands="setup bootstrap sync update doctor unlink add switch system completion help"
   local options="--profile --feature --layer --backend --platform --target --base-only --all --packages-only --stow-only --wm --wm-profile --overlay --no-overlay --apply --dry-run -h --help"
 
   if (( cword == 1 )); then
@@ -137,7 +149,7 @@ _dotfiles_completion() {
       COMPREPLY=( $(compgen -W "core desktop" -- "$cur") )
       return 0
       ;;
-    --target|--overlay)
+    --target|--overlay|--from|switch)
       COMPREPLY=( $(compgen -d -- "$cur") )
       return 0
       ;;
@@ -152,6 +164,7 @@ _dotfiles_completion() {
   esac
 
   if [[ "$cur" == -* ]]; then
+    [[ "${words[1]}" != switch ]] || options="--overlay --no-overlay --from --with-packages --rollback --target --apply -h --help"
     COMPREPLY=( $(compgen -W "$options" -- "$cur") )
   fi
 }

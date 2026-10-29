@@ -34,6 +34,7 @@ declare -A WM_PROFILES=()
 # External components (components.conf) recorded in the target's receipt.
 declare -a RECORDED_COMPONENTS=()
 ADD_ARGS=()
+SWITCH_ARGS=()
 
 # Overlay: a second layers root (--overlay DIR), usually a private repository.
 OVERLAY_PATH=""
@@ -164,6 +165,8 @@ Uso:
   $PROGRAM_NAME doctor [opciones]
   $PROGRAM_NAME unlink [opciones]
   $PROGRAM_NAME add NOMBRE [--target DIR] [-n|--dry-run]
+  $PROGRAM_NAME switch RUTA [--overlay RUTA|--no-overlay] [--from RUTA] [--with-packages] [--target DIR] [--apply]
+  $PROGRAM_NAME switch --rollback [--target DIR] [--apply]
   $PROGRAM_NAME system [setup|doctor] [opciones]
   $PROGRAM_NAME completion [zsh|bash]
   $PROGRAM_NAME help
@@ -184,6 +187,15 @@ Comandos:
   unlink      Retira los enlaces Stow y los de los componentes (conserva sus checkouts).
   add         Añade un componente externo de components.conf (p. ej. walls): lo clona en
               ~/.local/share/dotfiles/NOMBRE en su commit fijado y crea sus enlaces.
+  switch      Cambia el checkout activo del target a RUTA: detecta la instalación actual
+              (el ecosistema anterior de ~/.dotfiles u otro checkout del monorepo, o --from),
+              traduce su selección (perfil, WMs, private al overlay, walls al componente,
+              el tema, mimeapps.list) y lista lo que no migra. Sin --apply solo muestra el
+              plan; con --apply comprueba colisiones antes de tocar nada, guarda un
+              manifiesto en ~/.local/state/dotfiles/transactions/, retira solo los enlaces
+              hacia el checkout anterior y aplica la selección con el bootstrap de RUTA (solo
+              enlaces salvo --with-packages); si algo falla restaura el target tal como estaba.
+              --rollback deshace el último cambio (los archivos nuevos se apartan, no se borran).
   system      Capa opcional de sistema (Ly, Limine, DNS-over-TLS) con sudo explícito;
               nunca la ejecutan bootstrap, sync ni update. Ver '$PROGRAM_NAME system help'.
   completion  Imprime el script de autocompletado para zsh (default) o bash.
@@ -219,6 +231,7 @@ Ejemplos:
   $PROGRAM_NAME doctor
   $PROGRAM_NAME unlink
   $PROGRAM_NAME add walls
+  $PROGRAM_NAME switch ~/.dotfiles --apply
 EOF
   else
     cat <<EOF
@@ -230,6 +243,8 @@ Usage:
   $PROGRAM_NAME doctor [options]
   $PROGRAM_NAME unlink [options]
   $PROGRAM_NAME add NAME [--target DIR] [-n|--dry-run]
+  $PROGRAM_NAME switch DIR [--overlay DIR|--no-overlay] [--from DIR] [--with-packages] [--target DIR] [--apply]
+  $PROGRAM_NAME switch --rollback [--target DIR] [--apply]
   $PROGRAM_NAME system [setup|doctor] [options]
   $PROGRAM_NAME completion [zsh|bash]
   $PROGRAM_NAME help
@@ -251,6 +266,16 @@ Commands:
   unlink      Removes GNU Stow symlinks and component links (component checkouts are kept).
   add         Adds an external component from components.conf (e.g. walls): clones it into
               ~/.local/share/dotfiles/NAME at its pinned commit and creates its links.
+  switch      Makes DIR the target's active checkout: detects the current install (the
+              previous ~/.dotfiles ecosystem or another monorepo checkout, or --from),
+              translates its selection (profile, WMs, private to the overlay, walls to the
+              component, the theme, mimeapps.list) and lists what does not migrate. Without
+              --apply it only prints the plan; with --apply it checks collisions before
+              touching anything, saves a manifest under ~/.local/state/dotfiles/transactions/,
+              removes only the links into the previous checkout and applies the selection with
+              DIR's bootstrap (links only unless --with-packages); when anything fails the
+              target is restored as it was. --rollback undoes the last switch (files that
+              appeared since are set aside, never deleted).
   system      Optional system layer (Ly, Limine, DNS-over-TLS) under an explicit sudo;
               bootstrap, sync and update never run it. See '$PROGRAM_NAME system help'.
   completion  Prints the shell completion script for zsh (default) or bash.
@@ -286,6 +311,7 @@ Examples:
   $PROGRAM_NAME doctor
   $PROGRAM_NAME unlink
   $PROGRAM_NAME add walls
+  $PROGRAM_NAME switch ~/.dotfiles --apply
 EOF
   fi
 }
@@ -353,6 +379,11 @@ parse_args() {
     add)
       # add parses its own options (see lib/components.sh).
       ADD_ARGS=("$@")
+      return 0
+      ;;
+    switch)
+      # switch parses its own options (see lib/switch.sh).
+      SWITCH_ARGS=("$@")
       return 0
       ;;
     help|-h|--help)
@@ -1585,6 +1616,9 @@ main() {
       ;;
     add)
       cmd_add "${ADD_ARGS[@]}"
+      ;;
+    switch)
+      cmd_switch "${SWITCH_ARGS[@]}"
       ;;
   esac
 }

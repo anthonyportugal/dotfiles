@@ -205,6 +205,15 @@ También puedes orquestar los componentes directamente mediante flags explícito
   ```bash
   ./bin/dotfiles unlink --apply
   ```
+- **Cambio del checkout activo (`switch`):** Lleva un home a otro checkout, por ejemplo desde la instalación anterior de varios repositorios en `~/.dotfiles` (base, `wm/<x>`, private, walls) a este monorepo, o entre dos checkouts del monorepo como `~/dev/personal/dotfiles` y `~/.dotfiles`. Sin `--apply` solo muestra el plan:
+  ```bash
+  ./bin/dotfiles switch ~/dev/personal/dotfiles            # plan: qué migra y qué no
+  ./bin/dotfiles switch ~/dev/personal/dotfiles --apply    # cambio (solo enlaces)
+  ./bin/dotfiles switch --rollback --apply                 # deshace el último cambio
+  ```
+  La instalación actual se detecta por `~/.local/bin/dotfiles` (o `~/.dotfiles/base`; `--from RUTA` la indica). Su selección se traduce: los paquetes base enlazados fijan el perfil, `wm/<x>` pasa a la capa de WM `<x>` (su recibo conserva su perfil), la instalación private anterior pasa al overlay (`--overlay RUTA`, si no el overlay guardado, si no un checkout hermano `RUTA-private` o `dotfiles-private` junto al nuevo; el plan dice cuál) con `development` como la capa `dev` y cada componente laboral `<w>` como la feature `work-<w>` del overlay, los enlaces de walls pasan al componente `walls`, el tema elegido para el WM al que apunta el tema compartido pasa a `~/.local/state/dotfiles/theme/selected`, y un `mimeapps.list` enlazado al checkout anterior se conserva como archivo con todas las asociaciones que las apps escribieron a través de él. Un checkout del monorepo conserva su selección guardada. Lo que no tiene equivalente se lista como `No migrado:` (agent-harness y system tienen sus propios instaladores) y sus enlaces se conservan.
+
+  Antes de cambiar nada, el dry-run del propio checkout nuevo comprueba las colisiones: un archivo real o un enlace que apunta a otro sitio que los checkouts reemplazados aborta el cambio sin modificar nada y lista cada ruta. Después se guarda en `~/.local/state/dotfiles/transactions/` un manifiesto de cada enlace que se reemplaza (ruta y destino anterior) y una copia del directorio de estado; solo se retiran los enlaces hacia los checkouts reemplazados y la selección se aplica con el `bootstrap` del checkout nuevo (`--stow-only` salvo `--with-packages`). Si falla cualquier paso, el target se restaura tal como estaba. `switch --rollback --apply` deshace después el último cambio: vuelven los enlaces, archivos y recibos anteriores, y los archivos que aparecieron desde entonces se apartan a `transactions/displaced-*`, nunca se borran. Ningún checkout se modifica.
 - **Capa de Sistema Opcional (`system`):** Aplica [`layers/system`](layers/system/README.es.md) (display manager Ly, tema de Limine, DNS-over-TLS) en `/etc` y `/boot` con `sudo` explícito. Es opcional: `bootstrap`, `sync` y `update` nunca la ejecutan, y `update` solo avisa cuando un cambio descargado la tocó. La selección aplicada se guarda en `~/.local/state/dotfiles/system.receipt`:
   ```bash
   ./bin/dotfiles system setup --ly --dns --provider quad9 --install

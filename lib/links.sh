@@ -28,11 +28,13 @@ is_repo_symlink() {
   if [[ -n "$stow_canon" && ( "$dest" == "$stow_canon/"* || "$dest" == "$stow_canon" ) ]]; then
     return 0
   fi
-  if [[ -n "$dots_canon" && "$dest" == "$dots_canon/"* ]]; then
+  # A switch preflight (DOTFILES_STRICT_LINKS=1) names every replaceable
+  # checkout itself, so other links into ~/.dotfiles count as foreign.
+  if [[ -n "$dots_canon" && "${DOTFILES_STRICT_LINKS:-0}" != 1 && "$dest" == "$dots_canon/"* ]]; then
     return 0
   fi
-  # Checkouts whose links the caller removes before linking (a retire), as
-  # canonical paths separated by ':'; only set during a preflight.
+  # Checkouts whose links the caller removes before linking (a retire or a
+  # switch), as canonical paths separated by ':'; only set during a preflight.
   local replaceable_root
   local -a replaceable_roots=()
   IFS=: read -r -a replaceable_roots <<< "${DOTFILES_REPLACEABLE_ROOTS:-}"
