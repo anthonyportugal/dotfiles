@@ -119,6 +119,8 @@ output=$(run sync --stow-only --target "$H" 2>&1) || fail "sync falló: $output"
 # Overriding another selection field on sync keeps the recorded layers.
 output=$(run sync --stow-only --profile core --target "$H" 2>&1) || fail "sync --profile core falló: $output"
 grep -Fxq 'LAYERS="dev"' "$RECEIPT" || fail "sync sin --layer perdió la capa del recibo: $(<"$RECEIPT")"
+[[ "$output" != *'Se retiran:'* ]] || fail "sync --profile core retiró parte de la selección guardada: $output"
+[[ -L "$dev_link" ]] || fail "sync --profile core retiró la capa dev guardada"
 
 # An unknown layer in the receipt is ignored with a warning.
 sed -i 's/^LAYERS=.*/LAYERS="dev nope"/' "$RECEIPT"

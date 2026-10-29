@@ -6,6 +6,9 @@
 #   2. WMs (desktop only): any of layers/wm/*/layer.conf, none included;
 #   3. extras: opt-in layers, features and components.conf entries that fit
 #      the chosen profile and WMs, discovered at run time, none checked;
+#      on a target with a selection receipt every question starts from the
+#      recorded selection (Enter keeps it) and the plan names what an
+#      unchecked answer retires;
 #   4. overlay: an existing checkout with layers/, or a Git URL cloned into
 #      the target's .dotfiles-private on apply, or Enter to skip;
 # then apply, dry-run or cancel (the default). Answers are read one line at a
@@ -97,8 +100,10 @@ wizard_heading() {
   printf '\n%b%s%b\n' "${C_BOLD}${C_MAUVE}" "$1" "$C_RESET"
 }
 
+# Prints option $1 named $2 with description $3; a mark $4 ("[x]" or "[ ]")
+# shows a pre-selected multiple choice.
 wizard_option() {
-  printf '  %b[%d]%b %s%s\n' "$C_PINK" "$1" "$C_RESET" "$2" "${3:+ - $3}"
+  printf '  %b[%d]%b %s%s%s\n' "$C_PINK" "$1" "$C_RESET" "${4:+$4 }" "$2" "${3:+ - $3}"
 }
 
 wizard_invalid() {
@@ -146,22 +151,41 @@ wizard_select() {
 
 # Multiple choice: fills the array named $1 with the indexes chosen among the
 # names of array $3 (descriptions in array $4) under title $2. An answer lists
-# numbers or names separated by spaces or commas; empty means none.
+# numbers or names separated by spaces or commas; empty means none. With the
+# indexes of array $5 pre-selected (the current selection), they are marked,
+# Enter keeps them, "-" clears them and any other answer replaces them.
 wizard_multiselect() {
   local -n _wz_selected=$1
   local title=$2
   local -n _wz_names=$3 _wz_descriptions=$4
-  local index answer token found valid
-  local -a tokens=() _wz_picked=()
+  local index answer token found valid mark=""
+  local -a tokens=() _wz_picked=() _wz_defaults=()
 
+  if [[ -n "${5:-}" ]]; then
+    local -n _wz_defaults_ref=$5
+    _wz_defaults=("${_wz_defaults_ref[@]}")
+  fi
   _wz_selected=()
   wizard_heading "$title"
   for index in "${!_wz_names[@]}"; do
-    wizard_option "$(( index + 1 ))" "${_wz_names[index]}" "${_wz_descriptions[index]}"
+    if (( ${#_wz_defaults[@]} > 0 )); then
+      mark="[ ]"
+      ! array_contains _wz_defaults "$index" || mark="[x]"
+    fi
+    wizard_option "$(( index + 1 ))" "${_wz_names[index]}" "${_wz_descriptions[index]}" "$mark"
   done
   while true; do
-    printf '%b%s: %b' "$C_BLUE" "$(_t "Numbers or names separated by spaces (Enter = none)" "Números o nombres separados por espacios (Enter = ninguno)")" "$C_RESET"
-    wizard_read answer || return 0
+    if (( ${#_wz_defaults[@]} > 0 )); then
+      printf '%b%s: %b' "$C_BLUE" "$(_t "Numbers or names separated by spaces (Enter = keep the marked ones, - = none)" "Números o nombres separados por espacios (Enter = conservar los marcados, - = ninguno)")" "$C_RESET"
+      if ! wizard_read answer || [[ -z "$answer" ]]; then
+        _wz_selected=("${_wz_defaults[@]}")
+        return 0
+      fi
+      [[ "$answer" != - ]] || return 0
+    else
+      printf '%b%s: %b' "$C_BLUE" "$(_t "Numbers or names separated by spaces (Enter = none)" "Números o nombres separados por espacios (Enter = ninguno)")" "$C_RESET"
+      wizard_read answer || return 0
+    fi
     IFS=$' \t,' read -r -a tokens <<< "$answer"
     _wz_picked=()
     valid=1
@@ -185,8 +209,11 @@ wizard_multiselect() {
       _wz_selected=("${_wz_picked[@]}")
       return 0
     fi
-    # At the end of input an invalid list selects nothing.
-    (( WIZARD_EOF == 0 )) || return 0
+    # At the end of input an invalid list keeps the pre-selection, if any.
+    if (( WIZARD_EOF == 1 )); then
+      _wz_selected=("${_wz_defaults[@]}")
+      return 0
+    fi
   done
 }
 
@@ -318,13 +345,38 @@ wizard_add_component() {
     warn "$(_t "The $1 component was not added" "El componente $1 no se añadió")"
 }
 
+# Prints what the chosen selection would retire from the recorded one, the
+# same names the bootstrap plan lists. Runs the engine's resolution in a
+# subshell, so nothing of this run changes; a selection the engine refuses
+# prints nothing here and fails in the bootstrap itself.
+wizard_retire_preview() {
+  ( _wizard_retire_names ) 3>&1 >/dev/null 2>&1 || true
+}
+
+# Body of wizard_retire_preview; only ever run in its subshell. The names go
+# to file descriptor 3, everything the engine prints is discarded.
+_wizard_retire_names() {
+  COMMAND=bootstrap
+  prepare_overlay
+  validate_features
+  TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
+  resolve_selected_layers
+  RECORDED_COMPONENTS=()
+  (( STOW_ENABLED == 0 )) || recorded_components RECORDED_COMPONENTS
+  compute_retired_selection
+  printf '%s' "${RETIRE_NAMES[*]}" >&3
+}
+
 wizard_plan_line() {
   printf '  %-12s %s\n' "$1" "$2"
 }
 
 run_interactive_wizard() {
-  local profile_choice final_choice index mode overlay_text component
-  local -a wm_names=() wm_descriptions=() picked=() components=()
+  local profile_choice final_choice index mode overlay_text component retiring
+  local profile_default=desktop extras_title
+  local -a wm_names=() wm_descriptions=() picked=() components=() defaults=()
+  local -a recorded_wms=() recorded_extras=() recorded_components_list=()
+  local -A recorded=()
   local wm_dir
 
   wizard_detect_language
@@ -332,8 +384,17 @@ run_interactive_wizard() {
   printf '%b%s%b %s\n' "${C_BOLD}${C_MAUVE}" "dotfiles setup" "$C_RESET" \
     "$(prettify_path "$REPO_ROOT") -> $(prettify_path "$TARGET_DIR")"
 
+  # A target set up before starts from its current selection.
+  if read_receipt dotfiles recorded; then
+    [[ "${recorded[PROFILE]:-}" == desktop || -n "${recorded[WMS]:-}" ]] || profile_default=server
+    read -r -a recorded_wms <<< "${recorded[WMS]:-}"
+    read -r -a recorded_extras <<< "${recorded[LAYERS]:-} ${recorded[FEATURES]:-}"
+    recorded_components recorded_components_list
+    recorded_extras+=("${recorded_components_list[@]}")
+  fi
+
   # 1. Profile.
-  wizard_select profile_choice desktop "$(_t "Choose a profile" "Elige un perfil")" \
+  wizard_select profile_choice "$profile_default" "$(_t "Choose a profile" "Elige un perfil")" \
     server "$(_t "Terminal only: shell, Git and CLI tools (VPS, headless)" "Solo terminal: shell, Git y herramientas CLI (VPS, sin pantalla)")" \
     desktop "$(_t "Server plus the graphical session (theme, fonts, audio, portals)" "Servidor más la sesión gráfica (tema, fuentes, audio, portales)")"
   if [[ "$profile_choice" == server ]]; then
@@ -352,8 +413,12 @@ run_interactive_wizard() {
       wm_descriptions+=("$(wizard_layer_description "$wm_dir" description)")
     done
     if (( ${#wm_names[@]} > 0 )); then
+      defaults=()
+      for index in "${!wm_names[@]}"; do
+        ! array_contains recorded_wms "${wm_names[index]}" || defaults+=("$index")
+      done
       wizard_multiselect picked "$(_t "Window managers (none, one or several)" "Gestores de ventanas (ninguno, uno o varios)")" \
-        wm_names wm_descriptions
+        wm_names wm_descriptions defaults
       for index in "${picked[@]}"; do
         WMS+=("${wm_names[index]}")
       done
@@ -365,8 +430,14 @@ run_interactive_wizard() {
   wizard_collect_extras
   picked=()
   if (( ${#WIZARD_EXTRA_NAMES[@]} > 0 )); then
-    wizard_multiselect picked "$(_t "Extras (optional, none selected by default)" "Extras (opcionales, ninguno marcado por defecto)")" \
-      WIZARD_EXTRA_NAMES WIZARD_EXTRA_DESCRIPTIONS
+    defaults=()
+    for index in "${!WIZARD_EXTRA_NAMES[@]}"; do
+      ! array_contains recorded_extras "${WIZARD_EXTRA_NAMES[index]}" || defaults+=("$index")
+    done
+    extras_title=$(_t "Extras (optional, none selected by default)" "Extras (opcionales, ninguno marcado por defecto)")
+    (( ${#defaults[@]} == 0 )) || \
+      extras_title=$(_t "Extras (optional, the current selection is marked)" "Extras (opcionales, la selección actual está marcada)")
+    wizard_multiselect picked "$extras_title" WIZARD_EXTRA_NAMES WIZARD_EXTRA_DESCRIPTIONS defaults
   fi
   FEATURES=() OPTIONAL_LAYERS=()
   for index in "${picked[@]}"; do
@@ -375,6 +446,12 @@ run_interactive_wizard() {
       feature) FEATURES+=("${WIZARD_EXTRA_NAMES[index]}") ;;
       component) components+=("${WIZARD_EXTRA_NAMES[index]}") ;;
     esac
+  done
+
+  # Recorded components left unchecked are unlinked by the bootstrap.
+  RETIRED_COMPONENTS=()
+  for component in "${recorded_components_list[@]}"; do
+    array_contains components "$component" || RETIRED_COMPONENTS+=("$component")
   done
 
   # 4. Overlay.
@@ -398,6 +475,8 @@ run_interactive_wizard() {
   [[ "$PROFILE" != desktop ]] || wizard_plan_line "WMs:" "${WMS[*]:-$(_t "none" "ninguno")}"
   wizard_plan_line "Extras:" "${extras[*]:-$(_t "none" "ninguno")}"
   wizard_plan_line "Overlay:" "$overlay_text"
+  retiring=$(wizard_retire_preview)
+  [[ -z "$retiring" ]] || wizard_plan_line "$(_t "Retiring:" "Se retiran:")" "$retiring"
   wizard_plan_line "$(_t "Mode:" "Modo:")" "$mode"
   wizard_plan_line "Target:" "$(prettify_path "$TARGET_DIR")"
 
@@ -424,8 +503,9 @@ run_interactive_wizard() {
   COMMAND="bootstrap"
   resolve_wm_layers
   bootstrap_with_optional_components
+  # Recorded components were re-applied by the bootstrap; only new ones are added.
   for component in "${components[@]}"; do
-    wizard_add_component "$component" "$APPLY"
+    array_contains recorded_components_list "$component" || wizard_add_component "$component" "$APPLY"
   done
   info "$(_t "Optional system layer (Ly, Limine, DNS-over-TLS, needs sudo): run 'dotfiles system' when you want it." "Capa de sistema opcional (Ly, Limine, DNS-over-TLS, requiere sudo): ejecute 'dotfiles system' cuando la quiera.")"
 }

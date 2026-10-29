@@ -95,6 +95,9 @@ grep -qx 'OVERLAY=""' "$(receipt "$H" dotfiles)" || fail "Enter no omitió el ov
 [[ "$output" == *'fail-closed'* ]] || fail "sin overlay no avisó que Git queda fail-closed: $output"
 [[ "$output" == *'dotfiles system'* ]] || fail "setup no indicó 'dotfiles system' al cerrar: $output"
 [[ "$output" != *'user.name'* && "$output" != *'Git Name'* ]] || fail "setup sigue pidiendo la identidad Git: $output"
+[[ "$output" == *'Extras (optional, none selected by default)'* && "$output" == *'(Enter = none)'* ]] || \
+  fail "sin recibo cambió la pregunta de extras: $output"
+[[ "$output" != *'[x]'* && "$output" != *'[ ]'* && "$output" != *'Retiring:'* ]] || fail "sin recibo setup marcó o retiró algo: $output"
 
 # 2. Desktop + bspwm + dev + dev-containers + walls, applied.
 H="$TEST_ROOT/desktop"
@@ -134,6 +137,86 @@ setup_run "$H" "server\n\nfile://$OVERLAY_SRC\napply\n"
 [[ -d "$H/.dotfiles-private/.git" ]] || fail "setup no clonó el overlay en ~/.dotfiles-private"
 [[ -L "$H/.config/overlay/ident" ]] || fail "setup no aplicó el overlay clonado"
 grep -Fxq "OVERLAY=\"$H/.dotfiles-private\"" "$(receipt "$H" dotfiles)" || fail "el recibo no guardó el overlay clonado"
+
+# 3b. A target set up before starts from its receipt: Enter on every
+# question keeps the whole selection, unchecking retires its links and the
+# plan names them first.
+retire_line() {
+  grep -E "^  $1 +" <<< "$output" || true
+}
+expect_wizard_retired() {
+  local label=$1 expected=$2 line count=0
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    [[ "$line" =~ ^\ \ $label\ +(.*)$ && "${BASH_REMATCH[1]}" == "$expected" ]] || \
+      fail "el plan retira '$line' en vez de '$expected': $output"
+    count=$(( count + 1 ))
+  done <<< "$(retire_line "$label")"
+  # Once in the setup plan and once in the bootstrap plan.
+  (( count == 2 )) || fail "el plan no listó '$label $expected' en el plan de setup y en el del bootstrap: $output"
+}
+H="$TEST_ROOT/desktop"
+R=$(receipt "$H" dotfiles)
+selection_of() {
+  grep -E '^(PROFILE|WMS|LAYERS|FEATURES|OVERLAY)=' "$1"
+}
+selection_before=$(selection_of "$R")
+setup_run "$H" '\n\n\n\napply\n'
+(( status == 0 )) || fail "setup con Enter sobre un recibo terminó con $status: $output"
+[[ "$output" == *'Choose [desktop]'* ]] || fail "setup no propuso el perfil guardado: $output"
+[[ "$output" == *'[x] bspwm'* && "$output" == *'[ ] mangowm'* ]] || fail "setup no marcó los WMs guardados: $output"
+[[ "$output" == *'[x] dev '* && "$output" == *'[x] dev-containers'* && "$output" == *'[x] walls'* && "$output" == *'[ ] dev-js'* ]] || \
+  fail "setup no marcó los extras guardados: $output"
+[[ "$output" == *'Extras (optional, the current selection is marked)'* ]] || fail "la pregunta de extras no indica la preselección: $output"
+[[ "$output" == *'Enter = keep the marked ones, - = none'* ]] || fail "setup no explica cómo conservar o vaciar la preselección: $output"
+[[ -z "$(retire_line 'Retiring:')" ]] || fail "Enter en todas las preguntas retiró algo: $output"
+[[ "$(selection_of "$R")" == "$selection_before" ]] || fail "Enter en todas las preguntas cambió la selección: $(<"$R")"
+grep -qx 'COMPONENTS="walls"' "$(receipt "$H" components)" || fail "Enter en todas las preguntas perdió walls"
+[[ -L "$H/.config/bspwm/bspwmrc" && -L "$H/.local/share/wallpapers" ]] || fail "Enter en todas las preguntas retiró enlaces"
+dev_link="$H/.config/zsh/conf.d/50-dev.zsh"
+[[ -L "$dev_link" ]] || fail "la capa dev no estaba enlazada"
+
+# Unchecking dev and dev-containers: the dry-run names them and changes nothing.
+setup_run "$H" '\n\nwalls\n\ndry-run\n'
+(( status == 0 )) || fail "setup dry-run desmarcando dev terminó con $status: $output"
+expect_wizard_retired 'Retiring:' 'dev dev-containers'
+[[ -L "$dev_link" && "$(selection_of "$R")" == "$selection_before" ]] || fail "el dry-run de setup retiró algo"
+
+# Applied (in Spanish), the links of dev go and the receipt forgets them.
+SETUP_LANG=es_PE.UTF-8 setup_run "$H" '\n\nwalls\n\napply\n'
+(( status == 0 )) || fail "setup desmarcando dev terminó con $status: $output"
+expect_wizard_retired 'Se retiran:' 'dev dev-containers'
+[[ ! -e "$dev_link" && ! -L "$dev_link" ]] || fail "setup no retiró los enlaces de la capa dev"
+grep -qx 'LAYERS=""' "$R" || fail "el recibo conserva la capa dev: $(<"$R")"
+grep -qx 'FEATURES=""' "$R" || fail "el recibo conserva dev-containers: $(<"$R")"
+[[ -L "$H/.local/share/wallpapers" && -L "$H/.config/bspwm/bspwmrc" ]] || fail "desmarcar dev retiró walls o bspwm"
+
+# "-" clears the extras: the component is unlinked and forgotten, its checkout kept.
+setup_run "$H" '\n\n-\n\napply\n'
+(( status == 0 )) || fail "setup vaciando los extras terminó con $status: $output"
+expect_wizard_retired 'Retiring:' 'walls'
+[[ ! -L "$H/.local/share/wallpapers" ]] || fail "setup no retiró el enlace de walls"
+[[ ! -e "$(receipt "$H" components)" ]] || fail "el recibo de componentes conserva walls"
+[[ -d "$H/.local/share/dotfiles/walls" ]] || fail "retirar walls borró su checkout"
+
+# Unchecking the WM retires its layer.
+setup_run "$H" '\n-\n\n\napply\n'
+(( status == 0 )) || fail "setup desmarcando bspwm terminó con $status: $output"
+expect_wizard_retired 'Retiring:' 'bspwm'
+[[ ! -L "$H/.config/bspwm/bspwmrc" ]] || fail "setup no retiró bspwm"
+grep -qx 'WMS=""' "$R" || fail "el recibo conserva bspwm: $(<"$R")"
+
+# The recorded overlay: Enter keeps it, n drops it and retires its layers.
+H="$TEST_ROOT/overlay-detected"
+setup_run "$H" '\n\n\napply\n'
+(( status == 0 )) || fail "setup con Enter sobre el overlay terminó con $status: $output"
+[[ "$output" == *'Choose [server]'* ]] || fail "setup no propuso el perfil server guardado: $output"
+[[ -z "$(retire_line 'Retiring:')" && -L "$H/.config/overlay/ident" ]] || fail "Enter no conservó el overlay: $output"
+setup_run "$H" '\n\nn\napply\n'
+(( status == 0 )) || fail "setup sin el overlay terminó con $status: $output"
+expect_wizard_retired 'Retiring:' 'ident'
+[[ ! -L "$H/.config/overlay/ident" ]] || fail "setup no retiró la capa del overlay descartado"
+grep -qx 'OVERLAY=""' "$(receipt "$H" dotfiles)" || fail "el recibo conserva el overlay descartado"
 
 # 4. Dry-run and cancel change nothing (not even the overlay clone).
 for final in dry-run cancel; do

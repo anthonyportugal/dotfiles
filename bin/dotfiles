@@ -79,6 +79,16 @@ declare -a SELECTED_LAYERS=()
 BASE_LAYERS=(core cli desktop)
 FAILED_LAYER=""
 
+# What this run retires because the selection receipt recorded more than the
+# run selects (compute_retired_selection). One unit per layer: its root,
+# profile and recorded features; an empty package list unlinks the whole
+# layer, otherwise only those Stow packages (dropped features of a kept layer).
+declare -a RETIRE_ROOTS=() RETIRE_LAYERS=() RETIRE_PROFILES=() RETIRE_FEATURES=() RETIRE_PACKAGE_LISTS=()
+# Names on the plan's retire line: layers, then features, then components.
+declare -a RETIRE_NAMES=()
+# Recorded components the wizard dropped; unlinked and forgotten on apply.
+declare -a RETIRED_COMPONENTS=()
+
 # An explicit language (DOTFILES_LANG or --lang) always wins; otherwise setup
 # follows $LANG (see wizard_detect_language) and every other command uses en.
 DOTFILES_LANG_EXPLICIT=0
@@ -157,10 +167,14 @@ Uso:
 
 Comandos:
   setup       Asistente guiado corto: perfil (servidor o escritorio), WMs, extras y overlay;
-              luego muestra el plan y pregunta aplicar, simular (dry-run) o cancelar.
+              parte de la selección guardada (Enter la conserva) y luego muestra el plan
+              y pregunta aplicar, simular (dry-run) o cancelar.
   bootstrap   Instala la selección indicada por flags sin asistente; sin --apply solo
-              muestra el plan (dry-run).
-  sync        Re-aplica la selección guardada (perfil, capas, WMs, componentes) sin tocar Git.
+              muestra el plan (dry-run). Lo que la selección guardada tenía y esta no
+              (capas, features, WMs, un perfil menor, el overlay) se retira: el plan lo
+              lista en 'Se retiran:' y solo se quitan enlaces hacia este checkout u overlay.
+  sync        Re-aplica la selección guardada (perfil, capas, WMs, componentes) sin tocar Git;
+              lo que un flag descarta se retira como en bootstrap.
   update      Descarga el repositorio público y el overlay (fast-forward) y re-aplica la
               selección guardada; los componentes pasan a su nueva ref fijada.
   doctor      Comprueba dependencias, sintaxis, enlaces y componentes sin modificar nada.
@@ -219,10 +233,15 @@ Usage:
 
 Commands:
   setup       Short guided setup: profile (server or desktop), WMs, extras and overlay;
-              then shows the plan and asks to apply, dry-run or cancel.
+              starts from the saved selection (Enter keeps it), then shows the plan
+              and asks to apply, dry-run or cancel.
   bootstrap   Installs the selection given by flags without the wizard; without --apply
-              it only prints the plan (dry-run).
-  sync        Re-applies the saved selection (profile, layers, WMs, components) without touching Git.
+              it only prints the plan (dry-run). What the saved selection had and this
+              one drops (layers, features, WMs, a lower profile, the overlay) is retired:
+              the plan lists it under 'Retiring:' and only links into this checkout or
+              overlay are removed.
+  sync        Re-applies the saved selection (profile, layers, WMs, components) without touching Git;
+              what a flag drops is retired as with bootstrap.
   update      Pulls the public repository and the overlay (fast-forward) and re-applies the
               saved selection; components move to their newly pinned ref.
   doctor      Verifies dependencies, syntax, symlinks, and components without modifying anything.
@@ -894,6 +913,204 @@ layer_label() {
   esac
 }
 
+# Prints the profile recorded layer $1 (under root $2) was applied with: a
+# WM layer's own receipt, or the layer name like layer_profile.
+recorded_layer_profile() {
+  local -A conf=() saved=()
+  local wm_profile
+
+  case "$1" in
+    wm/*)
+      read_layer_conf "$2/$1" conf
+      wm_profile=${WM_PROFILES[${1#wm/}]:-$WM_PROFILE}
+      if read_receipt "${conf[receipt]:-${1//\//-}}" saved && [[ "${saved[PROFILE]:-}" == core || "${saved[PROFILE]:-}" == desktop ]]; then
+        wm_profile=${saved[PROFILE]}
+      fi
+      printf '%s' "$wm_profile"
+      ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+# Appends to the array named by $2 every layer of overlay root $1 whose
+# requires are all in it, repeating like add_overlay_layers; names that
+# collide with a public layer are skipped.
+add_recorded_overlay_layers() {
+  local root=$1 name dependency added=1 ready layer_dir
+  local -n recorded_ref=$2
+  local -A conf=()
+  local -a names=() dependencies=()
+
+  for layer_dir in "$root"/*/; do
+    name=${layer_dir%/}
+    name=${name##*/}
+    [[ "$name" =~ ^[a-z0-9][a-z0-9-]*$ && ! -e "$LAYERS_DIR/$name" && -f "$root/$name/layer.conf" ]] || continue
+    names+=("$name")
+  done
+  while (( added == 1 )); do
+    added=0
+    for name in "${names[@]}"; do
+      ! array_contains "$2" "$name" || continue
+      read_layer_conf "$root/$name" conf
+      read -r -a dependencies <<< "${conf[requires]:-}"
+      ready=1
+      for dependency in "${dependencies[@]}"; do
+        array_contains "$2" "$dependency" || { ready=0; break; }
+      done
+      (( ready == 1 )) || continue
+      recorded_ref+=("$name")
+      added=1
+    done
+  done
+}
+
+# Compares the selection receipt with the layers this bootstrap or sync
+# resolved and fills the RETIRE_* units: every recorded layer that is no
+# longer selected (or comes from another overlay) is unlinked whole, and a
+# kept layer loses the Stow packages of its dropped features. Only links into
+# the layer's own checkout are ever removed (stow --delete).
+compute_retired_selection() {
+  local -A recorded=() conf=() layer_roots=()
+  local -a requested=() recorded_layers=() recorded_features=() entries=() declared=()
+  local -a layer_features=() dropped_features=() kept_packages=() retired_packages=()
+  local entry layer root index feature recorded_overlay="" overlay_root=""
+
+  RETIRE_ROOTS=() RETIRE_LAYERS=() RETIRE_PROFILES=() RETIRE_FEATURES=() RETIRE_PACKAGE_LISTS=()
+  RETIRE_NAMES=()
+  if (( STOW_ENABLED == 1 )) && [[ "$COMMAND" == bootstrap || "$COMMAND" == sync ]] && read_receipt dotfiles recorded; then
+    # The recorded selection, keeping only what still exists.
+    case "${recorded[PROFILE]:-}" in
+      core|cli|desktop) requested+=("${recorded[PROFILE]}") ;;
+    esac
+    read -r -a entries <<< "${recorded[LAYERS]:-}"
+    for entry in "${entries[@]}"; do
+      ! array_contains SUPPORTED_LAYERS "$entry" || requested+=("$entry")
+    done
+    read -r -a entries <<< "${recorded[WMS]:-}"
+    for entry in "${entries[@]}"; do
+      [[ ! "$entry" =~ $WM_NAME_PATTERN || ! -f "$LAYERS_DIR/wm/$entry/layer.conf" ]] || requested+=("wm/$entry")
+    done
+    (( ${#requested[@]} == 0 )) || resolve_layers "$LAYERS_DIR" recorded_layers "${requested[@]}"
+    for layer in "${recorded_layers[@]}"; do
+      layer_roots["$layer"]=$LAYERS_DIR
+    done
+
+    # The recorded overlay's layers come from its own checkout.
+    if [[ -n "${recorded[OVERLAY]:-}" ]]; then
+      recorded_overlay=$(realpath -m -- "${recorded[OVERLAY]}")
+      if [[ -d "$recorded_overlay/layers" ]]; then
+        overlay_root="$recorded_overlay/layers"
+        index=${#recorded_layers[@]}
+        add_recorded_overlay_layers "$overlay_root" recorded_layers
+        for layer in "${recorded_layers[@]:index}"; do
+          layer_roots["$layer"]=$overlay_root
+        done
+      else
+        warn "$(_t "the layers of the recorded overlay cannot be retired: $recorded_overlay/layers does not exist" "no se pueden retirar las capas del overlay guardado: no existe $recorded_overlay/layers")"
+      fi
+    fi
+    read -r -a recorded_features <<< "${recorded[FEATURES]:-}"
+
+    # Reverse order, like unlink: a layer goes before what it requires.
+    for (( index = ${#recorded_layers[@]} - 1; index >= 0; index-- )); do
+      layer=${recorded_layers[index]}
+      root=${layer_roots[$layer]}
+      read_layer_conf "$root/$layer" conf
+      read -r -a declared <<< "${conf[features]:-}"
+      layer_features=()
+      for feature in "${recorded_features[@]}"; do
+        array_contains declared "$feature" && append_unique layer_features "$feature"
+      done
+      for feature in "${layer_features[@]}"; do
+        array_contains FEATURES "$feature" || append_unique dropped_features "$feature"
+      done
+
+      if array_contains SELECTED_LAYERS "$layer" && [[ "$(layer_root "$LAYERS_DIR" "$layer")" == "$root" ]]; then
+        # Kept: only the Stow packages of its dropped features go.
+        # kept_packages is read through array_contains by name.
+        # shellcheck disable=SC2034
+        retired_packages=() kept_packages=()
+        read_layer_stow_packages "$root/$layer" "$(layer_profile "$layer")" kept_packages
+        for feature in "${declared[@]}"; do
+          [[ -f "$root/$layer/packages/stow/$feature.txt" ]] || continue
+          read_manifest "$root/$layer/packages/stow/$feature.txt" entries
+          for entry in "${entries[@]}"; do
+            if array_contains FEATURES "$feature"; then
+              append_unique kept_packages "$entry"
+            elif array_contains layer_features "$feature"; then
+              append_unique retired_packages "$entry"
+            fi
+          done
+        done
+        entries=()
+        for entry in "${retired_packages[@]}"; do
+          array_contains kept_packages "$entry" || entries+=("$entry")
+        done
+        (( ${#entries[@]} > 0 )) || continue
+        RETIRE_PACKAGE_LISTS+=("${entries[*]}")
+      else
+        RETIRE_PACKAGE_LISTS+=("")
+        RETIRE_NAMES+=("${layer#wm/}")
+      fi
+      RETIRE_ROOTS+=("$root")
+      RETIRE_LAYERS+=("$layer")
+      RETIRE_PROFILES+=("$(recorded_layer_profile "$layer" "$root")")
+      RETIRE_FEATURES+=("${layer_features[*]}")
+    done
+    RETIRE_NAMES+=("${dropped_features[@]}")
+  fi
+
+  # Components the wizard dropped are not re-applied; they are links, so a
+  # --packages-only run keeps them.
+  (( STOW_ENABLED == 1 )) || RETIRED_COMPONENTS=()
+  (( ${#RETIRED_COMPONENTS[@]} > 0 )) || return 0
+  RETIRE_NAMES+=("${RETIRED_COMPONENTS[@]}")
+  entries=()
+  for entry in "${RECORDED_COMPONENTS[@]}"; do
+    array_contains RETIRED_COMPONENTS "$entry" || entries+=("$entry")
+  done
+  RECORDED_COMPONENTS=("${entries[@]}")
+}
+
+# Unlinks only Stow packages $3 of layer $2 under root $1 (apply mode $4):
+# the dropped features of a layer that stays selected, so the layer keeps its
+# receipt. Same stow --delete simulation, removal and check as unlink.
+retire_layer_packages() {
+  local STOW_DIR="$1/$2/home"
+  local -a STOW_PACKAGES=()
+
+  read -r -a STOW_PACKAGES <<< "$3"
+  info "Retiro de las features descartadas de la capa $2"
+  print_array "Paquetes Stow" STOW_PACKAGES
+  [[ -f "$STOW_DIR/.stow" ]] || { error "falta el marcador $STOW_DIR/.stow"; return 1; }
+  command_exists stow || { error "GNU Stow es necesario para retirar enlaces"; return 1; }
+  run_stow delete 1 || return 1
+  (( $4 == 1 )) || return 0
+  info "Retirando enlaces GNU Stow; no se eliminarán paquetes ni archivos ajenos"
+  run_stow delete 0 || return 1
+  validate_links_unlinked
+}
+
+# Retires the RETIRE_* units and RETIRED_COMPONENTS with apply mode $1: a
+# whole layer through its normal unlink (links only, no packages), dropped
+# features through retire_layer_packages.
+retire_dropped_selection() {
+  local apply_mode=$1 index
+  local SYSTEM_ENABLED=0
+  local -a FEATURES=()
+
+  for index in "${!RETIRE_LAYERS[@]}"; do
+    if [[ -n "${RETIRE_PACKAGE_LISTS[index]}" ]]; then
+      retire_layer_packages "${RETIRE_ROOTS[index]}" "${RETIRE_LAYERS[index]}" \
+        "${RETIRE_PACKAGE_LISTS[index]}" "$apply_mode"
+    else
+      read -r -a FEATURES <<< "${RETIRE_FEATURES[index]}"
+      run_layer "${RETIRE_ROOTS[index]}" "${RETIRE_LAYERS[index]}" unlink "${RETIRE_PROFILES[index]}" "$apply_mode"
+    fi || die "falló el retiro de la capa ${RETIRE_LAYERS[index]}"
+  done
+  (( ${#RETIRED_COMPONENTS[@]} == 0 )) || unlink_components "$apply_mode" RETIRED_COMPONENTS
+}
+
 # Common start of bootstrap, doctor and unlink: validates the request,
 # resolves the layers and prints the selection plan.
 prepare_selection() {
@@ -929,12 +1146,13 @@ prepare_selection() {
   if (( STOW_ENABLED == 1 && BASE_ONLY == 0 )); then
     recorded_components RECORDED_COMPONENTS
   fi
+  compute_retired_selection
   (( ${#RECORDED_COMPONENTS[@]} == 0 )) || print_array "Componentes" RECORDED_COMPONENTS
 
   if [[ -n "$OVERLAY_PATH" ]]; then
     printf '  %-24s %s\n' 'Overlay:' "$OVERLAY_PATH"
   fi
-
+  (( ${#RETIRE_NAMES[@]} == 0 )) || printf '  %-24s %s\n' "$(_t 'Retiring:' 'Se retiran:')" "${RETIRE_NAMES[*]}"
 }
 
 # Runs operation $1 with apply mode $2 on every selected layer, in reverse
@@ -966,10 +1184,12 @@ bootstrap_with_optional_components() {
 
   if (( APPLY == 1 )); then
     info "Preflight de todas las capas antes de modificar nada"
+    retire_dropped_selection 0
     run_selected_layers bootstrap 0 || \
       die "falló el preflight de la capa $FAILED_LAYER; no se modificó la base"
   fi
 
+  retire_dropped_selection "$APPLY"
   run_selected_layers bootstrap "$APPLY" || die "falló el bootstrap de la capa $FAILED_LAYER"
   if (( APPLY == 1 )); then
     # Recorded as soon as the layers are on disk, so a failing optional
