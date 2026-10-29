@@ -31,6 +31,16 @@ TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-setup-smoke.XXXXXX")
 TEST_ROOT=$(realpath -e -- "$TEST_ROOT")
 CHECKOUT_STATE=$(git -C "$REPO_ROOT" status --porcelain)
 
+# The desktop post-link applies prefer-dark through gsettings when the target
+# is HOME; the fixture keeps it off the host dconf (as in bootstrap-smoke.sh).
+FAKE_BIN="$TEST_ROOT/fake-bin"
+mkdir -p "$FAKE_BIN"
+ln -s "$SCRIPT_DIR/fakes/gsettings" "$FAKE_BIN/gsettings"
+export PATH="$FAKE_BIN:$PATH"
+export DOTFILES_TEST_GSETTINGS_STATE="$TEST_ROOT/gsettings.state"
+export DOTFILES_TEST_GSETTINGS_LOG="$TEST_ROOT/gsettings.log"
+: > "$DOTFILES_TEST_GSETTINGS_STATE"
+: > "$DOTFILES_TEST_GSETTINGS_LOG"
 
 # Git never reads the host configuration (signing, hooks, default branch).
 export GIT_CONFIG_NOSYSTEM=1
