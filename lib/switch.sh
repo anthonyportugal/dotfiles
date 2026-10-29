@@ -412,7 +412,7 @@ txn_commit() {
 # dotfiles switch
 
 SW_NEW="" SW_OLD="" SW_KIND="" SW_PROFILE="core" SW_OVERLAY="" SW_OVERLAY_SOURCE=""
-SW_THEME="" SW_THEME_FROM="" SW_CARRY_MIMEAPPS=0
+SW_THEME="" SW_THEME_FROM="" SW_CARRY_MIMEAPPS=0 SW_ALREADY_ACTIVE=0
 declare -a SW_ROOTS=() SW_LINKS=() SW_WMS=() SW_LAYERS=() SW_FEATURES=()
 declare -a SW_NEW_COMPONENTS=() SW_DROP_RECEIPTS=() SW_NOT_MIGRATED=() SW_ARGS=()
 declare -a SW_NEW_OPTIONAL=() SW_NEW_FEATURES=()
@@ -786,10 +786,12 @@ _sw_build_args() {
   (( with_packages == 1 )) || SW_ARGS+=(--stow-only)
 }
 
+# Prints the plan of the prepared switch; mode $1 (apply or dry-run) is left
+# out when empty (the wizard asks for it after the plan).
 _sw_print_plan() {
   local mode=$1 item
   info "Plan del cambio de checkout"
-  printf '  %-24s %s\n' 'Modo:' "$mode"
+  [[ -z "$mode" ]] || printf '  %-24s %s\n' 'Modo:' "$mode"
   printf '  %-24s %s\n' 'Target:' "$TARGET_DIR"
   if [[ "$SW_KIND" == legacy ]]; then
     printf '  %-24s %s\n' 'Instalación actual:' "$SW_OLD (ecosistema anterior)"
@@ -946,8 +948,60 @@ _sw_rollback() {
   success "Se restauró el estado anterior al cambio"
 }
 
+# Detects the current install of TARGET_DIR (realpath) and translates its
+# selection for checkout $1: --from $2, --overlay $3, --no-overlay $4 (0|1),
+# --with-packages $5 (0|1), apply mode $6 (0|1). Fills SW_* and SW_ARGS, or
+# sets SW_ALREADY_ACTIVE when $1 is the active checkout already. Stops (die)
+# when $1 is not a checkout, nothing is detected or a change is unfinished.
+# Shared by `dotfiles switch` and the setup wizard's migration offer.
+switch_prepare() {
+  local new=$1 from=$2 overlay_arg=$3 no_overlay=$4 with_packages=$5 apply=$6 pending
+
+  SW_ALREADY_ACTIVE=0
+  SW_NEW=$(realpath -m -- "$new")
+  [[ -d "$SW_NEW/layers" && -x "$SW_NEW/bin/dotfiles" ]] || \
+    die "$SW_NEW no es un checkout de dotfiles (faltan layers/ o bin/dotfiles)"
+  grep -q DOTFILES_REPLACEABLE_ROOTS "$SW_NEW/lib/links.sh" 2>/dev/null || \
+    die "el checkout $SW_NEW es anterior a 'switch'; actualícelo antes de cambiar a él"
+  if pending=$(txn_pending "$apply"); then
+    die "quedó un cambio sin cerrar en $pending; reviértalo con '$PROGRAM_NAME switch --rollback --apply' antes de continuar"
+  fi
+
+  # The new checkout's components.conf decides which components exist (both
+  # are read by load_components).
+  # shellcheck disable=SC2034
+  COMPONENTS_FILE=${DOTFILES_COMPONENTS_FILE:-$SW_NEW/components.conf}
+  # shellcheck disable=SC2034
+  COMPONENTS_LOADED=0
+  load_components
+
+  _sw_detect "$from"
+  if [[ "$SW_KIND" == monorepo && "$(realpath -m -- "$SW_OLD")" == "$SW_NEW" ]]; then
+    SW_ALREADY_ACTIVE=1
+    return 0
+  fi
+  if [[ "$SW_KIND" == monorepo ]]; then
+    _sw_translate_monorepo "$overlay_arg" "$no_overlay"
+  else
+    _sw_translate_legacy "$overlay_arg" "$no_overlay"
+  fi
+  [[ ! -L "$TARGET_DIR/.config/mimeapps.list" ]] || ! array_contains SW_LINKS .config/mimeapps.list || SW_CARRY_MIMEAPPS=1
+  _sw_build_args "$with_packages"
+}
+
+# Checks the prepared switch for collisions and, with apply mode $1 = 1,
+# runs it inside its transaction.
+switch_run() {
+  _sw_preflight
+  if (( $1 == 0 )); then
+    info "Dry-run: nada cambió; use --apply para cambiar de checkout"
+    return 0
+  fi
+  _sw_apply
+}
+
 cmd_switch() {
-  local new="" apply=0 rollback=0 with_packages=0 from="" overlay_arg="" no_overlay=0 pending
+  local new="" apply=0 rollback=0 with_packages=0 from="" overlay_arg="" no_overlay=0
 
   while (( $# > 0 )); do
     case "$1" in
@@ -996,45 +1050,16 @@ cmd_switch() {
   fi
 
   [[ -n "$new" ]] || usage_error "switch necesita la ruta del checkout nuevo"
-  SW_NEW=$(realpath -m -- "$new")
-  [[ -d "$SW_NEW/layers" && -x "$SW_NEW/bin/dotfiles" ]] || \
-    die "$SW_NEW no es un checkout de dotfiles (faltan layers/ o bin/dotfiles)"
-  grep -q DOTFILES_REPLACEABLE_ROOTS "$SW_NEW/lib/links.sh" 2>/dev/null || \
-    die "el checkout $SW_NEW es anterior a 'switch'; actualícelo antes de cambiar a él"
-  if pending=$(txn_pending "$apply"); then
-    die "quedó un cambio sin cerrar en $pending; reviértalo con '$PROGRAM_NAME switch --rollback --apply' antes de continuar"
-  fi
-
-  # The new checkout's components.conf decides which components exist (both
-  # are read by load_components).
-  # shellcheck disable=SC2034
-  COMPONENTS_FILE=${DOTFILES_COMPONENTS_FILE:-$SW_NEW/components.conf}
-  # shellcheck disable=SC2034
-  COMPONENTS_LOADED=0
-  load_components
-
-  _sw_detect "$from"
-  if [[ "$SW_KIND" == monorepo && "$(realpath -m -- "$SW_OLD")" == "$SW_NEW" ]]; then
+  switch_prepare "$new" "$from" "$overlay_arg" "$no_overlay" "$with_packages" "$apply"
+  if (( SW_ALREADY_ACTIVE == 1 )); then
     info "$SW_NEW ya es el checkout activo de $TARGET_DIR; no hay nada que cambiar"
     return 0
   fi
-  if [[ "$SW_KIND" == monorepo ]]; then
-    _sw_translate_monorepo "$overlay_arg" "$no_overlay"
-  else
-    _sw_translate_legacy "$overlay_arg" "$no_overlay"
-  fi
-  [[ ! -L "$TARGET_DIR/.config/mimeapps.list" ]] || ! array_contains SW_LINKS .config/mimeapps.list || SW_CARRY_MIMEAPPS=1
-  _sw_build_args "$with_packages"
 
   if (( apply == 1 )); then
     _sw_print_plan apply
   else
     _sw_print_plan dry-run
   fi
-  _sw_preflight
-  if (( apply == 0 )); then
-    info "Dry-run: nada cambió; use --apply para cambiar de checkout"
-    return 0
-  fi
-  _sw_apply
+  switch_run "$apply"
 }

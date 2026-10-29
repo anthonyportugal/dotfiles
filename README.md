@@ -136,6 +136,8 @@ If you already have `~/.dotfiles/base` locally, run the guided setup directly:
 ./install.sh
 ```
 
+When the target still has links of another install (the previous `~/.dotfiles` ecosystem or another monorepo checkout, detected like `switch` does), `setup` first shows what it found (the install, its profile, WMs, extras, overlay, the links to replace and anything `Not migrated:`) and asks `migrate`, `continue` or `cancel` (the default, also at the end of input). `migrate` runs the `switch` logic for this checkout: it shows the switch plan and asks `apply`, `dry-run` or `cancel`; apply checks collisions, keeps the manifest and rolls back on failure (setup then exits non-zero), and on success setup ends with the selection applied and tells you that `dotfiles switch --rollback --apply` undoes it; the next `setup` starts from that receipt. `continue` goes on to the questions and leaves the old links alone. On a fresh home or one already on this checkout nothing is shown.
+
 `setup` asks four questions, then shows the plan:
 
 1. **Profile:** `server` (shell, Git and CLI tools, the `cli` layer) or `desktop` (adds the graphical session).
@@ -205,7 +207,7 @@ You can also orchestrate components directly using explicit flags:
   ```bash
   ./bin/dotfiles unlink --apply
   ```
-- **Switching the active checkout (`switch`):** Moves a home to another checkout, for example from the previous multi-repository install under `~/.dotfiles` (base, `wm/<x>`, private, walls) to this monorepo, or between two monorepo checkouts such as `~/dev/personal/dotfiles` and `~/.dotfiles`. Without `--apply` it only prints the plan:
+- **Switching the active checkout (`switch`):** Moves a home to another checkout, for example from the previous multi-repository install under `~/.dotfiles` (base, `wm/<x>`, private, walls) to this monorepo, or between two monorepo checkouts such as `~/dev/personal/dotfiles` and `~/.dotfiles`. `setup` offers this same migration when it finds an old install, so you only need the command in scripts. Without `--apply` it only prints the plan:
   ```bash
   ./bin/dotfiles switch ~/dev/personal/dotfiles            # plan: what migrates and what does not
   ./bin/dotfiles switch ~/dev/personal/dotfiles --apply    # switch (links only)

@@ -174,7 +174,9 @@ Uso:
 Comandos:
   setup       Asistente guiado corto: perfil (servidor o escritorio), WMs, overlay y extras;
               parte de la selección guardada (Enter la conserva) y luego muestra el plan
-              y pregunta aplicar, simular (dry-run) o cancelar.
+              y pregunta aplicar, simular (dry-run) o cancelar. Si encuentra otra
+              instalación (~/.dotfiles anterior u otro checkout), ofrece antes migrarla
+              con la lógica de switch.
   bootstrap   Instala la selección indicada por flags sin asistente; sin --apply solo
               muestra el plan (dry-run). Lo que la selección guardada tenía y esta no
               (capas, features, WMs, un perfil menor, el overlay) se retira: el plan lo
@@ -252,7 +254,9 @@ Usage:
 Commands:
   setup       Short guided setup: profile (server or desktop), WMs, overlay and extras;
               starts from the saved selection (Enter keeps it), then shows the plan
-              and asks to apply, dry-run or cancel.
+              and asks to apply, dry-run or cancel. When it finds another install
+              (the old ~/.dotfiles or another checkout), it first offers to migrate
+              it with the switch logic.
   bootstrap   Installs the selection given by flags without the wizard; without --apply
               it only prints the plan (dry-run). What the saved selection had and this
               one drops (layers, features, WMs, a lower profile, the overlay) is retired:

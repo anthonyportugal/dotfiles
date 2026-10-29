@@ -340,5 +340,112 @@ if "$DOTFILES" completion bash | grep -qw install; then
   fail "la completion bash ofrece install"
 fi
 
+# 9. An old install on the target: setup offers to migrate it with the
+# switch logic before the four questions. The checkout is a copy with the
+# overlay next to it, so nothing comes from the real machine.
+# shellcheck source=SCRIPTDIR/lib/legacy-home.sh
+source "$SCRIPT_DIR/lib/legacy-home.sh"
+MIG="$TEST_ROOT/mig/dotfiles"
+copy_checkout "$MIG"
+make_legacy_overlay "$TEST_ROOT/mig/dotfiles-private"
+MIG_STATE=$(hash_tree "$MIG")
+
+# Runs setup from the copy on a fresh legacy home $1 with stdin $2; H, LEGACY
+# and the hashes before the run ($home_before, $legacy_before) are left set.
+migrate_run() {
+  new_legacy_home "$1"
+  home_before=$(hash_tree "$H")
+  legacy_before=$(hash_tree "$LEGACY")
+  SETUP_DOTFILES="${MIGRATE_DOTFILES:-$MIG/bin/dotfiles}" setup_run "$H" "$2"
+}
+
+# 9a. The summary names what was found and one question comes first;
+# cancel changes nothing. In Spanish with a Spanish LANG.
+migrate_run migrate-cancel 'cancel\n'
+(( status == 0 )) || fail "setup con una instalación anterior y cancel terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "cancel en la migración modificó el target"
+# shellcheck disable=SC2088 # the tilde is the literal text the summary prints
+for expected in 'Previous install detected' '~/.dotfiles (previous ecosystem)' 'Profile:'*'desktop' \
+  'WMs:'*'mangowm' 'Extras:'*'dev work-csti walls' 'Overlay:'*'dotfiles-private' 'Links to replace:      11' \
+  'Not migrated:'*'agent-harness' 'migrate'*'continue'*'cancel' 'Setup cancelled'; do
+  # shellcheck disable=SC2053 # the expectations are glob patterns
+  [[ "$output" == *$expected* ]] || fail "el resumen de la migración no muestra '$expected': $output"
+done
+[[ "$output" != *'Choose a profile'* ]] || fail "cancel en la migración siguió con las preguntas: $output"
+SETUP_LANG=es_ES.UTF-8 migrate_run migrate-es 'cancel\n'
+[[ "$output" == *'Instalación anterior detectada'*'Enlaces a reemplazar:'*'Migrarla'* ]] || \
+  fail "el resumen de la migración no sigue a LANG: $output"
+
+# 9b. Migrate + apply: the switch moves the selection to this checkout, the
+# wizard ends (no questions) and says how to undo it.
+migrate_run migrate-apply 'migrate\napply\n'
+(( status == 0 )) || fail "migrar + apply terminó con $status: $output"
+[[ "$(hash_tree "$LEGACY")" == "$legacy_before" ]] || fail "la migración modificó el checkout anterior"
+receipt_file=$(receipt "$H" dotfiles)
+for line in 'PROFILE="desktop"' 'WMS="mangowm"' 'LAYERS="dev"' 'FEATURES="work-csti"' "OVERLAY=\"$TEST_ROOT/mig/dotfiles-private\""; do
+  grep -Fxq "$line" "$receipt_file" || fail "la migración no registró $line: $(<"$receipt_file")"
+done
+[[ "$(realpath -- "$H/.config/mango/config.conf")" == "$MIG/layers/wm/mangowm/home/"* ]] || fail "la migración no enlazó MangoWM al checkout"
+[[ "$(realpath -- "$H/.local/bin/dotfiles")" == "$MIG/bin/dotfiles" ]] || fail "el comando dotfiles no apunta al checkout migrado"
+[[ "$(realpath -- "$H/.zshrc")" == "$MIG/"* ]] || fail "quedó un enlace de base hacia el checkout anterior"
+[[ -f "$H/.local/state/dotfiles/transactions/switch-last/manifest" ]] || fail "la migración no dejó el manifiesto de reversión"
+[[ "$output" == *'dotfiles switch --rollback --apply'* ]] || fail "la migración no explicó cómo deshacerla: $output"
+[[ "$output" != *'Choose a profile'* ]] || fail "tras migrar el wizard repitió las preguntas: $output"
+# The next setup starts from the migrated receipt and offers nothing.
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'cancel\n'
+[[ "$output" != *'Previous install detected'* ]] || fail "setup volvió a ofrecer la migración ya hecha: $output"
+[[ "$output" == *'[x] mangowm'* ]] || fail "tras migrar setup no partió del recibo: $output"
+
+# 9c. Migrate + dry-run and migrate + cancel change nothing.
+migrate_run migrate-dry 'migrate\ndry-run\n'
+(( status == 0 )) || fail "migrar + dry-run terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "migrar + dry-run modificó el target"
+[[ "$output" == *'Plan del cambio de checkout'*'sin colisiones'* ]] || fail "el dry-run de la migración no mostró el plan y el preflight: $output"
+[[ "$output" == *'Dry-run: nothing changed'* ]] || fail "el dry-run de la migración no dijo que nada cambió: $output"
+migrate_run migrate-plan-cancel 'migrate\ncancel\n'
+(( status == 0 )) || fail "migrar + cancel terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "migrar + cancel modificó el target"
+[[ "$output" == *'Plan del cambio de checkout'*'apply'*'dry-run'*'cancel'*'Setup cancelled'* ]] || \
+  fail "migrar no mostró el plan antes de apply / dry-run / cancel: $output"
+
+# 9d. Continue without migrating: today's four questions, same output as on
+# a home without an old install, after the summary.
+migrate_run migrate-continue 'continue\nserver\n\n\ncancel\n'
+continue_output=$output
+(( status == 0 )) || fail "continuar sin migrar terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "continuar sin migrar + cancel modificó el target"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$TEST_ROOT/migrate-fresh" 'server\n\n\ncancel\n'
+[[ "${continue_output%%$'\n'*}" == "${output%%$'\n'*}" && "$continue_output" == *"${output#*$'\n'}" ]] || \
+  fail "continuar sin migrar no siguió el flujo de siempre: $continue_output"
+
+# 9e. Nothing foreign: no summary, the profile question comes right after
+# the header (as before), on a fresh home and on one already on the checkout.
+[[ "$output" != *'Previous install detected'* ]] || fail "un home nuevo mostró el resumen de migración: $output"
+second=$(sed -n 2,3p <<< "$output")
+[[ "$second" == $'\nChoose a profile' ]] || fail "un home nuevo no empieza por el perfil: $output"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$TEST_ROOT/migrate-fresh" 'server\n\n\napply\n'
+(( status == 0 )) || fail "setup server en el home nuevo terminó con $status: $output"
+SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$TEST_ROOT/migrate-fresh" 'cancel\n'
+[[ "$output" != *'Previous install detected'* && "$(sed -n 3p <<< "$output")" == 'Choose a profile' ]] || \
+  fail "un home ya en este checkout mostró el resumen de migración: $output"
+
+# 9f. End of input on the question cancels and changes nothing.
+migrate_run migrate-eof ''
+(( status == 0 )) || fail "EOF en la migración terminó con $status: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "EOF en la migración modificó el target"
+[[ "$output" == *'Setup cancelled'* && "$output" != *'Choose a profile'* ]] || fail "EOF en la migración no canceló: $output"
+
+# 9g. A failed migration shows the switch's own rollback and setup fails.
+BROKEN="$TEST_ROOT/broken/dotfiles"
+copy_checkout "$BROKEN"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$BROKEN/layers/wm/mangowm/hooks/post-link"
+MIGRATE_DOTFILES="$BROKEN/bin/dotfiles" migrate_run migrate-fail 'migrate\napply\n'
+(( status != 0 )) || fail "una migración fallida no hizo fallar setup: $output"
+[[ "$output" == *'se restauró el estado anterior'* ]] || fail "la migración fallida no mostró la reversión del switch: $output"
+[[ "$(hash_tree "$H")" == "$home_before" ]] || fail "la migración fallida no dejó el target como estaba"
+[[ "$(hash_tree "$MIG")" == "$MIG_STATE" ]] || fail "la migración modificó el checkout copiado"
+[[ "$(DOTFILES_LANG=en "$DOTFILES" help)" == *'offers to migrate'*'switch logic'* ]] || fail "la ayuda (en) no documenta la migración de setup"
+[[ "$(DOTFILES_LANG=es "$DOTFILES" help)" == *'ofrece antes migrarla'*'lógica de switch'* ]] || fail "la ayuda (es) no documenta la migración de setup"
+
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || fail "las pruebas modificaron el checkout"
 echo "OK: dotfiles setup (perfil, WMs, overlay, extras, plan) validado"

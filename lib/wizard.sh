@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # lib/wizard.sh - `dotfiles setup`: one short guided flow and prompt helpers.
 #
+# When the target has links of another install (the pre-monorepo ~/.dotfiles
+# or another monorepo checkout, as `dotfiles switch` detects it), setup first
+# shows what it found and offers to migrate it with the switch logic, to go on
+# to the questions without migrating, or to cancel; a migration ends setup.
+#
 # The flow asks four questions, prints the plan and runs the normal bootstrap:
 #   1. profile: server (cli) or desktop;
 #   2. WMs (desktop only): any of layers/wm/*/layer.conf, none included;
@@ -22,6 +27,8 @@
 
 # Set once stdin ends; every later prompt then takes its default.
 WIZARD_EOF=0
+# Set when the migration offer ended setup (migrated or cancelled).
+WIZARD_ENDED=0
 # Overlay URL to clone on apply (dry-run and cancel never clone).
 WIZARD_OVERLAY_URL=""
 # Extras offered by the current run: kind (layer|feature|component), name and
@@ -404,6 +411,111 @@ wizard_plan_line() {
   printf '  %-12s %s\n' "$1" "$2"
 }
 
+# Prepares the switch from the current install of the target to this
+# checkout, the way `dotfiles switch` does (an explicit --overlay or
+# --no-overlay of setup carries over, otherwise switch resolves it). Only
+# ever run in a subshell: the switch stops the process when nothing is found.
+_wizard_switch_prepare() {
+  local overlay_arg=""
+  (( OVERLAY_EXPLICIT == 0 )) || overlay_arg=$OVERLAY_PATH
+  TARGET_DIR=$(realpath -m -- "$TARGET_DIR")
+  switch_prepare "$REPO_ROOT" "" "$overlay_arg" "$NO_OVERLAY" 0 0
+}
+
+# Prints, on file descriptor 3, the summary of an install of another checkout
+# (the pre-monorepo ~/.dotfiles or another monorepo checkout) that has links
+# in the target; nothing when there is none or the target already uses this
+# checkout. Everything the switch prints is discarded.
+_wizard_migration_summary() {
+  local item old
+  local -a extras=()
+
+  _wizard_switch_prepare >/dev/null 2>&1
+  (( SW_ALREADY_ACTIVE == 0 && ${#SW_LINKS[@]} > 0 )) || return 0
+  old=$(prettify_path "$SW_OLD")
+  [[ "$SW_KIND" != legacy ]] || old="$old $(_t "(previous ecosystem)" "(ecosistema anterior)")"
+  extras=("${SW_LAYERS[@]}" "${SW_FEATURES[@]}" "${SW_NEW_COMPONENTS[@]}")
+  {
+    wizard_heading "$(_t "Previous install detected" "Instalación anterior detectada")"
+    wizard_summary_line "$(_t "Install:" "Instalación:")" "$old"
+    wizard_summary_line "$(_t "Profile:" "Perfil:")" "$SW_PROFILE"
+    (( ${#SW_WMS[@]} == 0 )) || wizard_summary_line "WMs:" "${SW_WMS[*]}"
+    wizard_summary_line "Extras:" "${extras[*]:-$(_t "none" "ninguno")}"
+    if [[ -n "$SW_OVERLAY" ]]; then
+      wizard_summary_line "Overlay:" "$(prettify_path "$SW_OVERLAY")"
+    else
+      wizard_summary_line "Overlay:" "$(_t "none" "ninguno")"
+    fi
+    wizard_summary_line "$(_t "Links to replace:" "Enlaces a reemplazar:")" "${#SW_LINKS[@]}"
+    for item in "${SW_NOT_MIGRATED[@]}"; do
+      wizard_summary_line "$(_t "Not migrated:" "No migrado:")" "$item"
+    done
+  } >&3
+}
+
+wizard_summary_line() {
+  printf '  %-22s %s\n' "$1" "$2"
+}
+
+# The migration itself, only ever run in a subshell with errexit: the switch
+# plan, then apply, dry-run or cancel (the default), like the final step.
+_wizard_migrate() {
+  local choice
+
+  _wizard_switch_prepare
+  _sw_print_plan ""
+  wizard_select choice cancel "$(_t "How do you want to continue?" "¿Cómo deseas continuar?")" \
+    apply "$(_t "Migrate now" "Migrar ahora")" \
+    dry-run "$(_t "Check for collisions without modifying anything" "Comprobar colisiones sin modificar nada")" \
+    cancel "$(_t "Exit without changes" "Salir sin cambios")"
+  case "$choice" in
+    cancel)
+      info "$(_t "Setup cancelled; nothing was changed." "Configuración cancelada; no se modificó nada.")"
+      ;;
+    dry-run)
+      switch_run 0 </dev/null
+      info "$(_t "Dry-run: nothing changed. Run setup again and choose apply to migrate." "Dry-run: nada cambió. Vuelva a ejecutar setup y elija apply para migrar.")"
+      ;;
+    apply)
+      switch_run 1 </dev/null
+      info "$(_t "Migration done; setup starts from this selection next time. To undo it: dotfiles switch --rollback --apply" "Migración hecha; setup partirá de esta selección la próxima vez. Para deshacerla: dotfiles switch --rollback --apply")"
+      ;;
+  esac
+}
+
+# Before the questions: when the target has links of another install, shows
+# what was found and asks to migrate it now (the switch logic), continue to
+# the questions without migrating, or cancel (the default, also at the end of
+# input). Sets WIZARD_ENDED when setup ends here instead of asking the
+# questions; exits with the migration's status when it failed.
+wizard_offer_migration() {
+  local summary choice status=0
+
+  set +e
+  summary=$( ( set -e; _wizard_migration_summary ) 3>&1 >/dev/null 2>&1 )
+  set -e
+  [[ -n "$summary" ]] || return 0
+  printf '%s\n' "$summary"
+  wizard_select choice cancel "$(_t "What do you want to do with it?" "¿Qué deseas hacer con ella?")" \
+    migrate "$(_t "Migrate it to this checkout, keeping its selection (reversible)" "Migrarla a este checkout conservando su selección (reversible)")" \
+    continue "$(_t "Continue to the questions without migrating (its links stay)" "Seguir con las preguntas sin migrar (sus enlaces se conservan)")" \
+    cancel "$(_t "Exit without changes" "Salir sin cambios")"
+  case "$choice" in
+    continue) return 0 ;;
+    cancel)
+      info "$(_t "Setup cancelled; nothing was changed." "Configuración cancelada; no se modificó nada.")"
+      WIZARD_ENDED=1
+      return 0
+      ;;
+  esac
+  set +e
+  ( set -e; _wizard_migrate )
+  status=$?
+  set -e
+  (( status == 0 )) || exit "$status"
+  WIZARD_ENDED=1
+}
+
 run_interactive_wizard() {
   local profile_choice final_choice index mode overlay_text component retiring
   local profile_default=desktop extras_title
@@ -416,6 +528,9 @@ run_interactive_wizard() {
   setup_colors
   printf '%b%s%b %s\n' "${C_BOLD}${C_MAUVE}" "dotfiles setup" "$C_RESET" \
     "$(prettify_path "$REPO_ROOT") -> $(prettify_path "$TARGET_DIR")"
+  # Never in a || list: errexit must stay on inside the migration.
+  wizard_offer_migration
+  (( WIZARD_ENDED == 0 )) || return 0
 
   # A target set up before starts from its current selection.
   if read_receipt dotfiles recorded; then
