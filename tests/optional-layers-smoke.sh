@@ -110,6 +110,35 @@ dev_link="$H/.config/zsh/conf.d/50-dev.zsh"
   fail "el enlace de la capa dev no apunta a layers/dev"
 grep -Fxq 'LAYERS="dev"' "$RECEIPT" || fail "el recibo no guardó la capa opcional: $(<"$RECEIPT")"
 
+# The layer's zsh file puts pnpm and its binaries on PATH, for a pnpm installed
+# standalone under PNPM_HOME as well as for a packaged one; without pnpm it
+# changes nothing. Prints PNPM_HOME and PATH for home $1 and PATH $2.
+dev_env() {
+  # shellcheck disable=SC2016  # expanded by the zsh it runs
+  env -u PNPM_HOME -u XDG_DATA_HOME HOME="$1" PATH="$2" "$ZSH_BIN" -dfc \
+    'source "$1"; print -r -- "${PNPM_HOME:-unset} $PATH"' _ "$dev_link"
+}
+ZSH_BIN=$(command -v zsh)
+PNPM_NONE="$TEST_ROOT/pnpm-none"
+PNPM_PACKAGED="$TEST_ROOT/pnpm-packaged"
+mkdir -p "$PNPM_NONE" "$PNPM_PACKAGED/bin" "$PNPM_PACKAGED/home"
+printf '#!/bin/sh\n' > "$PNPM_PACKAGED/bin/pnpm"
+chmod +x "$PNPM_PACKAGED/bin/pnpm"
+pnpm_home="$H/.local/share/pnpm"
+output=$(dev_env "$H" "$PNPM_NONE")
+[[ "$output" == "unset $PNPM_NONE" ]] || fail "sin pnpm la capa dev cambió el entorno: $output"
+output=$(dev_env "$PNPM_PACKAGED/home" "$PNPM_PACKAGED/bin")
+packaged_home="$PNPM_PACKAGED/home/.local/share/pnpm"
+[[ "$output" == "$packaged_home $packaged_home:$packaged_home/bin:$PNPM_PACKAGED/bin" ]] || \
+  fail "con un pnpm empaquetado la capa dev no preparó el PATH: $output"
+mkdir -p "$pnpm_home/bin"
+printf '#!/bin/sh\n' > "$pnpm_home/pnpm"
+chmod +x "$pnpm_home/pnpm"
+output=$(dev_env "$H" "$PNPM_NONE")
+[[ "$output" == "$pnpm_home $pnpm_home:$pnpm_home/bin:$PNPM_NONE" ]] || \
+  fail "con un pnpm independiente la capa dev no preparó el PATH: $output"
+rm -rf -- "$pnpm_home"
+
 # sync without flags restores the recorded opt-in layer.
 rm -f -- "$dev_link"
 output=$(run sync --stow-only --target "$H" 2>&1) || fail "sync falló: $output"
