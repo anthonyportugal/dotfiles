@@ -29,6 +29,9 @@ command -v stow >/dev/null 2>&1 || fail "GNU Stow es necesario para este smoke t
 command -v git >/dev/null 2>&1 || fail "git es necesario para este smoke test"
 [[ -d "$TEST_TMP_PARENT" ]] || fail "no existe el directorio temporal: $TEST_TMP_PARENT"
 TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-components-smoke.XXXXXX")
+# setup looks for the overlay next to the checkout; keep the real
+# dotfiles-private out of these runs.
+export DOTFILES_OVERLAY_DIR="$TEST_ROOT/no-overlay"
 CHECKOUT_STATE=$(git -C "$REPO_ROOT" status --porcelain)
 
 # Git never reads the host configuration (signing, hooks, default branch).

@@ -25,6 +25,9 @@ command -v stow >/dev/null 2>&1 || fail "GNU Stow es necesario para este smoke t
 [[ -x "$DOTFILES" ]] || fail "$DOTFILES no es ejecutable"
 
 TEST_ROOT=$(mktemp -d "$TEST_TMP_PARENT/dotfiles-wizard-smoke.XXXXXX")
+# setup looks for the overlay next to the checkout; keep the real
+# dotfiles-private out of these runs.
+export DOTFILES_OVERLAY_DIR="$TEST_ROOT/no-overlay"
 TARGET_DIR="$TEST_ROOT/home"
 FAKE_BIN="$TEST_ROOT/bin"
 

@@ -113,17 +113,26 @@ Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machin
 
 ### 1. One-Line Installation (Recommended for New Machines)
 
-Deploy the entire ecosystem with a single command. It automatically clones the base repository into `~/.dotfiles/base` and launches the interactive setup wizard:
+Deploy the entire ecosystem with a single command. It clones the repository into `~/.dotfiles` and launches the interactive setup wizard; no SSH key is needed, it clones over HTTPS:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+
+# Somewhere else, e.g. next to your other repositories:
+DOTFILES_BASE_DIR=~/dev/personal/dotfiles bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
+
+| Variable | Default | Effect |
+| :--- | :--- | :--- |
+| `DOTFILES_BASE_DIR` | `~/.dotfiles` | Where the repository is cloned. Links point into this checkout, so keep it there. |
+| `DOTFILES_REPO` / `DOTFILES_BRANCH` | this repository / `main` | Clone another remote or branch. |
+| `DOTFILES_OVERLAY_DIR` | the checkout path plus `-private` | Where `setup` looks for the overlay and clones it (`~/.dotfiles-private`, or `~/dev/personal/dotfiles-private` for the example above). |
 
 The wizard is one short guided flow (see below): profile, window managers, overlay and extras, then the plan.
 
 ### 2. If You Already Cloned the Repository
 
-If you already have `~/.dotfiles/base` locally, run the guided setup directly:
+If you already cloned the repository (anywhere), run the guided setup from it:
 
 ```bash
 # Option A: Launch the guided setup (language follows $LANG: es_* is Spanish, anything else English)
@@ -142,7 +151,7 @@ When the target still has links of another install (the previous `~/.dotfiles` e
 
 1. **Profile:** `server` (shell, Git and CLI tools, the `cli` layer) or `desktop` (adds the graphical session).
 2. **Window managers** (desktop only): none, one or several of the layers under `layers/wm/`.
-3. **Overlay:** an overlay with `layers/` found at `~/.dotfiles-private` (or recorded in the receipt) is offered with Yes by default; otherwise paste a Git URL, cloned into `~/.dotfiles-private` only when you apply, or press Enter to skip. Without an overlay the public Git config stays fail-closed until you configure an identity.
+3. **Overlay:** an overlay with `layers/` found next to the checkout (`<checkout>-private`, e.g. `~/.dotfiles-private`; `DOTFILES_OVERLAY_DIR` overrides it) or recorded in the receipt is offered with Yes by default; otherwise paste a Git URL, cloned there only when you apply, or press Enter to skip. Without an overlay the public Git config stays fail-closed until you configure an identity.
 4. **Extras:** nothing is checked by default. The list is built at run time from the opt-in layers, the features declared in `layer.conf` and the components in `components.conf`, each with its `description`, plus the features of the overlay chosen in the previous question (an overlay given by URL is cloned on apply, so its features are offered on the next run), and only shows what fits the chosen profile and window managers. A new layer, feature or component appears without changing the wizard.
 
 On a machine set up before, every question starts from the selection saved in the receipt: the saved profile is the default, saved WMs and extras are marked `[x]`, and the saved overlay is offered with Yes. Enter keeps the marked entries, `-` clears them and any other answer replaces them, so pressing Enter on every question changes nothing. Whatever you uncheck (an extra, a WM, the overlay, or `server` instead of `desktop`) is retired: the plan lists it in a `Retiring:` line (`Se retiran:` in Spanish) and apply removes its links.

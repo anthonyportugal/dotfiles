@@ -9,8 +9,8 @@
 # The flow asks four questions, prints the plan and runs the normal bootstrap:
 #   1. profile: server (cli) or desktop;
 #   2. WMs (desktop only): any of layers/wm/*/layer.conf, none included;
-#   3. overlay: an existing checkout with layers/, or a Git URL cloned into
-#      the target's .dotfiles-private on apply, or Enter to skip;
+#   3. overlay: an existing checkout with layers/, or a Git URL cloned next
+#      to this checkout (wizard_overlay_dir) on apply, or Enter to skip;
 #   4. extras: opt-in layers, features (the chosen overlay's included) and
 #      components.conf entries that fit the chosen profile and WMs,
 #      discovered at run time, none checked;
@@ -31,6 +31,12 @@ WIZARD_EOF=0
 WIZARD_ENDED=0
 # Overlay URL to clone on apply (dry-run and cancel never clone).
 WIZARD_OVERLAY_URL=""
+
+# Prints where the overlay is looked for and cloned: next to this checkout
+# (DIR-private, where the switch looks for it too), or DOTFILES_OVERLAY_DIR.
+wizard_overlay_dir() {
+  printf '%s' "${DOTFILES_OVERLAY_DIR:-$REPO_ROOT-private}"
+}
 # Extras offered by the current run: kind (layer|feature|component), name and
 # description share the index.
 declare -a WIZARD_EXTRA_KINDS=() WIZARD_EXTRA_NAMES=() WIZARD_EXTRA_DESCRIPTIONS=()
@@ -327,11 +333,12 @@ wizard_collect_overlay_features() {
 }
 
 # Chooses the overlay. An existing checkout with layers/ (the --overlay path,
-# the receipt's overlay or the target's .dotfiles-private) is offered with
-# Yes by default; otherwise a Git URL is cloned into .dotfiles-private on
-# apply, or Enter skips it.
+# the receipt's overlay or wizard_overlay_dir) is offered with Yes by
+# default; otherwise a Git URL is cloned into wizard_overlay_dir on apply,
+# or Enter skips it.
 wizard_choose_overlay() {
-  local candidate existing="" url="" dest="$TARGET_DIR/.dotfiles-private"
+  local candidate existing="" url="" dest
+  dest=$(wizard_overlay_dir)
   local -A saved=()
   local recorded=""
 
@@ -362,9 +369,10 @@ wizard_choose_overlay() {
   info "$(_t "No overlay: the public Git config stays fail-closed until an identity is configured (~/.config/git/local.gitconfig)." "Sin overlay: la configuración Git pública queda fail-closed hasta configurar una identidad (~/.config/git/local.gitconfig).")"
 }
 
-# Clones WIZARD_OVERLAY_URL into the target's .dotfiles-private.
+# Clones WIZARD_OVERLAY_URL into wizard_overlay_dir.
 wizard_clone_overlay() {
-  local dest="$TARGET_DIR/.dotfiles-private"
+  local dest
+  dest=$(wizard_overlay_dir)
 
   info "$(_t "Cloning the overlay into $dest" "Clonando el overlay en $dest")"
   if git clone -q -- "$WIZARD_OVERLAY_URL" "$dest" && [[ -d "$dest/layers" ]]; then

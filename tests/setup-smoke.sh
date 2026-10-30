@@ -49,6 +49,10 @@ git config --file "$GIT_CONFIG_GLOBAL" user.name test
 git config --file "$GIT_CONFIG_GLOBAL" user.email test@example.invalid
 git config --file "$GIT_CONFIG_GLOBAL" init.defaultBranch main
 git config --file "$GIT_CONFIG_GLOBAL" commit.gpgsign false
+# The wizard looks for the overlay next to the checkout; tests that run the
+# real checkout keep it on a path of their own so the real dotfiles-private
+# is never offered.
+export DOTFILES_OVERLAY_DIR="$TEST_ROOT/no-overlay"
 
 commit_all() {
   git -C "$1" add -A
@@ -127,23 +131,23 @@ grep -qx 'FEATURES="dev-containers"' "$R" || fail "el recibo no guardó dev-cont
 grep -qx 'COMPONENTS="walls"' "$(receipt "$H" components)" || fail "el recibo de componentes no guardó walls"
 [[ -L "$H/.local/share/wallpapers" ]] || fail "setup no añadió el componente walls"
 
-# 3. A detected overlay at the target's .dotfiles-private is applied and recorded.
+# 3. A detected overlay at DOTFILES_OVERLAY_DIR is applied and recorded.
 H="$TEST_ROOT/overlay-detected"
 make_overlay "$H/.dotfiles-private"
-setup_run "$H" 'server\n\n\napply\n'
+DOTFILES_OVERLAY_DIR="$H/.dotfiles-private" setup_run "$H" 'server\n\n\napply\n'
 (( status == 0 )) || fail "setup con overlay detectado terminó con $status: $output"
 [[ "$output" == *'Overlay detected'* ]] || fail "setup no detectó el overlay: $output"
 [[ -L "$H/.config/overlay/ident" ]] || fail "setup no aplicó la capa del overlay detectado"
 grep -Fxq "OVERLAY=\"$H/.dotfiles-private\"" "$(receipt "$H" dotfiles)" || \
   fail "el recibo no guardó el overlay detectado: $(<"$(receipt "$H" dotfiles)")"
 
-# An overlay URL is cloned into ~/.dotfiles-private and applied.
+# An overlay URL is cloned into DOTFILES_OVERLAY_DIR and applied.
 OVERLAY_SRC="$TEST_ROOT/overlay-src"
 make_overlay "$OVERLAY_SRC"
 git -C "$OVERLAY_SRC" init -q
 commit_all "$OVERLAY_SRC" overlay
 H="$TEST_ROOT/overlay-url"
-setup_run "$H" "server\nfile://$OVERLAY_SRC\n\napply\n"
+DOTFILES_OVERLAY_DIR="$H/.dotfiles-private" setup_run "$H" "server\nfile://$OVERLAY_SRC\n\napply\n"
 (( status == 0 )) || fail "setup con URL de overlay terminó con $status: $output"
 [[ -d "$H/.dotfiles-private/.git" ]] || fail "setup no clonó el overlay en ~/.dotfiles-private"
 [[ -L "$H/.config/overlay/ident" ]] || fail "setup no aplicó el overlay clonado"
@@ -287,7 +291,7 @@ H="$TEST_ROOT/eof"
 make_overlay "$H/.dotfiles-private"
 before=$(find "$H" | sort)
 status=0
-output=$(timeout 20 env LANG=C HOME="$H" "$DOTFILES" setup --stow-only --target "$H" < /dev/null 2>&1) || status=$?
+output=$(timeout 20 env LANG=C HOME="$H" DOTFILES_OVERLAY_DIR="$H/.dotfiles-private" "$DOTFILES" setup --stow-only --target "$H" < /dev/null 2>&1) || status=$?
 (( status == 0 )) || fail "setup con EOF terminó con $status: $output"
 [[ "$(find "$H" | sort)" == "$before" ]] || fail "setup con EOF modificó el home"
 # Invalid answers are asked again, and EOF still ends the flow.
@@ -535,6 +539,58 @@ SETUP_DOTFILES="$MIG/bin/dotfiles" setup_run "$H" 'migrate\napply\n'
 (( status == 0 )) || fail "migrar con un cambio sin manifiesto terminó con $status: $output"
 [[ "$output" == *'se descartó'* && ! -e "$H/.local/state/dotfiles/transactions/switch.pending" ]] || \
   fail "migrar no descartó el cambio sin manifiesto: $output"
+
+# 10. Without DOTFILES_OVERLAY_DIR the overlay lives next to the checkout
+# (<checkout>-private), where the switch looks for it: an overlay URL is
+# cloned there, and an existing one is offered.
+SIB="$TEST_ROOT/sib/dotfiles"
+copy_checkout "$SIB"
+unset DOTFILES_OVERLAY_DIR
+H="$TEST_ROOT/sibling-url"
+SETUP_DOTFILES="$SIB/bin/dotfiles" setup_run "$H" "server\nfile://$OVERLAY_SRC\n\napply\n"
+(( status == 0 )) || fail "setup con URL de overlay junto al checkout terminó con $status: $output"
+[[ -d "$SIB-private/.git" ]] || fail "setup no clonó el overlay junto al checkout ($SIB-private): $output"
+[[ ! -e "$H/.dotfiles-private" ]] || fail "setup clonó el overlay dentro del home en vez de junto al checkout"
+[[ -L "$H/.config/overlay/ident" ]] || fail "setup no aplicó el overlay clonado junto al checkout"
+grep -Fxq "OVERLAY=\"$SIB-private\"" "$(receipt "$H" dotfiles)" || \
+  fail "el recibo no guardó el overlay junto al checkout: $(<"$(receipt "$H" dotfiles)")"
+H="$TEST_ROOT/sibling-detected"
+SETUP_DOTFILES="$SIB/bin/dotfiles" setup_run "$H" 'server\n\n\napply\n'
+(( status == 0 )) || fail "setup con overlay junto al checkout terminó con $status: $output"
+[[ "$output" == *'Overlay detected'* && -L "$H/.config/overlay/ident" ]] || \
+  fail "setup no ofreció el overlay junto al checkout: $output"
+
+# 11. install.sh clones the repository into ~/.dotfiles, or into
+# DOTFILES_BASE_DIR when set, and starts setup from that checkout.
+INSTALL_SRC="$TEST_ROOT/install-src"
+mkdir -p "$INSTALL_SRC/bin" "$TEST_ROOT/curl"
+cat > "$INSTALL_SRC/bin/dotfiles" <<'FAKE'
+#!/usr/bin/env bash
+printf 'ran %s from %s\n' "$*" "$(cd -- "$(dirname -- "$0")/.." && pwd -P)"
+FAKE
+chmod +x "$INSTALL_SRC/bin/dotfiles"
+git -C "$INSTALL_SRC" init -q
+commit_all "$INSTALL_SRC" fake
+cp -- "$REPO_ROOT/install.sh" "$TEST_ROOT/curl/install.sh"
+install_run() {
+  local home=$1
+  shift
+  mkdir -p "$home"
+  status=0
+  output=$(env "$@" HOME="$home" DOTFILES_REPO="file://$INSTALL_SRC" bash "$TEST_ROOT/curl/install.sh" < /dev/null 2>&1) || \
+    status=$?
+}
+H="$TEST_ROOT/install-default"
+install_run "$H" -u DOTFILES_BASE_DIR
+(( status == 0 )) || fail "install.sh terminó con $status: $output"
+[[ "$output" == *"ran setup from $H/.dotfiles" ]] || \
+  fail "install.sh no clonó en ~/.dotfiles ni lanzó setup desde ahí: $output"
+[[ ! -e "$H/.dotfiles/base" ]] || fail "install.sh usó la ruta vieja ~/.dotfiles/base"
+H="$TEST_ROOT/install-base-dir"
+install_run "$H" DOTFILES_BASE_DIR="$H/dev/personal/dotfiles"
+(( status == 0 )) || fail "install.sh con DOTFILES_BASE_DIR terminó con $status: $output"
+[[ "$output" == *"ran setup from $H/dev/personal/dotfiles"* && ! -e "$H/.dotfiles" ]] || \
+  fail "install.sh no respetó DOTFILES_BASE_DIR: $output"
 
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || fail "las pruebas modificaron el checkout"
 echo "OK: dotfiles setup (perfil, WMs, overlay, extras, plan) validado"

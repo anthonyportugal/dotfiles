@@ -165,7 +165,8 @@ Once the CachyOS installation is complete, reboot the computer, remove the insta
 # 1. Ensure basic connectivity and tools are present
 sudo pacman -S --needed git bash
 
-# 2. Launch the interactive dotfiles installer
+# 2. Launch the interactive dotfiles installer (clones into ~/.dotfiles;
+#    DOTFILES_BASE_DIR=~/dev/personal/dotfiles picks another path)
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
 

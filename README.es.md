@@ -113,17 +113,26 @@ Configuración Base Pública  ──►  Capa Privada Opcional  ──►  Sobre
 
 ### 1. Instalación en un Solo Comando (Recomendado en Equipos Nuevos)
 
-Despliega el ecosistema completo con un comando interactivo. Clona el repositorio base en `~/.dotfiles/base` e inicia el asistente de configuración:
+Despliega el ecosistema completo con un comando interactivo. Clona el repositorio en `~/.dotfiles` e inicia el asistente de configuración; no necesita clave SSH, clona por HTTPS:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+
+# En otra ruta, p. ej. junto a tus otros repositorios:
+DOTFILES_BASE_DIR=~/dev/personal/dotfiles bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
 ```
+
+| Variable | Por defecto | Efecto |
+| :--- | :--- | :--- |
+| `DOTFILES_BASE_DIR` | `~/.dotfiles` | Dónde se clona el repositorio. Los enlaces apuntan a este checkout, así que no lo muevas. |
+| `DOTFILES_REPO` / `DOTFILES_BRANCH` | este repositorio / `main` | Clona otro remoto o rama. |
+| `DOTFILES_OVERLAY_DIR` | la ruta del checkout más `-private` | Dónde `setup` busca el overlay y lo clona (`~/.dotfiles-private`, o `~/dev/personal/dotfiles-private` en el ejemplo anterior). |
 
 El asistente es un único flujo guiado corto (ver abajo): perfil, gestores de ventanas, overlay y extras, y luego el plan.
 
 ### 2. Si ya Clonaste el Repositorio
 
-Si ya dispones de `~/.dotfiles/base` localmente, ejecuta directamente el asistente guiado:
+Si ya clonaste el repositorio (en cualquier ruta), ejecuta el asistente guiado desde él:
 
 ```bash
 # Opción A: Abrir el asistente guiado (el idioma sigue a $LANG: es_* es español, lo demás inglés)
@@ -142,7 +151,7 @@ Si el target todavía tiene enlaces de otra instalación (el ecosistema anterior
 
 1. **Perfil:** `server` (shell, Git y herramientas CLI, la capa `cli`) o `desktop` (añade la sesión gráfica).
 2. **Gestores de ventanas** (solo desktop): ninguno, uno o varios de las capas de `layers/wm/`.
-3. **Overlay:** un overlay con `layers/` en `~/.dotfiles-private` (o guardado en el recibo) se ofrece con Sí por defecto; si no, pega una URL Git, que se clona en `~/.dotfiles-private` solo al aplicar, o pulsa Enter para omitirlo. Sin overlay, la configuración Git pública queda fail-closed hasta que configures una identidad.
+3. **Overlay:** un overlay con `layers/` junto al checkout (`<checkout>-private`, p. ej. `~/.dotfiles-private`; `DOTFILES_OVERLAY_DIR` lo cambia) o guardado en el recibo se ofrece con Sí por defecto; si no, pega una URL Git, que se clona ahí solo al aplicar, o pulsa Enter para omitirlo. Sin overlay, la configuración Git pública queda fail-closed hasta que configures una identidad.
 4. **Extras:** ninguno viene marcado. La lista se genera al ejecutar a partir de las capas opcionales, las features declaradas en `layer.conf` y los componentes de `components.conf`, cada uno con su `description`, más las features del overlay elegido en la pregunta anterior (un overlay dado por URL se clona al aplicar, así que sus features se ofrecen en la siguiente ejecución), y solo muestra lo compatible con el perfil y los gestores elegidos. Una capa, feature o componente nuevo aparece sin tocar el asistente.
 
 En una máquina configurada antes, cada pregunta parte de la selección guardada en el recibo: el perfil guardado es el valor por defecto, los WMs y extras guardados aparecen marcados `[x]` y el overlay guardado se ofrece con Sí. Enter conserva los marcados, `-` los vacía y cualquier otra respuesta los reemplaza, así que pulsar Enter en todas las preguntas no cambia nada. Lo que desmarques (un extra, un WM, el overlay, o `server` en lugar de `desktop`) se retira: el plan lo lista en una línea `Se retiran:` y aplicar retira sus enlaces.
