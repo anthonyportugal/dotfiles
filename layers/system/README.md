@@ -69,8 +69,8 @@ layers/system/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles/base
-cd ~/.dotfiles/base/layers/system
+git clone https://github.com/anthonyportugal/dotfiles.git ~/.dotfiles
+cd ~/.dotfiles/layers/system
 ```
 
 ### 2. Audit System State (Safe Check)
