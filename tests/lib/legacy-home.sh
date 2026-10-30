@@ -95,5 +95,7 @@ new_legacy_home() {
   printf 'RECEIPT_VERSION=1\nCOMPONENT="private"\nPROFILE="development"\nWORK="csti"\nBACKEND="pacman"\n' > "$state/dotfiles/private.receipt"
   printf 'RECEIPT_VERSION=1\nCOMPONENT="agent-harness"\nTARGET="all"\n' > "$state/dotfiles/agent-harness.receipt"
   printf 'catppuccin-mocha-mauve\n' > "$state/mangowm/theme/selected"
+  # The wallpaper the old session saved, a file of the old walls checkout.
+  printf '%s\n' "$LEGACY/walls/wallpapers/a.jpg" > "$state/mangowm/wallpaper"
   ln -s ../../mangowm/theme/current "$state/dotfiles/theme/current"
 }

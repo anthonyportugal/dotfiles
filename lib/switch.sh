@@ -415,6 +415,7 @@ SW_NEW="" SW_OLD="" SW_KIND="" SW_PROFILE="core" SW_OVERLAY="" SW_OVERLAY_SOURCE
 SW_THEME="" SW_THEME_FROM="" SW_CARRY_MIMEAPPS=0 SW_ALREADY_ACTIVE=0
 declare -a SW_ROOTS=() SW_LINKS=() SW_WMS=() SW_LAYERS=() SW_FEATURES=()
 declare -a SW_NEW_COMPONENTS=() SW_DROP_RECEIPTS=() SW_NOT_MIGRATED=() SW_ARGS=()
+declare -a SW_WALLPAPER_WMS=()
 declare -a SW_NEW_OPTIONAL=() SW_NEW_FEATURES=()
 
 # Legacy walls links the old base installer created outside Stow.
@@ -740,6 +741,7 @@ _sw_translate_legacy() {
     if [[ -n "${COMPONENT_URLS[walls]:-}" ]]; then
       replaced+=("$root")
       SW_NEW_COMPONENTS+=(walls)
+      _sw_collect_wallpapers "$root"
     else
       SW_NOT_MIGRATED+=("walls (components.conf del checkout nuevo no lo declara; sus enlaces se conservan)")
     fi
@@ -780,6 +782,35 @@ _sw_translate_legacy() {
     fi
   done
   [[ "$SW_THEME" != - ]] || SW_THEME=""
+}
+
+# Fills SW_WALLPAPER_WMS with the WMs whose saved wallpaper
+# (~/.local/state/<wm>/wallpaper) is a file of the old walls checkout $1, so
+# the switch can point it at the same file of the walls component and the
+# wallpaper survives removing the old install.
+_sw_collect_wallpapers() {
+  local walls_root=$1 wm state line
+  for wm in "$SW_NEW/layers/wm"/*/; do
+    wm=${wm%/}
+    wm=${wm##*/}
+    state="$TARGET_DIR/.local/state/$wm/wallpaper"
+    [[ -f "$state" && ! -L "$state" ]] || continue
+    line=$(head -n 1 -- "$state" 2>/dev/null || true)
+    [[ -n "$line" && "$(realpath -m -- "$line")" == "$walls_root"/* ]] || continue
+    SW_WALLPAPER_WMS+=("$wm")
+  done
+}
+
+# Points the saved wallpaper of WM $1 at the same file of the walls component.
+_sw_move_wallpaper() {
+  local state="$TARGET_DIR/.local/state/$1/wallpaper" old_root new_root line tmp
+  old_root=$(realpath -m -- "$SW_OLD/walls")
+  new_root=$(realpath -m -- "$(component_dir walls)")
+  line=$(realpath -m -- "$(head -n 1 -- "$state")")
+  tmp="$state.switch.$$"
+  printf '%s\n' "$new_root/${line#"$old_root"/}" > "$tmp"
+  mv -f -- "$tmp" "$state"
+  info "Fondo de pantalla de $1 apuntado al componente walls: $new_root/${line#"$old_root"/}"
 }
 
 # The new checkout's bootstrap arguments for the translated selection.
@@ -823,6 +854,9 @@ _sw_print_plan() {
   [[ -z "$SW_THEME" ]] || printf '  %-24s %s (de %s)\n' 'Tema:' "$SW_THEME" "$SW_THEME_FROM"
   (( SW_CARRY_MIMEAPPS == 0 )) || \
     printf '  %-24s %s\n' 'mimeapps.list:' 'se conservan sus entradas antes de retirar el enlace'
+  for item in "${SW_WALLPAPER_WMS[@]}"; do
+    printf '  %-24s %s\n' 'Fondo de pantalla:' "$item (al componente walls)"
+  done
   (( ${#SW_DROP_RECEIPTS[@]} == 0 )) || print_array "Recibos migrados" SW_DROP_RECEIPTS
   printf '  %-24s %s\n' 'Enlaces a reemplazar:' "${#SW_LINKS[@]}"
   for item in "${SW_NOT_MIGRATED[@]}"; do
@@ -885,6 +919,9 @@ _sw_execute() {
     printf '%s\n' "$SW_THEME" > "$(receipt_dir)/theme/selected"
     info "Tema elegido migrado: $SW_THEME"
   fi
+  for name in "${SW_WALLPAPER_WMS[@]}"; do
+    _sw_move_wallpaper "$name"
+  done
   if (( ${#SW_NEW_COMPONENTS[@]} > 0 )); then
     recorded_components components
     for name in "${SW_NEW_COMPONENTS[@]}"; do
@@ -909,6 +946,9 @@ _sw_apply() {
   txn_begin switch
   txn_track "${SW_LINKS[@]}"
   txn_track_engine_outputs
+  for name in "${SW_WALLPAPER_WMS[@]}"; do
+    txn_track ".local/state/$name/wallpaper"
+  done
   for layer_dir in "$SW_NEW/layers"/*/ "$SW_NEW/layers"/wm/*/ ${SW_OVERLAY:+"$SW_OVERLAY/layers"/*/}; do
     if [[ -f "$layer_dir/layer.conf" ]]; then
       txn_track_packages "${layer_dir%/}/home"

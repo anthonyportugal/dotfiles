@@ -192,8 +192,8 @@ Comandos:
   switch      Cambia el checkout activo del target a RUTA: detecta la instalación actual
               (el ecosistema anterior de ~/.dotfiles u otro checkout del monorepo, o --from),
               traduce su selección (perfil, WMs, private al overlay, walls al componente,
-              el tema, mimeapps.list) y lista lo que no migra. Sin --apply solo muestra el
-              plan; con --apply comprueba colisiones antes de tocar nada, guarda un
+              el tema, el fondo guardado, mimeapps.list) y lista lo que no migra. Sin
+              --apply solo muestra el plan; con --apply comprueba colisiones antes de tocar nada, guarda un
               manifiesto en ~/.local/state/dotfiles/transactions/, retira solo los enlaces
               hacia el checkout anterior y aplica la selección con el bootstrap de RUTA (solo
               enlaces salvo --with-packages); si algo falla restaura el target tal como estaba.
@@ -273,9 +273,10 @@ Commands:
   switch      Makes DIR the target's active checkout: detects the current install (the
               previous ~/.dotfiles ecosystem or another monorepo checkout, or --from),
               translates its selection (profile, WMs, private to the overlay, walls to the
-              component, the theme, mimeapps.list) and lists what does not migrate. Without
-              --apply it only prints the plan; with --apply it checks collisions before
-              touching anything, saves a manifest under ~/.local/state/dotfiles/transactions/,
+              component, the theme, the saved wallpaper, mimeapps.list) and lists what does
+              not migrate. Without --apply it only prints the plan; with --apply it checks
+              collisions before touching anything, saves a manifest under
+              ~/.local/state/dotfiles/transactions/,
               removes only the links into the previous checkout and applies the selection with
               DIR's bootstrap (links only unless --with-packages); when anything fails the
               target is restored as it was. --rollback undoes the last switch (files that

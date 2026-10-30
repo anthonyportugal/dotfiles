@@ -97,7 +97,7 @@ run_switch "$NEW"
 [[ "$(hash_tree "$H")" == "$before" ]] || fail "switch sin --apply modificó el target"
 for expected in 'Perfil: +desktop' 'WMs: +mangowm' 'Capas opcionales: +dev' 'Features: +work-csti' \
   "Overlay: +$OVERLAY \\(checkout hermano\\)" 'Componentes nuevos: +walls' 'Tema: +catppuccin-mocha-mauve \(de mangowm\)' \
-  'mimeapps.list: +se conservan' 'Recibos migrados: +private' 'No migrado: +agent-harness' 'No migrado: +system' \
+  'mimeapps.list: +se conservan' 'Fondo de pantalla: +mangowm \(al componente walls\)' 'Recibos migrados: +private' 'No migrado: +agent-harness' 'No migrado: +system' \
   'Preflight del checkout nuevo: sin colisiones' 'Dry-run: nada cambió'; do
   grep -Eq "$expected" <<< "$output" || fail "el plan no muestra '$expected': $output"
 done
@@ -128,6 +128,8 @@ done
 grep -Fxq 'COMPONENTS="walls"' "$H/.local/state/dotfiles/components.receipt" || fail "walls no quedó registrado como componente"
 [[ "$(readlink -- "$H/.local/share/wallpapers")" == "$H/.local/share/dotfiles/walls/wallpapers" ]] || fail "los wallpapers no apuntan al componente walls"
 [[ "$(<"$H/.local/state/dotfiles/theme/selected")" == catppuccin-mocha-mauve ]] || fail "el tema de MangoWM no se migró"
+[[ "$(<"$H/.local/state/mangowm/wallpaper")" == "$H/.local/share/dotfiles/walls/wallpapers/a.jpg" ]] || \
+  fail "el fondo guardado sigue apuntando al checkout anterior: $(<"$H/.local/state/mangowm/wallpaper")"
 grep -Fxq 'id=catppuccin-mocha-mauve' "$H/.local/state/dotfiles/theme/current/metadata" || fail "el tema migrado no se renderizó"
 mimeapps="$H/.config/mimeapps.list"
 [[ -f "$mimeapps" && ! -L "$mimeapps" ]] || fail "mimeapps.list no quedó como archivo"
@@ -160,6 +162,14 @@ rm -rf -- "$H/.local/state/dotfiles/transactions"
 [[ "$(hash_tree "$H")" == "$home_before" ]] || fail "--rollback no dejó el target como antes del switch"
 run_switch --rollback
 (( status == 1 )) || fail "--rollback sin manifiesto debería fallar: $status $output"
+
+# 3a. A saved wallpaper outside the old walls checkout is left as it is.
+new_legacy_home own-wallpaper
+printf '%s\n' "$H/Pictures/mine.jpg" > "$H/.local/state/mangowm/wallpaper"
+run_switch "$NEW" --apply
+(( status == 0 )) || fail "switch --apply con un fondo propio terminó con $status: $output"
+[[ "$output" != *'Fondo de pantalla:'* ]] || fail "el plan movía un fondo que no es de walls: $output"
+[[ "$(<"$H/.local/state/mangowm/wallpaper")" == "$H/Pictures/mine.jpg" ]] || fail "switch cambió un fondo que no era de walls"
 
 # Switches home $1 to the new checkout; the hashes of both checkouts before
 # it are in $legacy_before and $new_before.
