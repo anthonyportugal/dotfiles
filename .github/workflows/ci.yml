@@ -62,10 +62,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install dependencies (stow, zsh, jq, shellcheck, luajit)
+      - name: Install dependencies (zsh, jq, shellcheck, luajit)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq stow zsh jq shellcheck luajit
+          sudo apt-get install -y -qq zsh jq shellcheck luajit
+
+      # Same Stow as Arch: Ubuntu's older one refuses to unstow next to a foreign file.
+      - name: Install GNU Stow 2.4.1
+        run: |
+          curl -fsSL -o /tmp/stow.tar.gz https://ftp.gnu.org/gnu/stow/stow-2.4.1.tar.gz
+          echo "2a671e75fc207303bfe86a9a7223169c7669df0a8108ebdf1a7fe8cd2b88780b  /tmp/stow.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/stow.tar.gz -C /tmp
+          cd /tmp/stow-2.4.1
+          ./configure --prefix=/usr
+          make
+          sudo make install
+          stow --version
 
       - name: Validate Zsh configuration syntax (zsh -n)
         run: |
