@@ -4,7 +4,7 @@
 
 Esta guía documenta la selección de paquetes recomendada para instalar **CachyOS** en modo limpio (**CLI / No Desktop**), aplicable tanto para estaciones de trabajo de escritorio (**Desktop**) como para computadoras portátiles (**Laptop**).
 
-El objetivo es obtener una base ultraligera, optimizada y sin paquetes redundantes o conflictivos, dejando el sistema listo para desplegar el ecosistema de dotfiles modulares (`dotfiles`, `dotfiles-mangowm`, `dotfiles-bspwm`, `dotfiles-system`).
+El objetivo es obtener una base ultraligera, optimizada y sin paquetes redundantes o conflictivos, dejando el sistema listo para desplegar el monorepo de [dotfiles](../README.es.md) y sus capas de gestores de ventanas y de sistema.
 
 ---
 

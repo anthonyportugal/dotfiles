@@ -4,7 +4,7 @@
 
 This guide documents the recommended package selection for installing **CachyOS** in a clean mode (**CLI / No Desktop**), applicable to both desktop workstations (**Desktop**) and portable computers (**Laptop**).
 
-The goal is to establish an ultra-lightweight, optimized base free of redundant or conflicting packages, preparing the system to seamlessly deploy the modular dotfiles ecosystem (`dotfiles`, `dotfiles-mangowm`, `dotfiles-bspwm`, `dotfiles-system`).
+The goal is to establish an ultra-lightweight, optimized base free of redundant or conflicting packages, preparing the system to seamlessly deploy the [dotfiles](../README.md) monorepo and its window manager and system layers.
 
 ---
 

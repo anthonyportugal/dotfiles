@@ -1,4 +1,4 @@
-# Dotfiles (Repositorio Base)
+# Dotfiles
 
 <p align="center">
   <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
@@ -12,13 +12,13 @@
 
 *Read this in other languages:* [English](README.md)
 
-Configuración base pública, modular y portable optimizada para entornos **Arch Linux**. Establece una experiencia de terminal unificada, herramientas CLI esenciales, aplicaciones compartidas y preferencias de sistema con total independencia del gestor de ventanas o compositor seleccionado.
+Configuración pública, modular y portable para **Arch Linux**, en un solo repositorio. La shell, las herramientas CLI, el escritorio, los gestores de ventanas y los ajustes de sistema son capas que eliges, todas manejadas por un único comando `dotfiles`.
 
 > [!TIP]
-> 🧩 **Ecosistema Modular de Dotfiles:**  
-> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Sistema](https://github.com/anthonyportugal/dotfiles-system) • [Agent Harness](https://github.com/anthonyportugal/agent-harness)
-> 
-> Este repositorio proporciona la base fundamental para el entorno de usuario y se integra limpiamente con gestores de ventanas independientes, compositores, herramientas de agentes IA y una capa de configuración privada opcional.
+> 🧩 **Dentro de este repositorio:**  
+> [MangoWM (Wayland)](layers/wm/mangowm/README.es.md) • [BSPWM (X11)](layers/wm/bspwm/README.es.md) • [Sistema](layers/system/README.es.md) • [Temas](themes/README.md) • externo: [Fondos de pantalla](https://github.com/anthonyportugal/walls)
+>
+> La instalación anterior de varios repositorios vive en la rama [`legacy`](https://github.com/anthonyportugal/dotfiles/tree/legacy); `dotfiles setup` ofrece migrarla.
 
 ---
 
@@ -26,7 +26,7 @@ Configuración base pública, modular y portable optimizada para entornos **Arch
 
 - ⚡ **Terminal y Shell de Alto Rendimiento:** Entorno Zsh veloz con prompt Starship, resaltado de sintaxis, autosugerencias y Fzf.
 - 🛡️ **Privacidad Fail-Closed:** Precedencia estricta de 3 niveles (`base` ──► `private` ──► `local`) garantizando que identidades laborales, claves de firma y secretos nunca se filtren a repositorios públicos.
-- 🎛️ **Orquestación Multi-WM:** Coordina de forma fluida gestores de ventanas independientes ([dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm) para Wayland y [dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm) para X11).
+- 🎛️ **Orquestación Multi-WM:** MangoWM (Wayland) y BSPWM (X11) son capas que comparten un motor de temas; instala una o ambas.
 - 🔄 **CLI de Ciclo de Vida Seguro:** Comandos integrados `sync`, `update` (con protección para evitar sobreescribir árboles de trabajo con cambios locales) y diagnósticos `doctor`.
 - 🚀 **Despliegue en un Solo Comando:** Asistente interactivo ejecutable directamente con `curl` en instalaciones limpias.
 - 🎨 **Estética Visual Unificada:** Tema Catppuccin Mocha consistente en Starship, Bat, Micro, Yazi, Foot y Alacritty.
@@ -35,28 +35,23 @@ Configuración base pública, modular y portable optimizada para entornos **Arch
 
 ## 🧱 Arquitectura Modular
 
-Este repositorio constituye la **base central** de un ecosistema modular multi-repositorio. Los gestores de ventanas (como BSPWM) y los compositores de Wayland (como MangoWM) residen en sus propios repositorios independientes y pueden instalarse por separado o componerse junto con esta base.
+Todo vive en este repositorio salvo lo privado o pesado. Una capa se aplica junto con las capas que requiere, así que elegir un gestor de ventanas trae también el escritorio, las herramientas CLI y el núcleo.
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                       ECOSISTEMA DE DOTFILES MODULAR                   │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                  DOTFILES BASE (Este Repositorio)                │  │
-│  │  • Shell: Zsh (Autosuggestions, Syntax Highlighting, Starship)   │  │
-│  │  • Herramientas CLI: Bat, Git, Micro, Yazi, Ripgrep, Fzf         │  │
-│  │  • Apps Comunes: Alacritty, Brave, MPV, Zathura, Thunar          │  │
-│  │  • Preferencias: GTK Prefer-Dark, Fuentes, Hooks de Sesión       │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                  │                                     │
-│             ┌────────────────────┴────────────────────┐                │
-│             ▼                                         ▼                │
-│  ┌──────────────────────┐                  ┌──────────────────────┐    │
-│  │    dotfiles-bspwm    │                  │   dotfiles-mangowm   │    │
-│  │  • Sesión X11        │                  │  • Sesión Wayland    │    │
-│  │  • Polybar, Rofi,    │                  │  • Waybar, Fuzzel,   │    │
-│  │    Picom, Dunst      │                  │    Swaylock, wlogout │    │
-│  └──────────────────────┘                  └──────────────────────┘    │
-└────────────────────────────────────────────────────────────────────────┘
+dotfiles (este repositorio)
+├── bin/dotfiles, lib/    un único CLI y su motor
+├── layers/
+│   ├── core              Zsh y Git fail-closed
+│   ├── cli               requiere core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch
+│   ├── desktop           requiere cli: Alacritty, Foot, motor de temas, preferencias GTK
+│   ├── wm/mangowm        requiere desktop: sesión Wayland (Waybar, Fuzzel, Swaylock, wlogout)
+│   ├── wm/bspwm          requiere desktop: sesión X11 (Polybar, Rofi, Picom, Dunst)
+│   ├── dev               opcional: herramientas de desarrollo, con features de Docker y pnpm
+│   └── system            opcional, necesita sudo: Ly, Limine, DNS-over-TLS
+├── themes/               paletas compartidas por todos los gestores de ventanas
+└── components.conf       repositorios externos fijados a un commit (walls)
+
+dotfiles-private          overlay opcional, con el mismo formato de capas
 ```
 
 ---
@@ -233,16 +228,14 @@ También puedes orquestar los componentes directamente mediante flags explícito
 
 ---
 
-## 🌐 Repositorios Conectados
+## 🌐 Repositorios Relacionados
 
-| Repositorio | Capacidad | Protocolo Gráfico / Ámbito |
-| :--- | :--- | :--- |
-| **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Sesión Wayland con mosaico dinámico (incluida en el showcase oficial de MangoWM) | Wayland |
-| **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Sesión X11 en mosaico (Polybar + Rofi + Picom + Dunst) | X11 |
-| **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP, se añade con `dotfiles add walls` (ver `components.conf`) | Multi-monitor |
-| **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | Configuraciones a nivel de sistema (gestor de pantalla Ly, bootloader Limine, DNS-over-TLS) | Sistema Linux |
-| **`dotfiles-private`** | Capa privada opcional para identidades, firmas y perfiles de trabajo | Local / Seguro |
-| **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | Proyecto independiente (harness para agentes IA); se instala con su propio instalador, no desde estos dotfiles | AI Engineering |
+| Repositorio | Función |
+| :--- | :--- |
+| **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP, se añade con `dotfiles add walls` (ver `components.conf`) |
+| **`dotfiles-private`** | Overlay opcional para identidades, firmas y perfiles de trabajo |
+
+`dotfiles-mangowm`, `dotfiles-bspwm` y `dotfiles-system` están archivados: pasaron a ser `layers/wm/mangowm`, `layers/wm/bspwm` y `layers/system`.
 
 ---
 
