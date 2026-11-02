@@ -11,7 +11,7 @@ system_usage() {
   if [[ "${DOTFILES_LANG:-en}" == "es" ]]; then
     cat <<EOF
 Uso:
-  $PROGRAM_NAME system [setup] [opciones del instalador] [--install] [--backend B] [--target DIR]
+  $PROGRAM_NAME system [setup] [opciones del instalador] [--install] [--backend B] [--platform P] [--target DIR]
   $PROGRAM_NAME system doctor [--target DIR]
   $PROGRAM_NAME system help
 
@@ -29,7 +29,7 @@ EOF
   else
     cat <<EOF
 Usage:
-  $PROGRAM_NAME system [setup] [installer options] [--install] [--backend B] [--target DIR]
+  $PROGRAM_NAME system [setup] [installer options] [--install] [--backend B] [--platform P] [--target DIR]
   $PROGRAM_NAME system doctor [--target DIR]
   $PROGRAM_NAME system help
 
@@ -112,6 +112,15 @@ cmd_system() {
       --backend=*)
         BACKEND_REQUEST=${arg#*=}
         ;;
+      --platform)
+        require_option_value "$arg" "${2-}"
+        PLATFORM_REQUEST=$2
+        shift 2
+        continue
+        ;;
+      --platform=*)
+        PLATFORM_REQUEST=${arg#*=}
+        ;;
       -i|--install)
         install=1
         ;;
@@ -150,6 +159,10 @@ cmd_system() {
     esac
     shift
   done
+  case "$PLATFORM_REQUEST" in
+    auto|cachyos|arch) ;;
+    *) usage_error "$(_t "invalid platform: $PLATFORM_REQUEST" "plataforma inválida: $PLATFORM_REQUEST")" ;;
+  esac
   case "$BACKEND_REQUEST" in
     auto|shelly|paru|yay|pacman) ;;
     *) usage_error "$(_t "invalid backend: $BACKEND_REQUEST" "backend inválido: $BACKEND_REQUEST")" ;;

@@ -72,10 +72,14 @@ output=$(run_system setup --dns -p quad9 --dry-run --target "$H" 2>&1) || fail "
 [[ ! -e "$RECEIPT" ]] || fail "un dry run escribió el recibo de system"
 
 # --install plans the Ly package through the monorepo backend engine.
-output=$(run_system setup --ly --install --dry-run --backend pacman --target "$H" 2>&1) || \
+output=$(run_system setup --ly --install --dry-run --platform arch --backend pacman --target "$H" 2>&1) || \
   fail "system setup --install --dry-run falló: $output"
 [[ "$output" == *'pacman -S --needed ly'* ]] || fail "system no planificó ly con el motor de paquetes: $output"
 [[ ! -e "$SUDO_LOG" ]] || fail "el plan de paquetes en dry run usó sudo"
+if output=$(run_system setup --ly --install --dry-run --platform windows --target "$H" 2>&1); then
+  fail "system aceptó una plataforma inválida"
+fi
+[[ "$output" == *windows* ]] || fail "system no nombró la plataforma inválida: $output"
 
 # setup escalates with sudo explicitly, without forwarding --install, and
 # records the applied selection in the user's receipt.
