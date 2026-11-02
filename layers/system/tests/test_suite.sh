@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# dotfiles-system - Automated Test Suite
+# dotfiles system layer - Automated Test Suite
 # ==============================================================================
 # Tests shell syntax, configuration validity, and bootloader idempotency in an
 # isolated, unprivileged environment.
@@ -34,7 +34,7 @@ fail() {
 }
 
 printf '%b\n' "\n${BOLD}================================================================${RESET}"
-printf '%b\n' "${BOLD}         Running dotfiles-system Automated Test Suite           ${RESET}"
+printf '%b\n' "${BOLD}         Running dotfiles system Automated Test Suite           ${RESET}"
 printf '%b\n\n' "${BOLD}================================================================${RESET}"
 
 # ------------------------------------------------------------------------------

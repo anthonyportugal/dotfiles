@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# dotfiles-system - Master System Components Installer
+# dotfiles system layer - Master System Components Installer
 # ==============================================================================
 # Unified installer for Ly display manager, Limine bootloader, and DNS-over-TLS.
 # Theme: Catppuccin Mocha
@@ -216,7 +216,7 @@ printf '%b' "\n${C_MAUVE}"
 cat <<'BANNER'
 ╭─────────────────────────────────────────────────────────────╮
 │                      ANTHONY PORTUGAL                       │
-│               dotfiles-system • Setup Wizard                │
+│               dotfiles • System Setup Wizard                │
 │             Ly, Limine Bootloader & DNS-over-TLS            │
 ╰─────────────────────────────────────────────────────────────╯
 BANNER
