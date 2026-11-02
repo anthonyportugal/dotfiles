@@ -332,6 +332,8 @@ UPSTREAM="$TEST_ROOT/upstream"
 PUBLIC="$TEST_ROOT/public"
 UH="$TEST_ROOT/update-home"
 cp -a "$REPO_ROOT/." "$UPSTREAM"
+# CI checks out a detached HEAD, and update can only pull on a branch.
+git -C "$UPSTREAM" switch -qC upstream
 {
   printf '# test\n'
   printf 'walls %s %s wallpapers=.local/share/wallpapers bin/walls=.local/bin/walls\n' "$URL" "$REF1"

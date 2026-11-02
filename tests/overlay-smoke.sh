@@ -162,6 +162,8 @@ commit_all() {
   git -C "$1" -c user.name=t -c user.email=t@t commit -qm "$2" --allow-empty --no-verify
 }
 cp -a "$REPO_ROOT/." "$UPSTREAM"
+# CI checks out a detached HEAD, and update can only pull on a branch.
+git -C "$UPSTREAM" switch -qC upstream
 commit_all "$UPSTREAM" wip
 git clone -q "$UPSTREAM" "$CHECKOUT"
 cp -a "$OVERLAY" "$OVERLAY_UPSTREAM"

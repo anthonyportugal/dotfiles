@@ -119,6 +119,8 @@ PATH="$FAKE_BIN:/usr/bin:/bin" HOME="$H" "$DOTFILES" bootstrap --profile core --
 UPSTREAM="$TEST_ROOT/upstream"
 CHECKOUT="$TEST_ROOT/checkout"
 cp -a "$REPO_ROOT/." "$UPSTREAM"
+# CI checks out a detached HEAD, and update can only pull on a branch.
+git -C "$UPSTREAM" switch -qC upstream
 git -C "$UPSTREAM" add -A
 git -C "$UPSTREAM" -c user.name=t -c user.email=t@t commit -qm wip --allow-empty --no-verify
 git clone -q "$UPSTREAM" "$CHECKOUT"
