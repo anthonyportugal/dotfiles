@@ -1,5 +1,9 @@
 # Dotfiles (Base Repository)
 
+> [!WARNING]
+> **This is the `legacy` branch**: the old multi-repository setup, kept as it was and no longer updated. The maintained version is the monorepo on [`main`](https://github.com/anthonyportugal/dotfiles).
+
+
 <p align="center">
   <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
@@ -16,7 +20,7 @@ Public, modular, and portable base configuration optimized for **Arch Linux** en
 
 > [!TIP]
 > 🧩 **Modular Dotfiles Ecosystem:**  
-> **Base & CLI [Current]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls) • [System](https://github.com/anthonyportugal/dotfiles-system) • [Agent Harness](https://github.com/anthonyportugal/agent-harness)
+> **Base & CLI [Current]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Wallpapers](https://github.com/anthonyportugal/walls/tree/legacy) • [System](https://github.com/anthonyportugal/dotfiles-system) • [Agent Harness](https://github.com/anthonyportugal/agent-harness)
 > 
 > This repository provides the standalone foundation for user environments and seamlessly integrates with independent window managers, compositors, AI agent toolchains, and an optional private configuration layer.
 
@@ -101,7 +105,7 @@ Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machin
 Deploy the entire ecosystem with a single command. It automatically clones the base repository into `~/.dotfiles/base` and launches the interactive setup wizard:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/legacy/install.sh)"
 ```
 
 The wizard detects existing components in `$HOME/.dotfiles/`, offers to clone missing ones, configures selected Window Managers (MangoWM, BSPWM, both, or none), the wallpapers layer, and the private layer (or local Git identity fallback).
@@ -183,7 +187,7 @@ You can also orchestrate components directly using explicit flags:
 | :--- | :--- | :--- |
 | **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Modern Wayland dynamic tiling session (featured in official MangoWM showcase) | Wayland |
 | **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Standalone classic tiling session (Polybar + Rofi + Picom + Dunst) | X11 |
-| **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection and management CLI | Multi-display |
+| **[walls](https://github.com/anthonyportugal/walls/tree/legacy)** | Curated WebP wallpaper collection and management CLI | Multi-display |
 | **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | System-level configurations (Ly display manager, Limine bootloader, DNS-over-TLS) | Linux System |
 | **`dotfiles-private`** | Private layer for identities, signing keys, and work profiles | Local / Secure |
 | **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | AI coding agent harness, modular rules assembly, MCP servers & skills runtime | AI Engineering |

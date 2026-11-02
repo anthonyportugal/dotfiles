@@ -1,5 +1,9 @@
 # Dotfiles (Repositorio Base)
 
+> [!WARNING]
+> **Esta es la rama `legacy`**: la configuración anterior de varios repositorios, conservada tal cual y sin más actualizaciones. La versión mantenida es el monorepo en [`main`](https://github.com/anthonyportugal/dotfiles).
+
+
 <p align="center">
   <a href="https://github.com/anthonyportugal/dotfiles/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anthonyportugal/dotfiles/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI" alt="CI"></a>
   <a href="https://kernel.org"><img src="https://img.shields.io/badge/OS-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux"></a>
@@ -16,7 +20,7 @@ Configuración base pública, modular y portable optimizada para entornos **Arch
 
 > [!TIP]
 > 🧩 **Ecosistema Modular de Dotfiles:**  
-> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls) • [Sistema](https://github.com/anthonyportugal/dotfiles-system) • [Agent Harness](https://github.com/anthonyportugal/agent-harness)
+> **Base y CLI [Actual]** • [MangoWM (Wayland)](https://github.com/anthonyportugal/dotfiles-mangowm) • [BSPWM (X11)](https://github.com/anthonyportugal/dotfiles-bspwm) • [Fondos de Pantalla](https://github.com/anthonyportugal/walls/tree/legacy) • [Sistema](https://github.com/anthonyportugal/dotfiles-system) • [Agent Harness](https://github.com/anthonyportugal/agent-harness)
 > 
 > Este repositorio proporciona la base fundamental para el entorno de usuario y se integra limpiamente con gestores de ventanas independientes, compositores, herramientas de agentes IA y una capa de configuración privada opcional.
 
@@ -101,7 +105,7 @@ Configuración Base Pública  ──►  Capa Privada Opcional  ──►  Sobre
 Despliega el ecosistema completo con un comando interactivo. Clona el repositorio base en `~/.dotfiles/base` e inicia el asistente de configuración:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/legacy/install.sh)"
 ```
 
 El asistente detectará automáticamente los repositorios existentes en `$HOME/.dotfiles/`, clonará los faltantes si lo deseas, configurará los gestores de ventanas seleccionados (MangoWM, BSPWM o ambos), los wallpapers y la capa privada (o su fallback de identidad Git local).
@@ -183,7 +187,7 @@ También puedes orquestar los componentes directamente mediante flags explícito
 | :--- | :--- | :--- |
 | **[dotfiles-mangowm](https://github.com/anthonyportugal/dotfiles-mangowm)** | Sesión Wayland con mosaico dinámico (incluida en el showcase oficial de MangoWM) | Wayland |
 | **[dotfiles-bspwm](https://github.com/anthonyportugal/dotfiles-bspwm)** | Sesión X11 en mosaico (Polybar + Rofi + Picom + Dunst) | X11 |
-| **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP y CLI de gestión | Multi-monitor |
+| **[walls](https://github.com/anthonyportugal/walls/tree/legacy)** | Colección curada de fondos en WebP y CLI de gestión | Multi-monitor |
 | **[dotfiles-system](https://github.com/anthonyportugal/dotfiles-system)** | Configuraciones a nivel de sistema (gestor de pantalla Ly, bootloader Limine, DNS-over-TLS) | Sistema Linux |
 | **`dotfiles-private`** | Capa privada opcional para identidades, firmas y perfiles de trabajo | Local / Seguro |
 | **[agent-harness](https://github.com/anthonyportugal/agent-harness)** | Harness para agentes IA, ensamblado de reglas modular, servidores MCP y skills | AI Engineering |

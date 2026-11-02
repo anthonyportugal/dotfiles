@@ -166,7 +166,7 @@ Una vez completada la instalación de CachyOS, reinicia el equipo, retira el med
 sudo pacman -S --needed git bash
 
 # 2. Iniciar el asistente guiado e interactivo de dotfiles
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/legacy/install.sh)"
 ```
 
 El instalador interactivo te guiará paso a paso para:

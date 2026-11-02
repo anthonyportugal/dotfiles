@@ -8,7 +8,7 @@ set -Eeuo pipefail
 
 main() {
   local dotfiles_repo="${DOTFILES_REPO:-https://github.com/anthonyportugal/dotfiles.git}"
-  local dotfiles_branch="${DOTFILES_BRANCH:-main}"
+  local dotfiles_branch="${DOTFILES_BRANCH:-legacy}"
   local target_base="${DOTFILES_BASE_DIR:-$HOME/.dotfiles/base}"
 
   # Determine if we are already inside the base repository
@@ -34,7 +34,7 @@ main() {
     printf '\033[1;34m::\033[0m Clonando repositorio base en %s...\n' "$target_base"
     mkdir -p "$(dirname "$target_base")"
     if ! git clone --depth=1 --branch "$dotfiles_branch" "$dotfiles_repo" "$target_base" 2>/dev/null; then
-      if ! git clone --depth=1 --branch "main" "$dotfiles_repo" "$target_base" 2>/dev/null; then
+      if ! git clone --depth=1 --branch "legacy" "$dotfiles_repo" "$target_base" 2>/dev/null; then
         git clone --depth=1 "$dotfiles_repo" "$target_base"
       fi
     fi

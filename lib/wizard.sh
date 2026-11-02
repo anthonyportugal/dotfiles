@@ -107,7 +107,10 @@ wizard_clone_if_missing() {
 
     info "Clonando $repo_name ($clone_url) en $target_dest..."
     mkdir -p "$(dirname "$target_dest")"
-    if git clone "$clone_url" "$target_dest"; then
+    # walls changed on main; this setup needs its legacy branch.
+    local -a clone_args=()
+    [[ "$repo_name" != "walls" ]] || clone_args=(--branch legacy)
+    if git clone "${clone_args[@]}" "$clone_url" "$target_dest"; then
       info "$repo_name clonado exitosamente."
       return 0
     else
