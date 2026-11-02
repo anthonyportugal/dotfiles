@@ -6,30 +6,21 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 
 # 1. Scan staged files for secrets
-if [[ -x "$REPO_ROOT/../private/bin/check-secrets" ]]; then
-  "$REPO_ROOT/../private/bin/check-secrets" staged
-elif [[ -x "$REPO_ROOT/../../private/bin/check-secrets" ]]; then
-  "$REPO_ROOT/../../private/bin/check-secrets" staged
-elif [[ -x "$HOME/.dotfiles/private/bin/check-secrets" ]]; then
-  "$HOME/.dotfiles/private/bin/check-secrets" staged
-else
-  # Portable fallback scanner if private layer is not present
-  declare -a PATTERNS=(
-    '-----BEGIN ([A-Z0-9]+[[:space:]])*PRIVATE KEY-----'
-    '(AKIA|ASIA)[A-Z0-9]{16}'
-    'github_pat_[A-Za-z0-9_]{20,}'
-    'gh[pousr]_[A-Za-z0-9]{20,}'
-    'sk-[A-Za-z0-9_-]{20,}'
-    '(OPENAI_API_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN)[[:space:]]*=[[:space:]]*["'\'']?[A-Za-z0-9]'
-  )
-  declare -a GIT_PATTERNS=()
-  for p in "${PATTERNS[@]}"; do
-    GIT_PATTERNS+=(-e "$p")
-  done
-  if git -C "$REPO_ROOT" grep --cached --ignore-case -I -q -E "${GIT_PATTERNS[@]}" -- . 2>/dev/null; then
-    printf 'error: potential secret detected in staged files. Aborting commit.\n' >&2
-    exit 1
-  fi
+declare -a PATTERNS=(
+  '-----BEGIN ([A-Z0-9]+[[:space:]])*PRIVATE KEY-----'
+  '(AKIA|ASIA)[A-Z0-9]{16}'
+  'github_pat_[A-Za-z0-9_]{20,}'
+  'gh[pousr]_[A-Za-z0-9]{20,}'
+  'sk-[A-Za-z0-9_-]{20,}'
+  '(OPENAI_API_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN)[[:space:]]*=[[:space:]]*["'\'']?[A-Za-z0-9]'
+)
+declare -a GIT_PATTERNS=()
+for p in "${PATTERNS[@]}"; do
+  GIT_PATTERNS+=(-e "$p")
+done
+if git -C "$REPO_ROOT" grep --cached --ignore-case -I -q -E "${GIT_PATTERNS[@]}" -- . 2>/dev/null; then
+  printf 'error: potential secret detected in staged files. Aborting commit.\n' >&2
+  exit 1
 fi
 
 # 2. Check for whitespace and merge conflict markers
