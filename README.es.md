@@ -51,7 +51,7 @@ dotfiles (este repositorio)
 ├── themes/               paletas compartidas por todos los gestores de ventanas
 └── components.conf       repositorios externos fijados a un commit (walls)
 
-dotfiles-private          overlay opcional, con el mismo formato de capas
+overlay privado           repositorio propio opcional, con el mismo formato de capas
 ```
 
 ---
@@ -94,13 +94,13 @@ El repositorio base implementa una estricta **precedencia de 3 niveles**:
 
 ```text
 Configuración Base Pública  ──►  Capa Privada Opcional  ──►  Sobreescrituras Locales
-     (~/.config/...)               (dotfiles-private)              (*.local.*)
+     (~/.config/...)               (overlay privado)               (*.local.*)
 ```
 
 1. **Identidad Git Múltiple:** `layers/core/home/git/.config/git/config` carga `~/.config/git/private.gitconfig` (si existe) para emails y claves de firma personales o laborales, seguido de `~/.config/git/local.gitconfig` específico de la máquina.
 2. **Entorno de Shell:** `layers/core/home/zsh/.zshrc` carga automáticamente `~/.config/zsh/private.zsh` (si existe) para alias privados, variables de entorno y rutas laborales, seguido de `~/.config/zsh/local.zsh`.
 3. **Fail-Closed e Independiente:** La ausencia de la capa privada nunca rompe la configuración pública. Ningún secreto, credencial o clave privada es rastreado en repositorios públicos.
-4. **Overlay:** el repositorio privado usa el mismo formato de capas (`layers/<nombre>/layer.conf`, `packages/`, `home/`) y se aplica con `--overlay ~/.dotfiles-private`. Cada una de sus capas se aplica sola cuando todas las capas que `requires` están elegidas (por ejemplo `requires=core`, o `requires=dev` para aplicarse solo junto a la capa opcional `dev`); sus features funcionan como las públicas. La ruta del overlay se guarda en el recibo de selección, así que `sync` y `update` lo vuelven a aplicar y a actualizar; `--no-overlay` deja de aplicarlo. Las capas del overlay no pueden repetir el nombre de una capa pública.
+4. **Overlay:** un repositorio privado propio puede añadir capas, con el mismo formato (`layers/<nombre>/layer.conf`, `packages/`, `home/`) y se aplica con `--overlay ~/.dotfiles-private`. Cada una de sus capas se aplica sola cuando todas las capas que `requires` están elegidas (por ejemplo `requires=core`, o `requires=dev` para aplicarse solo junto a la capa opcional `dev`); sus features funcionan como las públicas. La ruta del overlay se guarda en el recibo de selección, así que `sync` y `update` lo vuelven a aplicar y a actualizar; `--no-overlay` deja de aplicarlo. Las capas del overlay no pueden repetir el nombre de una capa pública.
 
 ---
 
@@ -233,7 +233,6 @@ También puedes orquestar los componentes directamente mediante flags explícito
 | Repositorio | Función |
 | :--- | :--- |
 | **[walls](https://github.com/anthonyportugal/walls)** | Colección curada de fondos en WebP, se añade con `dotfiles add walls` (ver `components.conf`) |
-| **`dotfiles-private`** | Overlay opcional para identidades, firmas y perfiles de trabajo |
 
 `dotfiles-mangowm`, `dotfiles-bspwm` y `dotfiles-system` están archivados: pasaron a ser `layers/wm/mangowm`, `layers/wm/bspwm` y `layers/system`.
 

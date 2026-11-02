@@ -80,7 +80,7 @@ Los perfiles son acumulativos:
   su activación permanece como una decisión explícita vía `chsh`.
 - **Exclusión de desarrollo JavaScript:** No existe un perfil de Node.js, npm,
   pnpm o Bun en este repositorio base. El runtime, gestores de paquetes y reglas
-  de agentes residen de forma estricta en la capa privada (`dotfiles-private`).
+  de agentes residen de forma estricta en el overlay privado.
 
 ## Backends del bootstrap
 

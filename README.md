@@ -51,7 +51,7 @@ dotfiles (this repository)
 ├── themes/               palettes shared by every window manager
 └── components.conf       external repositories pinned to a commit (walls)
 
-dotfiles-private          optional overlay, in the same layer format
+private overlay           optional repository of your own, in the same layer format
 ```
 
 ---
@@ -94,13 +94,13 @@ The base repository enforces a strict **3-tier configuration precedence**:
 
 ```text
 Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machine Overrides
-   (~/.config/...)            (dotfiles-private)            (*.local.*)
+   (~/.config/...)            (private overlay)             (*.local.*)
 ```
 
 1. **Git Multi-Identity:** `layers/core/home/git/.config/git/config` loads `~/.config/git/private.gitconfig` (if present) for personal/work emails and signing keys, followed by machine-specific `~/.config/git/local.gitconfig`.
 2. **Shell Environment:** `layers/core/home/zsh/.zshrc` automatically sources `~/.config/zsh/private.zsh` (if present) for private aliases, environment variables, and work paths, followed by `~/.config/zsh/local.zsh`.
 3. **Fail-Closed & Independent:** The absence of the private layer never breaks the public setup. No secrets, credentials, or private keys are ever tracked in public repositories.
-4. **Overlay:** the private repository uses the same layer format (`layers/<name>/layer.conf`, `packages/`, `home/`) and is applied with `--overlay ~/.dotfiles-private`. Each of its layers applies on its own once every layer it `requires` is selected (for example `requires=core`, or `requires=dev` to apply only with the opt-in `dev` layer); its features work like public ones. The overlay path is saved in the selection receipt, so `sync` and `update` re-apply and pull it; `--no-overlay` stops applying it. Overlay layer names cannot reuse a public layer name.
+4. **Overlay:** a private repository of your own can add layers: it uses the same format (`layers/<name>/layer.conf`, `packages/`, `home/`) and is applied with `--overlay ~/.dotfiles-private`. Each of its layers applies on its own once every layer it `requires` is selected (for example `requires=core`, or `requires=dev` to apply only with the opt-in `dev` layer); its features work like public ones. The overlay path is saved in the selection receipt, so `sync` and `update` re-apply and pull it; `--no-overlay` stops applying it. Overlay layer names cannot reuse a public layer name.
 
 ---
 
@@ -233,7 +233,6 @@ You can also orchestrate components directly using explicit flags:
 | Repository | Role |
 | :--- | :--- |
 | **[walls](https://github.com/anthonyportugal/walls)** | Curated WebP wallpaper collection, added with `dotfiles add walls` (see `components.conf`) |
-| **`dotfiles-private`** | Optional overlay for identities, signing keys, and work profiles |
 
 `dotfiles-mangowm`, `dotfiles-bspwm` and `dotfiles-system` are archived: they became `layers/wm/mangowm`, `layers/wm/bspwm` and `layers/system`.
 

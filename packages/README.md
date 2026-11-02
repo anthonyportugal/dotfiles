@@ -79,7 +79,7 @@ Profiles are cumulative:
   remains an explicit user choice via `chsh`.
 - **JavaScript Ecosystem Exclusion:** No Node.js, npm, pnpm, or Bun runtimes are
   declared in this public repository. Runtimes, package managers, and AI agent
-  skills belong strictly to the private layer (`dotfiles-private`).
+  skills belong strictly to the private overlay.
 
 ## Bootstrap Backends
 
