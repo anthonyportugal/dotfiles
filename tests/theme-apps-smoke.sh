@@ -179,6 +179,22 @@ check_yazi() {
   expect_line "$flavor" 'syntect_theme = "~/.config/bat/themes/dotfiles.tmTheme"'
 }
 
+# GTK: the rendered stylesheet defines the named colors from the palette;
+# the stowed gtk-3.0/gtk-4.0 files only import it.
+check_gtk() {
+  local palette=$1 css="$2/gtk.css"
+
+  expect_rendered "$css"
+  expect_palette_colors "$palette" "$css"
+  expect_line "$css" "@define-color accent_color $(palette_value "$palette" accent);"
+  expect_line "$css" "@define-color window_bg_color $(palette_value "$palette" background);"
+  expect_line "$css" "@define-color view_bg_color $(palette_value "$palette" background_alt);"
+  expect_line "$css" "@define-color error_color $(palette_value "$palette" urgent);"
+  expect_line "$css" '@define-color shade_color rgba(0, 0, 0, 0.36);'
+  [[ "$(tr -cd '{' < "$css" | wc -c)" == "$(tr -cd '}' < "$css" | wc -c)" ]] || \
+    fail "gtk.css tiene llaves desbalanceadas"
+}
+
 rendered=0
 for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   [[ -f "$palette" ]] || continue
@@ -187,6 +203,7 @@ for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   check_terminals "$palette" "$revision"
   check_cli "$palette" "$revision"
   check_yazi "$palette" "$revision"
+  check_gtk "$palette" "$revision"
   ((rendered++)) || true
 done
 (( rendered >= 14 )) || fail "se esperaban al menos 14 paletas, renderizadas: $rendered"
@@ -239,6 +256,14 @@ for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro
                 yazi/flavor.toml; do
   expect_no_hex "$SHARED_TEMPLATES/$template"
 done
+for version in 3.0 4.0; do
+  GTK_CSS="$DESKTOP_HOME/xdg-defaults/.config/gtk-$version/gtk.css"
+  expect_line "$GTK_CSS" '@import url("../../.local/state/dotfiles/theme/current/gtk.css");'
+  expect_no_hex "$GTK_CSS"
+  grep -Fq '@define-color' "$GTK_CSS" && fail "gtk-$version/gtk.css define colores propios"
+done
+expect_no_hex "$SHARED_TEMPLATES/gtk.css"
+
 # The stowed yazi theme only selects the flavor, so the flavor's syntect
 # theme applies.
 YAZI_THEME="$CLI_HOME/yazi/.config/yazi/theme.toml"
