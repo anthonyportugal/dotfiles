@@ -44,8 +44,9 @@ value without `#` (`89b4fa`), so formats such as `0x{{accent.raw}}ff` or
 `rgb({{accent.raw}})` are written in the template. Any other `{{...}}` marker,
 including `.raw` on a font or cursor key, fails the render.
 
-- `templates/` holds the outputs every desktop shares (`gtk.css`,
-  `yazi/flavor.toml`).
+- `templates/` holds the outputs every desktop shares; each one is listed
+  with its consumer under [Rendered state](#rendered-state). A WM template
+  directory cannot take the name of a shared output (`yazi`, `foot`, ...).
 - A window manager layer stows its own templates into
   `~/.local/share/dotfiles/theme/templates/<wm>/` and may stow an executable
   `~/.local/share/dotfiles/theme/reload.d/<wm>` that reloads its session after
@@ -61,10 +62,27 @@ $XDG_STATE_HOME/dotfiles/theme/
 └── <id>-<digest>/
     ├── gtk.css                   # imported by ~/.config/gtk-{3.0,4.0}/gtk.css
     ├── yazi/flavor.toml          # linked as ~/.config/yazi/flavors/theme.yazi
+    ├── alacritty/theme.toml      # [general] import of ~/.config/alacritty/alacritty.toml
+    ├── foot/theme.ini            # include= of ~/.config/foot/foot.ini
     ├── background
     ├── metadata                  # schema=2, id, family, flavour, accent_name
     └── <wm>/...                  # one directory per installed WM
 ```
+
+Every rendered file must be non-empty or the render fails. The stowed configs
+read these files through the default state path
+(`~/.local/state/dotfiles/theme/current/...`), so each application still starts
+when no theme was rendered yet:
+
+| Application | Without a rendered theme |
+|-------------|--------------------------|
+| alacritty | skips the missing import: default font and colors |
+| foot | reports the missing include and starts with its default font and colors |
+
+The terminal colors follow the ANSI roles; `16`/`17` are `hue_orange` and
+`hue_rose`. MangoWM's `foot.ini` template repeats the shared `[colors-dark]`
+block verbatim (foot only includes absolute paths, and MangoWM passes its own
+rendered config), and `tests/theme-apps-smoke.sh` keeps the two identical.
 
 The digest covers the palette, the engine and every template with its path, so
 editing, adding or renaming a template renders a new revision. The `desktop`

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Single theme engine shared by every window manager. It parses a palette from
-# themes/palettes/, renders the shared outputs (GTK, Yazi, background,
-# metadata) plus every installed WM template directory, and atomically
-# promotes the result to $XDG_STATE_HOME/dotfiles/theme/current.
+# themes/palettes/, renders the shared outputs (GTK, Yazi, terminals, CLI
+# tools, background, metadata) plus every installed WM template directory,
+# and atomically promotes the result to $XDG_STATE_HOME/dotfiles/theme/current.
 
 set -Eeuo pipefail
 
@@ -171,7 +171,8 @@ read_palette() {
 }
 
 # Collects the installed WM template directories into WM_DIRS. It runs in the
-# main shell so an unsafe name stops the render instead of a subshell.
+# main shell so an unsafe name stops the render instead of a subshell. A name
+# taken by a shared output (yazi, foot, ...) would overwrite it.
 collect_wm_template_dirs() {
   local dir name
 
@@ -181,7 +182,7 @@ collect_wm_template_dirs() {
     [[ -d "$dir" ]] || continue
     dir=${dir%/}
     name=${dir##*/}
-    [[ "$name" =~ $NAME_PATTERN && "$name" != yazi ]] || \
+    [[ "$name" =~ $NAME_PATTERN && ! -e "$SHARED_TEMPLATES_DIR/$name" ]] || \
       fail "nombre de plantillas de WM inválido: $name"
     WM_DIRS+=("$dir")
   done
@@ -235,12 +236,17 @@ render_all() {
     > "$destination/metadata"
 }
 
+# Every template, shared or from a WM, must have rendered a non-empty file.
 validate_outputs() {
   local destination=$1 dir relative required
 
-  for required in gtk.css yazi/flavor.toml background metadata; do
+  for required in background metadata; do
     [[ -s "$destination/$required" ]] || fail "output de tema vacío o ausente: $required"
   done
+  while IFS= read -r relative; do
+    [[ -n "$relative" ]] || continue
+    [[ -s "$destination/$relative" ]] || fail "output de tema vacío o ausente: $relative"
+  done < <(template_files "$SHARED_TEMPLATES_DIR")
   grep -Fq "${VALUES[accent]}" "$destination/gtk.css" || \
     fail 'GTK no recibió el acento del tema'
   grep -Fq "${VALUES[accent]}" "$destination/yazi/flavor.toml" || \

@@ -106,6 +106,18 @@ fi
 [[ "$(readlink -- "$STATE/current")" == "$before" ]] || fail "un nombre inválido cambió theme/current"
 rm -rf -- "$TEMPLATES/Bad_WM"
 
+# A WM template directory named like a shared output would overwrite it.
+for shared in yazi foot; do
+  mkdir -p "$TEMPLATES/$shared"
+  printf 'x={{accent}}\n' > "$TEMPLATES/$shared/x.conf"
+  if output=$(theme_in "$H" render 2>&1); then
+    fail "render aceptó plantillas de WM llamadas $shared"
+  fi
+  [[ "$output" == *"nombre de plantillas de WM inválido: $shared"* ]] || fail "render falló por otra causa: $output"
+  rm -rf -- "${TEMPLATES:?}/$shared"
+done
+[[ "$(readlink -- "$STATE/current")" == "$before" ]] || fail "un nombre reservado cambió theme/current"
+
 # set renders, persists the selection, syncs the GNOME accent and runs every
 # WM reload hook; a failing hook only warns.
 mkdir -p "$H/.local/share/dotfiles/theme/reload.d"
