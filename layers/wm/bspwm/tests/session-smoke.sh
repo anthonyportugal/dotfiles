@@ -43,6 +43,7 @@ fake_commands=(
   brave
   bspc
   ffmpeg
+  gammastep
   gsettings
   i3lock
   notify-send
@@ -126,6 +127,21 @@ media_output=$("$CONFIG_ROOT/scripts/polybar-media")
 
 bluetooth_output=$("$CONFIG_ROOT/scripts/polybar-bluetooth")
 [[ "$bluetooth_output" == *Headphones* ]] || fail "el módulo Bluetooth no mostró el dispositivo conectado"
+
+# Night light: gammastep replaces redshift with the same temperature.
+grep -qxF gammastep "$REPO_ROOT/packages/repo/desktop.txt" || fail "la capa bspwm no declara gammastep"
+! grep -rqxF redshift "$REPO_ROOT/packages" || fail "la capa bspwm aún declara redshift"
+! grep -rqi redshift "$CONFIG_ROOT" || fail "la configuración de bspwm aún usa redshift"
+"$CONFIG_ROOT/scripts/bspwm-nightlight" on
+for _ in {1..50}; do
+  grep -qxF 'gammastep -m randr -P -O 3500' "$TEST_LOG" && break
+  sleep 0.02
+done
+grep -qxF 'gammastep -m randr -P -O 3500' "$TEST_LOG" || fail "bspwm-nightlight on no aplicó 3500K con gammastep"
+[[ "$("$CONFIG_ROOT/scripts/bspwm-nightlight" status)" == *'3500K'* ]] || fail "polybar no muestra la luz nocturna activa"
+"$CONFIG_ROOT/scripts/bspwm-nightlight" off
+grep -qxF 'gammastep -m randr -x' "$TEST_LOG" || fail "bspwm-nightlight off no restableció la gamma con gammastep"
+[[ "$("$CONFIG_ROOT/scripts/bspwm-nightlight" status)" == *'off'* ]] || fail "polybar no muestra la luz nocturna apagada"
 
 color_output=$("$CONFIG_ROOT/scripts/bspwm-color-picker")
 [[ "$color_output" == "#cba6f7" ]] || fail "bspwm-color-picker no retornó el color esperado"

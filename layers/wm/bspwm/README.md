@@ -30,7 +30,7 @@ Autonomous, modular, and minimal X11 desktop session optimized for **Arch Linux*
 - 🖥️ **Multi-Monitor Aware:** Dynamic workspace balancing across outputs, focused-monitor screen recording, and ergonomic monitor navigation hotkeys.
 - 📊 **Dynamic Polybar:** Real-time auto-detection of active network interfaces (Wi-Fi/Ethernet), battery status, and MPRIS playback.
 - 🎛️ **Ergonomic Hotkeys:** Intuitive keybinding architecture driven by `sxhkd` with integrated interactive help menu (`Super + ?`).
-- 🔋 **Power & Night Light:** Built-in Redshift warm display control and interactive power profile selector (`power-profiles-daemon`).
+- 🔋 **Power & Night Light:** Built-in Gammastep warm display control and interactive power profile selector (`power-profiles-daemon`).
 - 🔒 **GNU Stow & Zero Bloat:** Cumulative profiles (`core`, `desktop`) with built-in dry-run safety and health diagnostics (`doctor`).
 
 ---
@@ -81,7 +81,7 @@ The BSPWM configuration is organized into cumulative profiles managed with [GNU 
 | **Terminal** | `alacritty` | GPU-accelerated terminal emulator themed with Catppuccin |
 | **Notifications** | `dunst` | Customizable, lightweight notification daemon |
 | **Wallpaper** | `feh` | Wallpaper setter with interactive selector |
-| **Night Light** | `redshift` | Screen color temperature adjustment |
+| **Night Light** | `gammastep` | Screen color temperature adjustment |
 | **Audio / Media** | PipeWire & Playerctl | Modern audio stack with MPRIS media control |
 | **Screenshots** | `satty` & `maim` | Fullscreen and region capture with interactive annotation editor |
 
@@ -172,7 +172,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 | `Super + L` | Lock screen immediately (slock / i3lock) |
 | `Super + X` | Open session power menu (Rofi) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Rofi) |
-| `Super + N` | Toggle warm night light (Redshift) |
+| `Super + N` | Toggle warm night light (Gammastep) |
 | `Super + W` | Select wallpaper from gallery via Rofi (Feh) |
 | `Super + Shift + W` | Open interactive Wi-Fi network menu (Rofi) |
 | `Alt + Space` | Toggle keyboard layout between US and Latin America |

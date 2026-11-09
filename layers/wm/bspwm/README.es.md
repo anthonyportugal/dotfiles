@@ -30,7 +30,7 @@ Sesión de escritorio X11 autónoma, modular y minimalista optimizada para **Arc
 - 🖥️ **Soporte Multi-Monitor Nativo:** Balanceo dinámico de workspaces entre pantallas, grabación de pantalla enfocada por monitor y atajos ergonómicos de navegación entre salidas.
 - 📊 **Polybar Dinámica:** Detección en tiempo real de interfaces de red activas (Wi-Fi/Ethernet), nivel de batería y reproducción multimedia MPRIS.
 - 🎛️ **Atajos Ergonómicos:** Arquitectura de teclado intuitiva gestionada por `sxhkd` con menú interactivo de ayuda (`Super + ?`).
-- 🔋 **Energía y Luz Nocturna:** Control de temperatura de color con Redshift y selector interactivo de perfiles de energía (`power-profiles-daemon`).
+- 🔋 **Energía y Luz Nocturna:** Control de temperatura de color con Gammastep y selector interactivo de perfiles de energía (`power-profiles-daemon`).
 - 🔒 **GNU Stow y Cero Basura:** Perfiles acumulativos (`core`, `desktop`) con simulación segura (dry-run) y diagnósticos de salud del sistema (`doctor`).
 
 ---
@@ -81,7 +81,7 @@ La configuración de BSPWM está estructurada en perfiles acumulativos administr
 | **Terminal** | `alacritty` | Emulador de terminal acelerado por GPU con tema Catppuccin |
 | **Notificaciones** | `dunst` | Daemon ligero y personalizable de notificaciones |
 | **Fondo de Pantalla** | `feh` | Gestor de fondos de pantalla con selector interactivo |
-| **Luz Nocturna** | `redshift` | Ajuste de temperatura de color de pantalla |
+| **Luz Nocturna** | `gammastep` | Ajuste de temperatura de color de pantalla |
 | **Audio / Multimedia** | PipeWire & Playerctl | Servidor de audio moderno con control de medios MPRIS |
 | **Capturas** | `satty` & `maim` | Captura de pantalla completa o por región con editor interactivo |
 
@@ -172,7 +172,7 @@ El escritorio está estilizado con **Catppuccin Mocha**, soportando las **14 pal
 | `Super + L` | Bloquear pantalla de inmediato (slock / i3lock) |
 | `Super + X` | Abrir menú de apagado/energía (Rofi) |
 | `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Rofi) |
-| `Super + N` | Activar / desactivar filtro de luz nocturna (Redshift) |
+| `Super + N` | Activar / desactivar filtro de luz nocturna (Gammastep) |
 | `Super + W` | Seleccionar fondo de pantalla desde la galería vía Rofi (Feh) |
 | `Super + Shift + W` | Abrir menú interactivo de redes Wi-Fi (Rofi) |
 | `Alt + Space` | Alternar distribución de teclado entre US y Latinoamérica |

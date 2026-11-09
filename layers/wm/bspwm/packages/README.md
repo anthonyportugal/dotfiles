@@ -14,7 +14,7 @@ Profiles are cumulative:
 | Profile | Content | Stow Package |
 | --- | --- | --- |
 | `core` | Xorg server, Xauth authorization, bspwm, sxhkd, GNU Stow, display/keyboard utilities (`xorg-xrandr`, `xorg-setxkbmap`, `xorg-xsetroot`), and session locking helpers (`util-linux` / `flock`). | `bspwm` |
-| `desktop` | `core` plus Polybar, Picom compositor, Rofi launcher, Dunst notifications, `xcape` key remapping, Catppuccin lockscreen (`i3lock-color` from AUR), Feh wallpaper daemon, screen capture/recording (Maim, Slop, Satty, FFmpeg), full PipeWire audio (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), Playerctl media control, power management (`power-profiles-daemon`), Bluetooth (`bluez-utils`), Redshift night light, `xclip` clipboard, Brave browser, Micro editor, Alacritty terminal, and fonts. | `bspwm` |
+| `desktop` | `core` plus Polybar, Picom compositor, Rofi launcher, Dunst notifications, `xcape` key remapping, Catppuccin lockscreen (`i3lock-color` from AUR), Feh wallpaper daemon, screen capture/recording (Maim, Slop, Satty, FFmpeg), full PipeWire audio (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), Playerctl media control, power management (`power-profiles-daemon`), Bluetooth (`bluez-utils`), Gammastep night light, `xclip` clipboard, Brave browser, Micro editor, Alacritty terminal, and fonts. | `bspwm` |
 
 Both profiles select the single Stow package `bspwm`. The default profile is `desktop`.
 

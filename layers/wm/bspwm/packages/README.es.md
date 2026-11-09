@@ -14,7 +14,7 @@ Los perfiles son acumulativos:
 | Perfil | Contenido | Paquete Stow |
 | --- | --- | --- |
 | `core` | Servidor Xorg, autorización Xauth, bspwm, sxhkd, GNU Stow, herramientas de display/teclado (`xorg-xrandr`, `xorg-setxkbmap`, `xorg-xsetroot`) y utilidades de bloqueo de sesión (`util-linux` / `flock`). | `bspwm` |
-| `desktop` | `core` más barra Polybar, compositor Picom, launcher Rofi, notificaciones Dunst, remapeo `xcape`, bloqueador Catppuccin `i3lock-color` (AUR), fondos con Feh, capturas y grabación (Maim, Slop, Satty, FFmpeg), audio PipeWire completo (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), control de medios Playerctl, gestión de energía (`power-profiles-daemon`), Bluetooth (`bluez-utils`), filtro nocturno Redshift, portapapeles `xclip`, navegador Brave, visor/editor Micro, emulador Alacritty y fuentes. | `bspwm` |
+| `desktop` | `core` más barra Polybar, compositor Picom, launcher Rofi, notificaciones Dunst, remapeo `xcape`, bloqueador Catppuccin `i3lock-color` (AUR), fondos con Feh, capturas y grabación (Maim, Slop, Satty, FFmpeg), audio PipeWire completo (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), control de medios Playerctl, gestión de energía (`power-profiles-daemon`), Bluetooth (`bluez-utils`), filtro nocturno Gammastep, portapapeles `xclip`, navegador Brave, visor/editor Micro, emulador Alacritty y fuentes. | `bspwm` |
 
 Ambos perfiles seleccionan el único paquete Stow `bspwm`. El perfil predeterminado es `desktop`.
 

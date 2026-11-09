@@ -3,6 +3,7 @@ brightnessctl
 dunst
 feh
 ffmpeg
+gammastep
 libnotify
 maim
 picom
@@ -12,7 +13,6 @@ pipewire-pulse
 polkit-gnome
 polybar
 power-profiles-daemon
-redshift
 rofi
 satty
 slop
