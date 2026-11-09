@@ -84,9 +84,13 @@ Los perfiles son acumulativos:
   Zsh (`zsh-autosuggestions`, `zsh-completions`, `zsh-syntax-highlighting` y
   `zsh-history-substring-search`). Sus paquetes Stow son `git` y `zsh`.
 - **`cli`**: Enriquece el entorno interactivo de terminal. Añade Starship prompt,
-  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad y fuentes
-  de símbolos Nerd Fonts. Sus paquetes Stow despliegan las configuraciones
-  Catppuccin Mocha para estas utilidades.
+  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad, Eza,
+  Zoxide, Tealdeer (`tldr`, caché actualizada a demanda con `tldr --update`), Dust,
+  Duf y fuentes de símbolos Nerd Fonts. Sus paquetes Stow despliegan las
+  configuraciones Catppuccin Mocha para estas utilidades. Con Eza instalado, los
+  alias de Zsh `ls`, `l`, `la`, `ll`, `ld` y `lt` (árbol) listan con iconos y
+  directorios primero (`command ls` mantiene el `ls` real); Zoxide añade `z`/`zi`
+  sin reemplazar `cd`.
 - **`desktop`**: Aporta utilidades gráficas independientes de la sesión o Window
   Manager. Incluye los emuladores de terminal Alacritty y Foot, visores ligeros
   (IMV, que abre una imagen junto con el resto de su carpeta mediante

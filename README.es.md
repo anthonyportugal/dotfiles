@@ -42,7 +42,7 @@ dotfiles (este repositorio)
 ├── bin/dotfiles, lib/    un único CLI y su motor
 ├── layers/
 │   ├── core              Zsh y Git fail-closed
-│   ├── cli               requiere core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch
+│   ├── cli               requiere core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch, Eza, Zoxide
 │   ├── desktop           requiere cli: Alacritty, Foot, motor de temas, preferencias GTK
 │   ├── wm/mangowm        requiere desktop: sesión Wayland (Waybar, Fuzzel, Swaylock, wlogout)
 │   ├── wm/bspwm          requiere desktop: sesión X11 (Polybar, Rofi, Picom, Dunst)

@@ -82,9 +82,12 @@ Profiles are cumulative:
   (`zsh-autosuggestions`, `zsh-completions`, `zsh-syntax-highlighting`, and
   `zsh-history-substring-search`). Its Stow packages are `git` and `zsh`.
 - **`cli`**: Enriches the interactive terminal experience. Adds the Starship prompt,
-  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad, and
-  Nerd Fonts symbol glyphs. Its Stow packages deploy Catppuccin Mocha configurations
-  for these utilities.
+  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad, Eza,
+  Zoxide, Tealdeer (`tldr`, cache updated on demand with `tldr --update`), Dust,
+  Duf, and Nerd Fonts symbol glyphs. Its Stow packages deploy Catppuccin Mocha
+  configurations for these utilities. With Eza installed, the Zsh aliases `ls`,
+  `l`, `la`, `ll`, `ld` and `lt` (tree) list with icons and directories first
+  (`command ls` keeps the real `ls`); Zoxide adds `z`/`zi` without replacing `cd`.
 - **`desktop`**: Delivers session-independent graphical utilities. Includes
   Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV, which
   opens an image with the rest of its folder through `imv-folder`, and Zathura with

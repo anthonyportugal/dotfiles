@@ -20,6 +20,7 @@ printf '\n--> 3/13: Executing shared theme engine, mimeapps, font and image view
 "$SCRIPT_DIR/theme-apps-smoke.sh"
 "$SCRIPT_DIR/mimeapps-smoke.sh"
 "$SCRIPT_DIR/fonts-smoke.sh"
+"$SCRIPT_DIR/cli-tools-smoke.sh"
 "$SCRIPT_DIR/imv-folder-smoke.sh"
 "$SCRIPT_DIR/checkout-copy-smoke.sh"
 
