@@ -27,28 +27,34 @@ ARGS_LOG="$TEST_ROOT/fuzzel.args"
 ROWS_LOG="$TEST_ROOT/fuzzel.rows"
 mkdir -p -- "$FAKE_BIN" "$TEST_ROOT/theme"
 
-# The double records its arguments and the rows it was given, then selects
-# row FUZZEL_PICK and prints the column --accept-nth names, like fuzzel.
+# The double records its arguments and the rows it was given, then picks row
+# FUZZEL_PICK and prints its zero-based index when --index is passed, like
+# fuzzel. FUZZEL_PICK=0 dismisses the menu.
 cat > "$FAKE_BIN/fuzzel" <<'FAKE'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf '%s\n' "$@" > "$FUZZEL_ARGS_LOG"
 cat > "$FUZZEL_ROWS_LOG"
-accept=0
-for argument in "$@"; do
-  [[ "$argument" == --accept-nth=* ]] && accept=${argument#--accept-nth=}
-done
-row=$(sed -n "${FUZZEL_PICK:-1}p" "$FUZZEL_ROWS_LOG")
-if (( accept > 0 )); then
-  cut -f "$accept" <<< "$row"
+pick=${FUZZEL_PICK:-1}
+(( pick > 0 )) || exit 1
+if [[ " $* " == *' --index '* ]]; then
+  printf '%s\n' "$(( pick - 1 ))"
 else
-  printf '%s\n' "$row"
+  sed -n "${pick}p" "$FUZZEL_ROWS_LOG"
 fi
 FAKE
+cat > "$FAKE_BIN/notify-send" <<'FAKE'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$NOTIFY_LOG"
+FAKE
+chmod +x "$FAKE_BIN/notify-send"
 chmod +x "$FAKE_BIN/fuzzel"
 
 export PATH="$FAKE_BIN:$PATH"
 export FUZZEL_ARGS_LOG="$ARGS_LOG" FUZZEL_ROWS_LOG="$ROWS_LOG"
+export NOTIFY_LOG="$TEST_ROOT/notify.log"
+# Lengths are counted in characters, which needs a UTF-8 locale.
+export LC_ALL=C.UTF-8
 export HOME="$TEST_ROOT/home"
 
 # shellcheck source-path=SCRIPTDIR source=../home/mango/.local/lib/mangowm/common
@@ -60,7 +66,7 @@ arg() {
 }
 
 shown() {
-  sed -n "${1}p" "$ROWS_LOG" | cut -f 1
+  sed -n "${1}p" "$ROWS_LOG"
 }
 
 # 1. Short entries keep the floor width and pass the caller's arguments on.
@@ -108,5 +114,23 @@ prompt=$(arg prompt)
 (( ${#prompt} <= MANGOWM_MENU_MAX_WIDTH - MANGOWM_MENU_PADDING )) || \
   fail "prompt de ${#prompt} caracteres"
 [[ "$prompt" == *'… ❯ '* || "$prompt" == *'❯ ' ]] || fail "prompt sin su final: $prompt"
+
+# 6. Values may hold tabs, and duplicated labels return their own value.
+picked=$(printf 'Red\tuuid-1\twlan0\nRed\tuuid-2\twlan1\n' | \
+  FUZZEL_PICK=2 mangowm_menu 'Wi-Fi ❯ ')
+[[ "$picked" == $'uuid-2\twlan1' ]] || fail "valor con tabs devuelto como '$picked'"
+[[ "$(cat "$ROWS_LOG")" == $'Red\nRed' ]] || fail 'fuzzel recibió algo más que las etiquetas'
+
+# 7. A dismissed menu prints nothing and reports fuzzel's status.
+status=0
+picked=$(printf '%s\n' 'Conectar' | FUZZEL_PICK=0 mangowm_menu 'Red ❯ ') || status=$?
+[[ -z "$picked" && $status -eq 1 ]] || fail "menú cerrado: '$picked', estado $status"
+
+# 8. A theme that cannot be loaded is reported instead of failing silently.
+mangowm_theme_dir() { return 1; }
+status=0
+printf '%s\n' 'Conectar' | mangowm_menu 'Red ❯ ' >/dev/null || status=$?
+(( status == 1 )) || fail "sin tema devolvió $status"
+grep -q 'Menú no disponible' "$NOTIFY_LOG" || fail 'no notificó la falla del tema'
 
 printf 'OK: menu-smoke\n'

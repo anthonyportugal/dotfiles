@@ -63,7 +63,8 @@ mangowm_require() {
 # Fuzzel menus size themselves to their entries: the widest entry sets the
 # width, between a floor and a cap. An entry longer than the cap is shortened
 # in the middle, keeping its end (a file name, the last path components), and
-# $HOME is shown as ~. The menu always returns the original entry.
+# $HOME is shown as ~. The menu always returns the original entry. Lengths
+# count characters under the session's UTF-8 locale.
 MANGOWM_MENU_MIN_WIDTH=30
 MANGOWM_MENU_MAX_WIDTH=90
 # Room for icons drawn wider than one character and the selection margin.
@@ -84,36 +85,45 @@ mangowm_menu_label() {
 }
 
 # mangowm_menu <prompt> [fuzzel arguments...] < entries
-# One entry per line; "label<TAB>value" shows the label and returns the value.
+# One entry per line; "label<TAB>value" shows the label and returns the value,
+# which may itself hold tabs. Prints nothing when the menu is dismissed.
 mangowm_menu() {
   local prompt=$1
   shift
-  local theme_dir entry value label max_label width widest
-  local rows=()
+  local theme_dir entry label max_label width widest index
+  local labels=() values=()
 
-  theme_dir=$(mangowm_theme_dir) || return 1
+  theme_dir=$(mangowm_theme_dir) || {
+    mangowm_notify critical 'Menú no disponible' \
+      'No se pudo cargar el tema activo; ejecute dotfiles-theme render'
+    return 1
+  }
   max_label=$(( MANGOWM_MENU_MAX_WIDTH - MANGOWM_MENU_PADDING ))
   mangowm_menu_label prompt "$prompt" "$max_label"
   widest=0
 
   while IFS= read -r entry || [[ -n "$entry" ]]; do
-    value=$entry
     if [[ "$entry" == *$'\t'* ]]; then
-      value=${entry#*$'\t'}
+      values+=("${entry#*$'\t'}")
       entry=${entry%%$'\t'*}
+    else
+      values+=("$entry")
     fi
     mangowm_menu_label label "$entry" "$max_label"
     (( ${#label} > widest )) && widest=${#label}
-    rows+=("$label"$'\t'"$value")
+    labels+=("$label")
   done
 
   width=$(( widest + MANGOWM_MENU_PADDING ))
   (( width < MANGOWM_MENU_MIN_WIDTH )) && width=$MANGOWM_MENU_MIN_WIDTH
   (( width > MANGOWM_MENU_MAX_WIDTH )) && width=$MANGOWM_MENU_MAX_WIDTH
 
-  printf '%s\n' "${rows[@]}" | fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-    --prompt="$prompt" --width="$width" \
-    --with-nth=1 --match-nth=1 --accept-nth=2 "$@"
+  # fuzzel prints the index of the chosen label, so labels need no encoding
+  # and duplicated labels still return their own value.
+  index=$(printf '%s\n' "${labels[@]}" | fuzzel --dmenu --index \
+    --config="$theme_dir/fuzzel.ini" --prompt="$prompt" --width="$width" "$@") || return $?
+  [[ "$index" =~ ^[0-9]+$ ]] && (( index < ${#values[@]} )) || return 0
+  printf '%s\n' "${values[index]}"
 }
 
 mangowm_is_media_active() {
