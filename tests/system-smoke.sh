@@ -7,6 +7,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
+# shellcheck source=SCRIPTDIR/lib/checkout-copy.sh
+source "$SCRIPT_DIR/lib/checkout-copy.sh"
 DOTFILES="$REPO_ROOT/bin/dotfiles"
 INSTALLER="$REPO_ROOT/layers/system/install.sh"
 TEST_ROOT=""
@@ -118,7 +120,7 @@ PATH="$FAKE_BIN:/usr/bin:/bin" HOME="$H" "$DOTFILES" bootstrap --profile core --
 # a machine that applied it, it only says how to re-apply it.
 UPSTREAM="$TEST_ROOT/upstream"
 CHECKOUT="$TEST_ROOT/checkout"
-cp -a "$REPO_ROOT/." "$UPSTREAM"
+copy_checkout "$REPO_ROOT" "$UPSTREAM"
 # CI checks out a detached HEAD, and update can only pull on a branch.
 git -C "$UPSTREAM" switch -qC upstream
 git -C "$UPSTREAM" add -A

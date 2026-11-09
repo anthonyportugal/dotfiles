@@ -18,6 +18,7 @@ printf '\n--> 3/13: Executing shared theme engine, mimeapps, font and image view
 "$SCRIPT_DIR/mimeapps-smoke.sh"
 "$SCRIPT_DIR/fonts-smoke.sh"
 "$SCRIPT_DIR/imv-folder-smoke.sh"
+"$SCRIPT_DIR/checkout-copy-smoke.sh"
 
 printf '\n--> 4/13: Executing WM, opt-in layer and overlay smoke tests...\n'
 "$SCRIPT_DIR/wm-layers-smoke.sh"
