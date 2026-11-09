@@ -388,13 +388,18 @@ gnome_accent() {
   esac
 }
 
-# Live reload after `set`: the GNOME accent, then every WM reload hook. A
-# failing hook only warns; the theme is already promoted.
+# Live reload after `set`: the GNOME accent and cursor (GTK falls back to the
+# default cursor when the theme is not installed), then every WM reload hook.
+# A failing hook only warns; the theme is already promoted.
 reload_live() {
   local hook
 
   if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.desktop.interface accent-color "$(gnome_accent)" \
+      2>/dev/null || true
+    gsettings set org.gnome.desktop.interface cursor-theme "${VALUES[cursor_theme]}" \
+      2>/dev/null || true
+    gsettings set org.gnome.desktop.interface cursor-size "${VALUES[cursor_size]}" \
       2>/dev/null || true
   fi
   [[ -d "$RELOAD_DIR" ]] || return 0

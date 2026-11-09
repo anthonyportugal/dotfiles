@@ -13,7 +13,7 @@ Los perfiles son acumulativos:
 
 | Perfil | Contenido | Paquete Stow |
 | --- | --- | --- |
-| `core` | Servidor Xorg, autorización Xauth, bspwm, sxhkd, GNU Stow, herramientas de display/teclado (`xorg-xrandr`, `xorg-setxkbmap`, `xorg-xsetroot`) y utilidades de bloqueo de sesión (`util-linux` / `flock`). | `bspwm` |
+| `core` | Servidor Xorg, autorización Xauth, bspwm, sxhkd, GNU Stow, herramientas de display/teclado (`xorg-xrandr`, `xorg-setxkbmap`, `xorg-xsetroot`, `xorg-xrdb`) y utilidades de bloqueo de sesión (`util-linux` / `flock`). | `bspwm` |
 | `desktop` | `core` más barra Polybar, compositor Picom, launcher Rofi, notificaciones Dunst, remapeo `xcape`, bloqueador Catppuccin `i3lock-color` (AUR), fondos con Feh, capturas y grabación (Maim, Slop, Satty, FFmpeg), audio PipeWire completo (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), control de medios Playerctl, gestión de energía (`power-profiles-daemon`), Bluetooth (`bluez-utils`), filtro nocturno Gammastep, portapapeles `xclip`, navegador Brave, visor/editor Micro, emulador Alacritty y fuentes. | `bspwm` |
 
 Ambos perfiles seleccionan el único paquete Stow `bspwm`. El perfil predeterminado es `desktop`.
@@ -30,6 +30,7 @@ La resolución respeta la prioridad estándar del ecosistema:
 
 - **`xorg-xauth` en `core`:** Esencial para que display managers ligeros como Ly autoricen correctamente la sesión X11.
 - **`xorg-setxkbmap` y `xorg-xsetroot`:** Aplican configuraciones portables de teclado (alternancia de idioma con Alt+Espacio) y establecen el cursor de inicio sin alterar configuraciones globales del sistema.
+- **`xorg-xrdb`:** Fusiona los recursos `Xcursor.theme`/`Xcursor.size` del tema al iniciar la sesión y en `dotfiles-theme set`, para que el cursor de la paleta (Bibata por defecto) llegue a los clientes X11; si el tema de cursor no está instalado, se usa el cursor por defecto.
 - **`util-linux`:** Provee `flock`, utilizado en los scripts de arranque para impedir ejecuciones duplicadas o concurrentes de Polybar y demonios de fondo.
 - **`xcape` en `desktop`:** Permite usar la tecla Super para abrir el launcher Rofi al pulsarse y soltarse rápidamente, sin interferir con combinaciones que la mantienen presionada.
 - **`i3lock-color` (AUR):** Provee la pantalla de bloqueo con anillo, fecha y reloj Catppuccin Mocha, logrando paridad visual completa con MangoWM / Wayland.

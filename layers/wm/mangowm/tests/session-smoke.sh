@@ -173,6 +173,8 @@ for unit_name in mangowm-mako mangowm-swayidle mangowm-swaybg mangowm-waybar; do
 done
 grep -q 'WAYLAND_DISPLAY.*XDG_CURRENT_DESKTOP' "$LOG" || \
   fail 'session-start no importó el entorno Wayland'
+grep -q '^dbus-update-activation-environment .*XCURSOR_THEME XCURSOR_SIZE' "$LOG" || \
+  fail 'session-start no importó el cursor del tema (XCURSOR_THEME/XCURSOR_SIZE)'
 
 grep -q '^session-preferences apply ' "$LOG" || \
   fail 'session-start no consumió el contrato de preferencias de la capa desktop'

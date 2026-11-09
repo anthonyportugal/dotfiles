@@ -214,6 +214,13 @@ if [[ "${BSPWM_DISABLE_POLYBAR:-0}" != 1 ]] && command -v polybar >/dev/null; th
   "$BSPWM_DIR/scripts/launch-polybar" &
 fi
 
+# Cursor from the rendered theme (bspwm.env above) through Xcursor resources;
+# without a theme, or when the theme is not installed, Xcursor keeps the
+# default cursor.
+if [[ -n "${BSPWM_CURSOR_THEME:-}" ]] && command -v xrdb >/dev/null; then
+  printf 'Xcursor.theme: %s\nXcursor.size: %s\n' \
+    "$BSPWM_CURSOR_THEME" "${BSPWM_CURSOR_SIZE:-24}" | xrdb -merge
+fi
 if command -v xsetroot >/dev/null; then
   xsetroot -cursor_name left_ptr
 fi

@@ -23,7 +23,12 @@ is required exactly once, and unknown, missing or duplicate keys are errors.
 | Cursor | `cursor_theme`, `cursor_size` | `^[A-Za-z0-9][A-Za-z0-9._-]*$`; `^[0-9]{2,3}$` |
 
 Colors are `#rrggbb` (either case). `accent_name` names the accent within its
-family; the GNOME accent color is derived from it. The default theme is
+family; the GNOME accent color is derived from it. `cursor_theme` names an
+Xcursor theme (Bibata comes from the desktop layer's external downloads) and
+reaches GTK (gsettings on `set`), MangoWM (`cursor_theme`, `cursor_size` and
+`XCURSOR_THEME`/`XCURSOR_SIZE` in its rendered `mango.conf`) and bspwm
+(`Xcursor.theme`/`Xcursor.size` resources from its rendered `bspwm.env`); a
+theme that is not installed falls back to the default cursor. The default theme is
 `catppuccin-mocha-pink`.
 
 The Catppuccin palettes map Mocha onto these roles: `background_deep`/`accent_fg`
@@ -131,5 +136,5 @@ dotfiles-theme list | current | set <id> | render [id] | validate [id] | path
 ```
 
 `set` renders, runs every render hook, saves the selection, syncs the GNOME
-accent color and runs every reload hook. `path` renders first when nothing is
+accent color and cursor and runs every reload hook. `path` renders first when nothing is
 active yet.

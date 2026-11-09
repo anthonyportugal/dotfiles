@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Live bspwm reload run by `dotfiles-theme set` after promoting a theme. The
 # engine already synced the GNOME accent; this only applies the bspwm part:
-# border colors from the rendered bspwm.env, then Polybar and Dunst restarts.
+# border colors and the cursor from the rendered bspwm.env, then Polybar and
+# Dunst restarts.
 
 set -Eeuo pipefail
 
@@ -22,6 +23,24 @@ reload_borders() {
   bspc config presel_feedback_color "$BSPWM_PRESEL_BORDER" 2>/dev/null || true
 }
 
+# Xcursor resources apply to clients started from now on; xsetroot reloads
+# the root window cursor right away.
+reload_cursor() {
+  local BSPWM_CURSOR_THEME='' BSPWM_CURSOR_SIZE=''
+
+  [[ -r "$THEME_DIR/bspwm.env" ]] || return 0
+  # shellcheck source=/dev/null
+  source "$THEME_DIR/bspwm.env"
+  [[ -n "$BSPWM_CURSOR_THEME" ]] || return 0
+  if command -v xrdb >/dev/null 2>&1; then
+    printf 'Xcursor.theme: %s\nXcursor.size: %s\n' \
+      "$BSPWM_CURSOR_THEME" "${BSPWM_CURSOR_SIZE:-24}" | xrdb -merge 2>/dev/null || true
+  fi
+  if command -v xsetroot >/dev/null 2>&1; then
+    xsetroot -cursor_name left_ptr 2>/dev/null || true
+  fi
+}
+
 reload_polybar() {
   if [[ -x "$BSPWM_DIR/scripts/launch-polybar" ]] && \
      pgrep -u "$UID" -x polybar >/dev/null 2>&1; then
@@ -38,5 +57,6 @@ reload_dunst() {
 }
 
 reload_borders
+reload_cursor
 reload_polybar
 reload_dunst
