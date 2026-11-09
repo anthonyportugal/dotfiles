@@ -214,6 +214,9 @@ _external_stage() {
       error "no se pudo extraer el archivo de $name"
       return 1
     }
+    # Owner-writable and traversable, so the payload can be moved, read and
+    # later removed, whatever modes the archive carries.
+    chmod -R u+rwX -- "$staging/extract" || return 1
     mapfile -t entries < <(find "$staging/extract" -mindepth 1 -maxdepth 1)
     if (( ${#entries[@]} != 1 )) || [[ ! -d "${entries[0]}" || -L "${entries[0]}" ]]; then
       error "el archivo de $name debe contener un único directorio de primer nivel"

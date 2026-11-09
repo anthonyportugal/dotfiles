@@ -88,6 +88,12 @@ ln -s arrow "$TEST_ROOT/archive/Cursor/cursors/default"
 printf '[Icon Theme]\n' > "$TEST_ROOT/archive/Cursor/index.theme"
 tar -C "$TEST_ROOT/archive" -cJf "$DOWNLOADS/Cursor.tar.xz" Cursor
 tar -C "$TEST_ROOT/archive" -cJf "$DOWNLOADS/Two.tar.xz" Cursor Extra
+mkdir -p "$TEST_ROOT/archive/Locked/sub"
+printf 'locked\n' > "$TEST_ROOT/archive/Locked/sub/f"
+chmod 0444 "$TEST_ROOT/archive/Locked/sub/f"
+chmod 0555 "$TEST_ROOT/archive/Locked/sub" "$TEST_ROOT/archive/Locked"
+tar -C "$TEST_ROOT/archive" -cJf "$DOWNLOADS/Locked.tar.xz" Locked
+chmod -R u+w "$TEST_ROOT/archive/Locked"
 
 sha() {
   sha256sum -- "$DOWNLOADS/$1" | cut -d' ' -f1
@@ -363,7 +369,22 @@ fi
 [[ $(trap -p INT) == *outer* ]] || fail 'no se restauró el trap INT del llamador'
 trap - INT
 
-# 16. Repository recipes are valid and pin https downloads.
+# 16. Read-only directories inside an archive still install, stay
+# readable, and leave no staging behind.
+new_target locked
+cat > "$PACKAGES_DIR/external/locked.conf" <<EOF
+version=1
+dest=share/icons/Locked
+archive=$(sha Locked.tar.xz) https://example.test/Locked.tar.xz
+EOF
+plan locked
+execute_package_install >/dev/null 2>&1 || fail 'un archivo con directorios de solo lectura no se instaló'
+[[ $(cat "$TARGET_DIR/.local/share/icons/Locked/sub/f") == locked ]] || fail 'el contenido bloqueado no es legible'
+compgen -G "$TARGET_DIR/.local/.dotfiles-external.*" >/dev/null && fail 'un archivo de solo lectura dejó staging'
+chmod -R u+w "$TARGET_DIR/.local/share/icons/Locked"
+rm -f -- "$PACKAGES_DIR/external/locked.conf"
+
+# 17. Repository recipes are valid and pin https downloads.
 names=()
 shopt -s nullglob
 for manifest in "$REPO_ROOT"/layers/*/packages/external/*.txt "$REPO_ROOT"/layers/wm/*/packages/external/*.txt; do
