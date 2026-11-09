@@ -52,7 +52,8 @@ refresh=fonts   # optional: rebuilds the font cache of dest
 
 - Only `https` URLs are accepted, and every download must match its `sha256`
   before anything changes. Nothing downloaded is executed (no `curl | sh`).
-  A failed or interrupted install leaves the previous version in place.
+  A failed or interrupted install leaves the previous version and its receipt
+  in place, and does not stop the other recipes of the run.
 - `dest` is `share/<directory>/<name>` under `~/.local` and belongs to the
   recipe: an install replaces it whole. A `dest` that dotfiles did not install
   is never replaced; the install stops and asks you to move it. Nor does an

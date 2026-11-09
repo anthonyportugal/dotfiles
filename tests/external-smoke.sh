@@ -254,6 +254,8 @@ fi
 [[ "$output" == *symlink* ]] || fail "el error no menciona el symlink: $output"
 [[ -z $(ls -A "$TARGET_DIR/elsewhere") ]] || fail 'la descarga llegó al destino del symlink'
 
+# 10-11 simulate unwritable directories, which root writes anyway.
+if (( EUID != 0 )); then
 # 10. When the receipt cannot be written, the install is undone: dest goes
 # away and the next run installs instead of refusing a dest it does not own.
 new_target receipt
@@ -285,6 +287,7 @@ chmod 0755 "$TARGET_DIR/.local/share/fonts"
 [[ -f "$fonts/Sans-Italic[wght].ttf" && ! -e "$fonts/payload" && ! -e "$fonts/README.txt" ]] || \
   fail 'el reemplazo fallido alteró dest'
 write_fonts_recipe 1 'Sans-Italic[wght].ttf'
+fi
 
 # 12. curl may be missing when the repository step of the same run installs it.
 (
@@ -317,7 +320,50 @@ wait "$installer" 2>/dev/null || true
 compgen -G "$TARGET_DIR/.local/.dotfiles-external.*" >/dev/null && fail 'una interrupción dejó staging'
 rm -f -- "$PACKAGES_DIR/external/slow.conf"
 
-# 14. Repository recipes are valid and pin https downloads.
+# 14. A signal right after the swap, before the receipt, undoes the swap:
+# the previous version and its receipt are back.
+new_target swap
+write_fonts_recipe 6 'Sans-Italic[wght].ttf'
+plan sans
+execute_package_install >/dev/null 2>&1 || fail 'la instalación base falló'
+fonts="$TARGET_DIR/.local/share/fonts/sans"
+write_fonts_recipe 7 README.txt
+(
+  _external_record() { kill -TERM "$BASHPID"; sleep 5; }
+  plan sans
+  execute_package_install
+) >/dev/null 2>&1 || true
+[[ -f "$fonts/Sans-Italic[wght].ttf" && ! -e "$fonts/README.txt" ]] || \
+  fail 'una interrupción tras el reemplazo no restauró la versión anterior'
+write_fonts_recipe 6 'Sans-Italic[wght].ttf'
+plan sans
+[[ "${INSTALLED_EXTERNAL_PACKAGES[*]}" == sans ]] || fail 'el recibo anterior no volvió con la versión anterior'
+# A first install interrupted the same way leaves neither dest nor receipt.
+new_target swap-fresh
+(
+  _external_record() { kill -TERM "$BASHPID"; sleep 5; }
+  plan sans
+  execute_package_install
+) >/dev/null 2>&1 || true
+[[ ! -e "$TARGET_DIR/.local/share/fonts/sans" ]] || fail 'una primera instalación interrumpida dejó dest'
+[[ ! -e "$(receipt_path external-sans)" ]] || fail 'una primera instalación interrumpida dejó recibo'
+write_fonts_recipe 1 'Sans-Italic[wght].ttf'
+
+# 15. One refused recipe does not skip the others, and the caller's own
+# signal traps are back afterwards.
+new_target partial
+mkdir -p "$TARGET_DIR/elsewhere" "$TARGET_DIR/.local/share"
+ln -s "$TARGET_DIR/elsewhere" "$TARGET_DIR/.local/share/icons"
+trap 'printf outer' INT
+plan cursor sans
+if execute_package_install >/dev/null 2>&1; then
+  fail 'una receta rechazada no hizo fallar la instalación'
+fi
+[[ -f "$TARGET_DIR/.local/share/fonts/sans/OFL.txt" ]] || fail 'una receta rechazada saltó las siguientes'
+[[ $(trap -p INT) == *outer* ]] || fail 'no se restauró el trap INT del llamador'
+trap - INT
+
+# 16. Repository recipes are valid and pin https downloads.
 names=()
 shopt -s nullglob
 for manifest in "$REPO_ROOT"/layers/*/packages/external/*.txt "$REPO_ROOT"/layers/wm/*/packages/external/*.txt; do

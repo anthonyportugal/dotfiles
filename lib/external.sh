@@ -25,7 +25,8 @@
 INSTALLED_EXTERNAL_PACKAGES=()
 MISSING_EXTERNAL_PACKAGES=()
 # The install in progress, for the SIGINT/SIGTERM cleanup.
-EXTERNAL_STAGING='' EXTERNAL_DEST='' EXTERNAL_DOWNLOAD_PID=''
+EXTERNAL_STAGING='' EXTERNAL_DEST='' EXTERNAL_NAME='' EXTERNAL_DOWNLOAD_PID=''
+EXTERNAL_SWAPPING=0
 
 external_prefix() {
   printf '%s' "$TARGET_DIR/.local"
@@ -226,7 +227,7 @@ _external_stage() {
 # Installs recipe $1 into its dest, replacing only a dest it installed.
 external_install() {
   local name=$1
-  local prefix staging dest current segment status=0
+  local prefix staging dest current segment receipt_file status=0
   local -A recipe=() receipt=()
   local -a sources=() segments=()
 
@@ -252,30 +253,56 @@ external_install() {
   mkdir -p -- "$prefix" "${dest%/*}" || return 1
   # Staged next to dest's filesystem, so the final rename is atomic.
   staging=$(mktemp -d "$prefix/.dotfiles-external.XXXXXX") || return 1
-  EXTERNAL_STAGING=$staging EXTERNAL_DEST=$dest
+  EXTERNAL_STAGING=$staging EXTERNAL_DEST=$dest EXTERNAL_NAME=$name
   if ! _external_stage "$name" "$staging"; then
-    status=1
-  elif [[ -e "$dest" ]] && ! mv -T -- "$dest" "$staging/previous"; then
+    _external_discard_staging
+    return 1
+  fi
+
+  # The swap: dest and its receipt change together, or neither does.
+  receipt_file=$(receipt_path "external-$name")
+  [[ ! -f "$receipt_file" ]] || cp -p -- "$receipt_file" "$staging/previous.receipt" || {
+    _external_discard_staging
+    return 1
+  }
+  EXTERNAL_SWAPPING=1
+  if [[ -e "$dest" ]] && ! mv -T -- "$dest" "$staging/previous"; then
     error "no se pudo apartar la versión instalada de $name en $dest"
     status=1
   elif ! mv -T -- "$staging/payload" "$dest"; then
     error "no se pudo mover $name a $dest"
     status=1
   elif ! _external_record "$name" "${recipe[version]}" "${recipe[dest]}"; then
-    # Without its receipt the adapter would no longer own dest: undo.
     error "no se pudo guardar el recibo de $name; se deshace la instalación"
-    mv -T -- "$dest" "$staging/payload"
     status=1
-  elif [[ "${recipe[refresh]:-}" == fonts ]] && command_exists fc-cache; then
+  fi
+  (( status == 0 )) || _external_undo
+  EXTERNAL_SWAPPING=0
+
+  if (( status == 0 )) && [[ "${recipe[refresh]:-}" == fonts ]] && command_exists fc-cache; then
     fc-cache -f "$dest" >/dev/null 2>&1 || warn "fc-cache no pudo refrescar $dest"
   fi
-  # A failed swap puts the previous version back.
-  if (( status != 0 )) && [[ ! -e "$dest" && -e "$staging/previous" ]]; then
-    mv -T -- "$staging/previous" "$dest"
-  fi
-
   _external_discard_staging
   return "$status"
+}
+
+# Puts back dest and the receipt as they were before the swap in progress.
+# The payload is no longer staged once it became dest.
+_external_undo() {
+  local receipt_file
+
+  if [[ ! -e "$EXTERNAL_STAGING/payload" && -e "$EXTERNAL_DEST" ]]; then
+    mv -T -- "$EXTERNAL_DEST" "$EXTERNAL_STAGING/undone"
+  fi
+  if [[ ! -e "$EXTERNAL_DEST" && -e "$EXTERNAL_STAGING/previous" ]]; then
+    mv -T -- "$EXTERNAL_STAGING/previous" "$EXTERNAL_DEST"
+  fi
+  receipt_file=$(receipt_path "external-$EXTERNAL_NAME")
+  if [[ -f "$EXTERNAL_STAGING/previous.receipt" ]]; then
+    mv -f -- "$EXTERNAL_STAGING/previous.receipt" "$receipt_file"
+  else
+    rm -f -- "$receipt_file"
+  fi
 }
 
 # Writes the receipt of recipe $1 (version $2, dest $3) and reads it back:
@@ -291,28 +318,29 @@ _external_record() {
 
 _external_discard_staging() {
   [[ "$EXTERNAL_STAGING" == "$(external_prefix)"/.dotfiles-external.* ]] && rm -rf -- "$EXTERNAL_STAGING"
-  EXTERNAL_STAGING='' EXTERNAL_DEST=''
+  EXTERNAL_STAGING='' EXTERNAL_DEST='' EXTERNAL_NAME=''
 }
 
-# On SIGINT or SIGTERM: stop the download, put back the previous version if
-# the swap was half done, and remove the staging directory.
+# On SIGINT or SIGTERM: stop the download, undo a swap in progress, and
+# remove the staging directory.
 _external_interrupted() {
   [[ -z "$EXTERNAL_DOWNLOAD_PID" ]] || kill "$EXTERNAL_DOWNLOAD_PID" 2>/dev/null || true
-  if [[ -n "$EXTERNAL_STAGING" && -n "$EXTERNAL_DEST" && ! -e "$EXTERNAL_DEST" && -e "$EXTERNAL_STAGING/previous" ]]; then
-    mv -T -- "$EXTERNAL_STAGING/previous" "$EXTERNAL_DEST"
-  fi
+  (( EXTERNAL_SWAPPING == 0 )) || _external_undo
   _external_discard_staging
   exit 130
 }
 
+# Installs every missing recipe; one failure does not skip the others.
 execute_external_install() {
-  local name status=0
+  local name status=0 previous_traps
 
+  previous_traps=$(trap -p INT TERM)
   trap _external_interrupted INT TERM
   for name in "${MISSING_EXTERNAL_PACKAGES[@]}"; do
     info "Instalando $name (descarga verificada con sha256, sin root)"
-    external_install "$name" || { status=1; break; }
+    external_install "$name" || status=1
   done
   trap - INT TERM
+  eval "$previous_traps"
   return "$status"
 }

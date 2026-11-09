@@ -53,7 +53,8 @@ refresh=fonts   # opcional: reconstruye la caché de fuentes de dest
 
 - Solo se aceptan URLs `https`, y cada descarga debe coincidir con su `sha256`
   antes de cambiar nada. Nada descargado se ejecuta (sin `curl | sh`). Una
-  instalación fallida o interrumpida deja la versión anterior en su lugar.
+  instalación fallida o interrumpida deja la versión anterior y su recibo en su
+  lugar, y no detiene las demás recetas de la ejecución.
 - `dest` es `share/<directorio>/<nombre>` bajo `~/.local` y pertenece a la
   receta: instalar lo reemplaza entero. Un `dest` que dotfiles no instaló nunca
   se reemplaza; la instalación se detiene y pide moverlo. Tampoco se instala a
