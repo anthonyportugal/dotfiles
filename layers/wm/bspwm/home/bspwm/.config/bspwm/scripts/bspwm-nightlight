@@ -47,6 +47,8 @@ enable() {
 
 disable() {
   pkill -x gammastep 2>/dev/null || true
+  # A redshift started before the switch to gammastep keeps its gamma ramp.
+  pkill -x redshift 2>/dev/null || true
   if command -v gammastep >/dev/null 2>&1; then
     gammastep -m randr -x >/dev/null 2>&1 || true
   fi
@@ -85,6 +87,7 @@ case "$command_name" in
   restore)
     rm -f "$state_file"
     pkill -x gammastep 2>/dev/null || true
+    pkill -x redshift 2>/dev/null || true
     ;;
   *)
     printf 'Uso: %s toggle|on|off|status|restore\n' "${0##*/}" >&2

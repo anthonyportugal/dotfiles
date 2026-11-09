@@ -222,6 +222,17 @@ bluetooth_click=$(jq -r '.bluetooth["on-click"]' "$waybar_config")
 sh -c "$bluetooth_click"
 grep -q '^foot --config=[^ ]*/mangowm/foot\.ini --app-id=floating-terminal bluetui $' "$LOG" || \
   fail "el clic de bluetooth no abrió bluetui en el terminal: $bluetooth_click"
+# Without bluetui (manifest not applied yet) the click explains what is
+# missing instead of opening a terminal that closes at once.
+mv -- "$FAKE_BIN/bluetui" "$FAKE_BIN/bluetui.off"
+log_lines=$(wc -l < "$LOG")
+sh -c "$bluetooth_click" || true
+click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
+grep -q '^notify-send .*bluetui' <<< "$click_log" || fail "el clic sin bluetui no avisó: $click_log"
+if grep -q '^foot .*bluetui' <<< "$click_log"; then
+  fail 'el clic sin bluetui abrió el terminal igualmente'
+fi
+mv -- "$FAKE_BIN/bluetui.off" "$FAKE_BIN/bluetui"
 "$TARGET/.local/lib/mangowm/brightness" up
 "$TARGET/.local/lib/mangowm/media" play-pause
 "$TARGET/.local/lib/mangowm/volume" mute

@@ -219,7 +219,7 @@ fi
 # default cursor.
 if [[ -n "${BSPWM_CURSOR_THEME:-}" ]] && command -v xrdb >/dev/null; then
   printf 'Xcursor.theme: %s\nXcursor.size: %s\n' \
-    "$BSPWM_CURSOR_THEME" "${BSPWM_CURSOR_SIZE:-24}" | xrdb -merge
+    "$BSPWM_CURSOR_THEME" "${BSPWM_CURSOR_SIZE:-24}" | xrdb -merge 2>/dev/null || true
 fi
 if command -v xsetroot >/dev/null; then
   xsetroot -cursor_name left_ptr

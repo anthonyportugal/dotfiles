@@ -135,7 +135,13 @@ bluetooth_output=$("$CONFIG_ROOT/scripts/polybar-bluetooth")
 # Night light: gammastep replaces redshift with the same temperature.
 grep -qxF gammastep "$REPO_ROOT/packages/repo/desktop.txt" || fail "la capa bspwm no declara gammastep"
 ! grep -rqxF redshift "$REPO_ROOT/packages" || fail "la capa bspwm aún declara redshift"
-! grep -rqi redshift "$CONFIG_ROOT" || fail "la configuración de bspwm aún usa redshift"
+# Only the cleanup of a redshift left by the old script may name it.
+if grep -rni redshift "$CONFIG_ROOT" | grep -vE ':[[:space:]]*(#|pkill -x redshift 2>/dev/null \|\| true$)'; then
+  fail "la configuración de bspwm aún usa redshift"
+fi
+grep -q 'pkill -x redshift' "$CONFIG_ROOT/scripts/bspwm-nightlight" || \
+  fail 'apagar la luz nocturna no detiene un redshift anterior'
+
 "$CONFIG_ROOT/scripts/bspwm-nightlight" on
 for _ in {1..50}; do
   grep -qxF 'gammastep -m randr -P -O 3500' "$TEST_LOG" && break
