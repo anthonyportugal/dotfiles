@@ -14,6 +14,7 @@ noto-fonts-emoji
 papirus-icon-theme
 playerctl
 thunar
+ttf-cormorant
 ttf-jetbrains-mono-nerd
 ttf-nerd-fonts-symbols
 tumbler

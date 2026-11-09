@@ -26,6 +26,15 @@ done
 ! declares ttf-jetbrains-mono || \
   fail 'la capa desktop aún declara ttf-jetbrains-mono (sin glifos Nerd)'
 
+# The Sanctuary role fonts: Cormorant (display) from extra; Hanken Grotesk
+# (text) and Cinzel (inscription) are not packaged, so they are pinned
+# downloads of the external adapter.
+declares ttf-cormorant || fail 'la capa desktop no declara ttf-cormorant'
+for recipe in hanken-grotesk cinzel; do
+  grep -qxF -- "$recipe" "${DESKTOP_MANIFEST%/repo/*}/external/desktop.txt" || \
+    fail "la capa desktop no declara la descarga externa $recipe"
+done
+
 # 2. Configs: plain "JetBrains Mono" is not installed by any declared package.
 if plain=$(grep -rnE 'JetBrains Mono([^A-Za-z]|$)' "$REPO_ROOT/layers" \
     --exclude='*.md' --exclude-dir=tests); then
