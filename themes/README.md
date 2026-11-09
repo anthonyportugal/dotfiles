@@ -47,15 +47,23 @@ including `.raw` on a font or cursor key, fails the render.
 - `templates/` holds the outputs every desktop shares; each one is listed
   with its consumer under [Rendered state](#rendered-state). A WM template
   directory cannot take the name of a shared output (`yazi`, `foot`, ...).
-- The bat theme, the btop theme and the micro colorscheme are adapted from
-  the Catppuccin ports (MIT); Catppuccin's rosewater has no schema-2 role and
-  renders as `hue_rose` (flamingo).
+- The bat theme, the btop theme, the micro colorscheme and the Yazi flavor
+  are adapted from the Catppuccin ports (MIT); Catppuccin's rosewater has no
+  schema-2 role and renders as `hue_rose` (flamingo).
 - A window manager layer stows its own templates into
-  `~/.local/share/dotfiles/theme/templates/<wm>/` and may stow an executable
-  `~/.local/share/dotfiles/theme/reload.d/<wm>` that reloads its session after
-  `dotfiles-theme set`. Application layers may stow a reload hook too (the cli
-  layer's `bat`). The hook receives the active directory in
-  `DOTFILES_THEME_DIR`.
+  `~/.local/share/dotfiles/theme/templates/<wm>/`.
+
+## Hooks
+
+Layers may stow executables into two hook directories under
+`~/.local/share/dotfiles/theme/`. Each hook receives the active directory in
+`DOTFILES_THEME_DIR`, runs in name order, and never fails the engine: a
+failing hook only warns, because the theme is already promoted.
+
+| Directory | Runs | Used by |
+|-----------|------|---------|
+| `render.d/` | after `current` moves to another revision (`render`, a desktop apply, `DOTFILES_THEME`, `path`) and on every `set`; its stdout goes to stderr | the cli layer's `bat`, which rebuilds bat's cache |
+| `reload.d/` | after `set` only, to reload a live session | `mangowm`, `bspwm` |
 
 ## Rendered state
 
@@ -64,8 +72,8 @@ $XDG_STATE_HOME/dotfiles/theme/
 ├── selected                      # saved theme id
 ├── current -> <id>-<digest>      # promoted atomically
 └── <id>-<digest>/
-    ├── gtk.css                   # imported by ~/.config/gtk-{3.0,4.0}/gtk.css
-    ├── yazi/flavor.toml          # linked as ~/.config/yazi/flavors/theme.yazi
+    ├── gtk.css                   # @define-color overrides, imported by ~/.config/gtk-{3.0,4.0}/gtk.css
+    ├── yazi/flavor.toml          # linked as ~/.config/yazi/flavors/theme.yazi; previews use the bat theme
     ├── alacritty/theme.toml      # [general] import of ~/.config/alacritty/alacritty.toml
     ├── foot/theme.ini            # include= of ~/.config/foot/foot.ini
     ├── bat/dotfiles.tmTheme      # linked as ~/.config/bat/themes/dotfiles.tmTheme
@@ -88,6 +96,8 @@ Each application still starts when no theme was rendered yet:
 
 | Application | Selects the theme | Without a rendered theme |
 |-------------|-------------------|--------------------------|
+| GTK 3/4 | `@import` in `~/.config/gtk-{3.0,4.0}/gtk.css` | skips the missing import: the GTK theme's own colors (Adwaita dark) |
+| Yazi | `[flavor] dark = "theme"` in `theme.toml` | the `theme.yazi` flavor link only exists after the first render (the desktop layer renders on apply) |
 | alacritty | `[general] import` | skips the missing import: default font and colors |
 | foot | `include=` | reports the missing include and starts with its default font and colors |
 | bat | `--theme="dotfiles"`, `BAT_THEME` | zsh sets `BAT_THEME=Catppuccin-mocha` (vendored) until bat's cache is not older than the rendered theme |
@@ -98,9 +108,11 @@ Each application still starts when no theme was rendered yet:
 | fastfetch | ANSI color names | follows the terminal palette (no rendered file) |
 
 bat only sees a new palette after `bat cache --build`: the cli layer's
-post-link builds it, and the bat reload hook
-(`~/.local/share/dotfiles/theme/reload.d/bat`) rebuilds it on every `set`. A
-reload hook never fails the switch: it exits 0 and reports a missing tool.
+post-link builds it, and the bat render hook
+(`~/.local/share/dotfiles/theme/render.d/bat`) rebuilds it whenever a revision
+is promoted, so zsh never pins `Catppuccin-mocha` after a render-only path. It
+exits 0 and reports a missing bat, and skips a cache outside `$HOME` (a render
+into another target must not touch the running session's cache).
 
 The terminal colors follow the ANSI roles; `16`/`17` are `hue_orange` and
 `hue_rose`. MangoWM's `foot.ini` template repeats the shared `[colors-dark]`
@@ -118,5 +130,6 @@ one command.
 dotfiles-theme list | current | set <id> | render [id] | validate [id] | path
 ```
 
-`set` renders, saves the selection, syncs the GNOME accent color and runs every
-reload hook. `path` renders first when nothing is active yet.
+`set` renders, runs every render hook, saves the selection, syncs the GNOME
+accent color and runs every reload hook. `path` renders first when nothing is
+active yet.
