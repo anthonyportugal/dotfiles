@@ -168,6 +168,47 @@ ENGINE_UNDER_TEST="$FAKE_REPO/bin/dotfiles-theme"
 H4="$TEST_ROOT/home-upper"
 theme_in "$H4" render >/dev/null || fail "render rechazó un color hexadecimal en mayúsculas"
 grep -Fq '#F5C2E7' "$H4/.local/state/dotfiles/theme/current/gtk.css" || fail "el color en mayúsculas no llegó a GTK"
+# Schema 2: {{key}} works for every key, {{key.raw}} only for colors, and the
+# rendered metadata records the schema.
+ENGINE_UNDER_TEST=$ENGINE
+H5="$TEST_ROOT/home-schema"
+ROLES="$H5/.local/share/dotfiles/theme/templates/fakewm"
+mkdir -p "$ROLES"
+printf 'mono={{font_mono}}\ncursor={{cursor_theme}}:{{cursor_size}}\nmagenta={{ansi_magenta.raw}}\n' \
+  > "$ROLES/roles.conf"
+theme_in "$H5" render >/dev/null || fail "render rechazó la paleta schema 2 por defecto"
+grep -Fxq 'schema=2' "$H5/.local/state/dotfiles/theme/current/metadata" || fail "metadata sin schema=2"
+grep -Fxq 'mono=JetBrainsMono Nerd Font' "$H5/.local/state/dotfiles/theme/current/fakewm/roles.conf" || \
+  fail "{{font_mono}} no renderizó la familia de la fuente"
+grep -Fxq 'cursor=Bibata-Modern-Classic:24' "$H5/.local/state/dotfiles/theme/current/fakewm/roles.conf" || \
+  fail "los roles de cursor no se renderizaron"
+grep -Fxq 'magenta=f5c2e7' "$H5/.local/state/dotfiles/theme/current/fakewm/roles.conf" || \
+  fail "{{ansi_magenta.raw}} no renderizó el color sin #"
+printf 'x={{font_mono.raw}}\n' > "$ROLES/raw.conf"
+if output=$(theme_in "$H5" render 2>&1); then
+  fail "render aceptó {{font_mono.raw}}"
+fi
+[[ "$output" == *'marcador desconocido {{font_mono.raw}}'* ]] || fail "render falló por otra causa: $output"
+rm -f -- "$ROLES/raw.conf"
+
+# Typed values and schema 1 are rejected by validate.
+ENGINE_UNDER_TEST="$FAKE_REPO/bin/dotfiles-theme"
+FAKE_PALETTE="$FAKE_REPO/themes/palettes/catppuccin-mocha-pink.conf"
+for case in 'font_mono=Mono;rm' 'font_text= Sans' 'cursor_theme=../cursors' 'cursor_size=8' \
+            'cursor_size=1000' 'foreground=cdd6f4'; do
+  key=${case%%=*}
+  sed "s|^$key=.*|$case|" "$REPO_ROOT/themes/palettes/catppuccin-mocha-pink.conf" > "$FAKE_PALETTE"
+  grep -Fxq -- "$case" "$FAKE_PALETTE" || fail "no se preparó la paleta con $case"
+  if output=$(theme_in "$H4" validate 2>&1); then
+    fail "validate aceptó $case"
+  fi
+  [[ "$output" == *"inválido para $key"* ]] || fail "validate falló por otra causa con $case: $output"
+done
+printf 'schema=1\nid=catppuccin-mocha-pink\nrosewater=#f5e0dc\n' > "$FAKE_PALETTE"
+if output=$(theme_in "$H4" validate 2>&1); then
+  fail "validate aceptó una paleta schema 1"
+fi
+[[ "$output" == *'schema de paleta no soportado'* ]] || fail "schema 1 falló por otra causa: $output"
 ENGINE_UNDER_TEST=$ENGINE
 
 # The desktop post-link renders the theme into the target after linking.

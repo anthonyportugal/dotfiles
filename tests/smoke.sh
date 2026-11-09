@@ -16,6 +16,7 @@ printf '\n--> 2/13: Executing layer hook smoke tests...\n'
 
 printf '\n--> 3/13: Executing shared theme engine, mimeapps, font and image viewer smoke tests...\n'
 "$SCRIPT_DIR/theme-smoke.sh"
+"$SCRIPT_DIR/theme-schema-smoke.sh"
 "$SCRIPT_DIR/mimeapps-smoke.sh"
 "$SCRIPT_DIR/fonts-smoke.sh"
 "$SCRIPT_DIR/imv-folder-smoke.sh"

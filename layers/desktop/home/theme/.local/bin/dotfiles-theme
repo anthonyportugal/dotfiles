@@ -22,8 +22,9 @@ PALETTE=''
 RENDER_TEMP=''
 NAME_PATTERN='^[a-z0-9]+(-[a-z0-9]+)*$'
 
-declare -A COLORS=()
-declare -A EXPECTED=()
+# Palette values by key, and the value type of every schema key.
+declare -A VALUES=()
+declare -A KEY_TYPES=()
 declare -a WM_DIRS=()
 
 fail() {
@@ -88,18 +89,50 @@ resolve_theme_id() {
   fi
 }
 
+# Schema 2 keys and their value type: meta, color, font or cursor_*. Every key
+# is required exactly once.
 declare_schema() {
   local key
 
-  for key in \
-    schema id family flavour accent_name \
-    rosewater flamingo pink mauve red maroon peach yellow green teal sky \
-    sapphire blue lavender text subtext1 subtext0 overlay2 overlay1 overlay0 \
-    surface2 surface1 surface0 base mantle crust background background_alt \
-    background_deep surface surface_hover foreground foreground_muted accent \
-    urgent warning success; do
-    EXPECTED["$key"]=1
+  for key in schema id family flavour accent_name; do
+    KEY_TYPES["$key"]=meta
   done
+  for key in \
+    background_deep background_alt background surface surface_hover \
+    surface_strong foreground foreground_muted foreground_subtle \
+    foreground_disabled border accent accent_fg urgent warning success info \
+    selection_bg selection_fg cursor cursor_fg \
+    ansi_black ansi_red ansi_green ansi_yellow ansi_blue ansi_magenta \
+    ansi_cyan ansi_white ansi_bright_black ansi_bright_red ansi_bright_green \
+    ansi_bright_yellow ansi_bright_blue ansi_bright_magenta ansi_bright_cyan \
+    ansi_bright_white \
+    syntax_keyword syntax_string syntax_number syntax_constant \
+    syntax_function syntax_type syntax_property syntax_tag syntax_operator \
+    syntax_regex syntax_variable syntax_punctuation syntax_comment \
+    hue_red hue_orange hue_yellow hue_green hue_teal hue_cyan hue_blue \
+    hue_indigo hue_purple hue_pink hue_rose hue_maroon; do
+    KEY_TYPES["$key"]=color
+  done
+  for key in font_mono font_text font_display font_inscription; do
+    KEY_TYPES["$key"]=font
+  done
+  KEY_TYPES[cursor_theme]=cursor_theme
+  KEY_TYPES[cursor_size]=cursor_size
+}
+
+# Fails unless the value of key $1 matches the pattern of its type. Metadata
+# is checked by read_palette.
+validate_value() {
+  local key=$1 pattern
+
+  case "${KEY_TYPES[$key]}" in
+    color) pattern='^#[0-9a-fA-F]{6}$' ;;
+    font) pattern='^[A-Za-z0-9][A-Za-z0-9 ]*$' ;;
+    cursor_theme) pattern='^[A-Za-z0-9][A-Za-z0-9._-]*$' ;;
+    cursor_size) pattern='^[0-9]{2,3}$' ;;
+    *) return 0 ;;
+  esac
+  [[ "${VALUES[$key]}" =~ $pattern ]] || fail "valor inválido para $key"
 }
 
 read_palette() {
@@ -110,36 +143,30 @@ read_palette() {
   PALETTE=$(palette_path "$THEME_ID")
   [[ -r "$PALETTE" ]] || fail "tema desconocido: $THEME_ID"
   declare_schema
-  COLORS=()
+  VALUES=()
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -n "$line" && "$line" != \#* ]] || continue
     [[ "$line" == *=* ]] || fail "línea inválida en la paleta: $line"
     key=${line%%=*}
     value=${line#*=}
-    [[ -v "EXPECTED[$key]" ]] || fail "clave desconocida en la paleta: $key"
-    [[ ! -v "COLORS[$key]" ]] || fail "clave duplicada en la paleta: $key"
-    COLORS["$key"]=$value
+    # Checked before the keys so an older palette reports its schema.
+    [[ "$key" != schema || "$value" == 2 ]] || fail 'schema de paleta no soportado'
+    [[ -v "KEY_TYPES[$key]" ]] || fail "clave desconocida en la paleta: $key"
+    [[ ! -v "VALUES[$key]" ]] || fail "clave duplicada en la paleta: $key"
+    VALUES["$key"]=$value
   done < "$PALETTE"
 
-  for key in "${!EXPECTED[@]}"; do
-    [[ -v "COLORS[$key]" ]] || fail "falta la clave de paleta: $key"
+  for key in "${!KEY_TYPES[@]}"; do
+    [[ -v "VALUES[$key]" ]] || fail "falta la clave de paleta: $key"
   done
 
-  [[ "${COLORS[schema]}" == 1 ]] || fail 'schema de paleta no soportado'
-  [[ "${COLORS[id]}" == "$THEME_ID" ]] || fail 'el id no coincide con el tema solicitado'
-  [[ "${COLORS[family]}" =~ ^[a-z0-9-]+$ ]] || fail 'familia inválida'
-  [[ "${COLORS[flavour]}" =~ ^[a-z0-9-]+$ ]] || fail 'flavour inválido'
-  [[ "${COLORS[accent_name]}" =~ ^[a-z0-9-]+$ ]] || fail 'accent_name inválido'
+  [[ "${VALUES[id]}" == "$THEME_ID" ]] || fail 'el id no coincide con el tema solicitado'
+  [[ "${VALUES[family]}" =~ ^[a-z0-9-]+$ ]] || fail 'familia inválida'
+  [[ "${VALUES[flavour]}" =~ ^[a-z0-9-]+$ ]] || fail 'flavour inválido'
+  [[ "${VALUES[accent_name]}" =~ ^[a-z0-9-]+$ ]] || fail 'accent_name inválido'
 
-  for key in "${!COLORS[@]}"; do
-    case "$key" in
-      schema|id|family|flavour|accent_name)
-        ;;
-      *)
-        [[ "${COLORS[$key]}" =~ ^#[0-9a-fA-F]{6}$ ]] || \
-          fail "color inválido para $key"
-        ;;
-    esac
+  for key in "${!VALUES[@]}"; do
+    validate_value "$key"
   done
 }
 
@@ -166,15 +193,17 @@ template_files() {
   (cd -- "$1" && find -L . -type f -printf '%P\n' | LC_ALL=C sort)
 }
 
-# Replaces {{key}} with the palette value and {{key.raw}} with the value
-# without its leading '#'. Any other {{...}} marker is an error.
+# Replaces {{key}} with the palette value and, for colors only, {{key.raw}}
+# with the value without its leading '#'. Any other {{...}} marker is an error.
 render_template() {
   local source=$1 destination=$2 content='' key value
 
   IFS= read -r -d '' content < "$source" || true
-  for key in "${!COLORS[@]}"; do
-    value=${COLORS[$key]}
-    content=${content//"{{$key.raw}}"/"${value#\#}"}
+  for key in "${!VALUES[@]}"; do
+    value=${VALUES[$key]}
+    if [[ "${KEY_TYPES[$key]}" == color ]]; then
+      content=${content//"{{$key.raw}}"/"${value#\#}"}
+    fi
     content=${content//"{{$key}}"/"$value"}
   done
   if [[ "$content" =~ \{\{[^}]*\}\} ]]; then
@@ -200,9 +229,9 @@ render_all() {
   for dir in "${WM_DIRS[@]}"; do
     render_tree "$dir" "$destination/${dir##*/}"
   done
-  printf '%s\n' "${COLORS[background]}" > "$destination/background"
-  printf '%s\n' 'schema=1' "id=${COLORS[id]}" "family=${COLORS[family]}" \
-    "flavour=${COLORS[flavour]}" "accent_name=${COLORS[accent_name]}" \
+  printf '%s\n' "${VALUES[background]}" > "$destination/background"
+  printf '%s\n' 'schema=2' "id=${VALUES[id]}" "family=${VALUES[family]}" \
+    "flavour=${VALUES[flavour]}" "accent_name=${VALUES[accent_name]}" \
     > "$destination/metadata"
 }
 
@@ -212,11 +241,11 @@ validate_outputs() {
   for required in gtk.css yazi/flavor.toml background metadata; do
     [[ -s "$destination/$required" ]] || fail "output de tema vacío o ausente: $required"
   done
-  grep -Fq "${COLORS[accent]}" "$destination/gtk.css" || \
+  grep -Fq "${VALUES[accent]}" "$destination/gtk.css" || \
     fail 'GTK no recibió el acento del tema'
-  grep -Fq "${COLORS[accent]}" "$destination/yazi/flavor.toml" || \
+  grep -Fq "${VALUES[accent]}" "$destination/yazi/flavor.toml" || \
     fail 'Yazi no recibió el acento del tema'
-  grep -Fxq "id=${COLORS[id]}" "$destination/metadata" || \
+  grep -Fxq "id=${VALUES[id]}" "$destination/metadata" || \
     fail 'metadata de tema inconsistente'
   for dir in "${WM_DIRS[@]}"; do
     while IFS= read -r relative; do
@@ -284,7 +313,7 @@ render_theme() {
   exec 9>"$THEME_ROOT/render.guard"
   flock 9
   collect_wm_template_dirs
-  revision="${COLORS[id]}-$(theme_digest)"
+  revision="${VALUES[id]}-$(theme_digest)"
 
   if [[ ! -d "$THEME_ROOT/$revision" ]]; then
     RENDER_TEMP=$(mktemp -d "$THEME_ROOT/.render.XXXXXX")
@@ -302,7 +331,7 @@ render_theme() {
 }
 
 gnome_accent() {
-  case "${COLORS[accent_name]}" in
+  case "${VALUES[accent_name]}" in
     blue|sapphire) printf 'blue\n' ;;
     teal|sky) printf 'teal\n' ;;
     green) printf 'green\n' ;;
@@ -340,7 +369,7 @@ set_theme() {
   reload_live
   if command -v notify-send >/dev/null 2>&1; then
     notify-send --urgency=low --app-name=dotfiles "Tema aplicado" \
-      "$1 (${COLORS[accent_name]}: ${COLORS[accent]})" 2>/dev/null || true
+      "$1 (${VALUES[accent_name]}: ${VALUES[accent]})" 2>/dev/null || true
   fi
 }
 
@@ -374,7 +403,7 @@ main() {
       ;;
     current)
       read_palette "$(resolve_theme_id)"
-      printf '%s (acento: %s, %s)\n' "$THEME_ID" "${COLORS[accent_name]}" "${COLORS[accent]}"
+      printf '%s (acento: %s, %s)\n' "$THEME_ID" "${VALUES[accent_name]}" "${VALUES[accent]}"
       ;;
     validate)
       (( $# <= 1 )) || { usage >&2; exit 2; }

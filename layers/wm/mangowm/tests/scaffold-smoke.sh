@@ -131,13 +131,30 @@ declare -A expected_keys=()
 
 for key in \
   schema id family flavour accent_name \
-  rosewater flamingo pink mauve red maroon peach yellow green teal sky \
-  sapphire blue lavender text subtext1 subtext0 overlay2 overlay1 overlay0 \
-  surface2 surface1 surface0 base mantle crust \
-  background background_alt background_deep surface surface_hover foreground \
-  foreground_muted accent urgent warning success; do
+  background_deep background_alt background surface surface_hover surface_strong \
+  foreground foreground_muted foreground_subtle foreground_disabled border \
+  accent accent_fg urgent warning success info \
+  selection_bg selection_fg cursor cursor_fg \
+  ansi_black ansi_red ansi_green ansi_yellow ansi_blue ansi_magenta ansi_cyan ansi_white \
+  ansi_bright_black ansi_bright_red ansi_bright_green ansi_bright_yellow \
+  ansi_bright_blue ansi_bright_magenta ansi_bright_cyan ansi_bright_white \
+  syntax_keyword syntax_string syntax_number syntax_constant syntax_function \
+  syntax_type syntax_property syntax_tag syntax_operator syntax_regex \
+  syntax_variable syntax_punctuation syntax_comment \
+  hue_red hue_orange hue_yellow hue_green hue_teal hue_cyan hue_blue hue_indigo \
+  hue_purple hue_pink hue_rose hue_maroon \
+  font_mono font_text font_display font_inscription cursor_theme cursor_size; do
   expected_keys[$key]=1
 done
+
+# Catppuccin Mocha accent colors; schema 2 has no per-name keys, so the
+# semantic accent is checked against this table.
+declare -A mocha_accents=(
+  [rosewater]='#f5e0dc' [flamingo]='#f2cdcd' [pink]='#f5c2e7' [mauve]='#cba6f7'
+  [red]='#f38ba8' [maroon]='#eba0ac' [peach]='#fab387' [yellow]='#f9e2af'
+  [green]='#a6e3a1' [teal]='#94e2d5' [sky]='#89dceb' [sapphire]='#74c7ec'
+  [blue]='#89b4fa' [lavender]='#b4befe'
+)
 
 check_palette() {
   local palette=$1
@@ -157,7 +174,7 @@ check_palette() {
 
     case "$key" in
       schema)
-        [[ "$value" == 1 ]] || fail "schema de paleta no soportado en $palette"
+        [[ "$value" == 2 ]] || fail "schema de paleta no soportado en $palette"
         ;;
       id)
         [[ "$value" == "$expected_id" ]] || fail "id de paleta inesperado en $palette"
@@ -171,6 +188,17 @@ check_palette() {
       accent_name)
         [[ "$value" == "$expected_accent" ]] || fail "acento de paleta inesperado en $palette"
         ;;
+      font_*)
+        [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9\ ]*$ ]] || \
+          fail "fuente inválida para $key en $palette"
+        ;;
+      cursor_theme)
+        [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
+          fail "cursor inválido en $palette"
+        ;;
+      cursor_size)
+        [[ "$value" =~ ^[0-9]{2,3}$ ]] || fail "tamaño de cursor inválido en $palette"
+        ;;
       *)
         [[ "$value" =~ ^#[0-9a-f]{6}$ ]] || \
           fail "color inválido para $key en $palette"
@@ -182,8 +210,9 @@ check_palette() {
     [[ -v "seen_keys[$key]" ]] || fail "falta la clave de paleta $key en $palette"
   done
 
-  local expected_color="${palette_values[$expected_accent]}"
-  [[ "${palette_values[accent]}" == "$expected_color" ]] || \
+  [[ -v "mocha_accents[$expected_accent]" ]] || \
+    fail "acento desconocido de Catppuccin Mocha: $expected_accent"
+  [[ "${palette_values[accent]}" == "${mocha_accents[$expected_accent]}" ]] || \
     fail "el acento semántico en $palette no coincide con el color de $expected_accent"
 }
 
@@ -195,7 +224,7 @@ for palette_file in "$MONOREPO_ROOT"/themes/palettes/*.conf; do
 done
 [[ "$found_palettes" -ge 14 ]] || fail "se esperaban al menos 14 paletas Catppuccin Mocha, encontradas: $found_palettes"
 
-grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
+grep -Fxq 'hue_pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
 grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 grep -Fqx "bind=SUPER+ALT,T,spawn,\$HOME/.local/bin/mango-theme menu" \
   "$REPO_ROOT/home/mango/.config/mango/conf.d/50-desktop.conf" || \

@@ -41,17 +41,17 @@
     mouse_right_click = close_all
 
 [urgency_low]
-    background = "{{base}}"
-    foreground = "{{subtext0}}"
+    background = "{{background}}"
+    foreground = "{{foreground_muted}}"
     timeout = 5
 
 [urgency_normal]
-    background = "{{base}}"
-    foreground = "{{text}}"
+    background = "{{background}}"
+    foreground = "{{foreground}}"
     timeout = 8
 
 [urgency_critical]
-    background = "{{base}}"
+    background = "{{background}}"
     foreground = "{{urgent}}"
     frame_color = "{{urgent}}"
     timeout = 0
