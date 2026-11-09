@@ -155,6 +155,30 @@ PY
   [[ "$output" == *"bg:$(palette_value "$palette" background),"* ]] || fail "fzf/options no lleva el fondo"
 }
 
+# Fails when rendered file $2 holds a #rrggbb color that is not a value of
+# palette $1, so every color in it comes from the palette.
+expect_palette_colors() {
+  local palette=$1 file=$2 foreign
+
+  foreign=$(comm -23 \
+    <(grep -oE '#[0-9a-fA-F]{6}\b' "$file" | tr 'A-F' 'a-f' | LC_ALL=C sort -u) \
+    <(sed -n 's/^[a-z_]*=\(#[0-9a-fA-F]\{6\}\)$/\1/p' "$palette" | tr 'A-F' 'a-f' | LC_ALL=C sort -u))
+  [[ -z "$foreign" ]] || fail "${file#"$TEST_ROOT"/} usa colores ajenos a la paleta: ${foreign//$'\n'/ }"
+}
+
+# Yazi: the flavor parses, takes every color from the palette and highlights
+# previews with the rendered bat theme.
+check_yazi() {
+  local palette=$1 revision=$2 flavor="$2/yazi/flavor.toml"
+
+  expect_rendered "$flavor"
+  python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' "$flavor" || \
+    fail "yazi/flavor.toml no es TOML válido"
+  expect_palette_colors "$palette" "$flavor"
+  expect_line "$flavor" "overall = { bg = \"$(palette_value "$palette" background)\" }"
+  expect_line "$flavor" 'syntect_theme = "~/.config/bat/themes/dotfiles.tmTheme"'
+}
+
 rendered=0
 for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   [[ -f "$palette" ]] || continue
@@ -162,6 +186,7 @@ for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   revision=$(render_in "$id" "$TEST_ROOT/$id")
   check_terminals "$palette" "$revision"
   check_cli "$palette" "$revision"
+  check_yazi "$palette" "$revision"
   ((rendered++)) || true
 done
 (( rendered >= 14 )) || fail "se esperaban al menos 14 paletas, renderizadas: $rendered"
@@ -210,9 +235,15 @@ for config in "$CLI_HOME/lazygit/.config/lazygit/config.yml" "$CLI_HOME/fastfetc
               "$ENVIRONMENT"; do
   expect_no_hex "$config"
 done
-for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro/default.micro fzf/options; do
+for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro/default.micro fzf/options \
+                yazi/flavor.toml; do
   expect_no_hex "$SHARED_TEMPLATES/$template"
 done
+# The stowed yazi theme only selects the flavor, so the flavor's syntect
+# theme applies.
+YAZI_THEME="$CLI_HOME/yazi/.config/yazi/theme.toml"
+expect_no_hex "$YAZI_THEME"
+grep -Fq 'syntect_theme' "$YAZI_THEME" && fail "theme.toml de yazi fija su propio syntect_theme"
 
 # The engine links the outputs an application only reads from its own config
 # directory, and only for the applications that are configured.

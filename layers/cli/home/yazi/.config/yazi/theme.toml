@@ -1,9 +1,8 @@
-# Catppuccin Mocha Yazi theme configuration
-# Delegates visual styling to the dynamic dotfiles flavor
+# Yazi theme configuration
+# Delegates visual styling to the flavor rendered by dotfiles-theme
+# (~/.config/yazi/flavors/theme.yazi), which also selects the bat theme
+# used to highlight previews.
 
 [flavor]
 dark  = "theme"
 light = "theme"
-
-[mgr]
-syntect_theme = "~/.config/bat/themes/Catppuccin-mocha.tmTheme"
