@@ -16,7 +16,7 @@ repositorios rolling. La procedencia se separa en `repo/`, `aur/` y
 | Selección | Contenido | Paquete Stow |
 | --- | --- | --- |
 | `core` | Compositor, terminal Foot, launcher Fuzzel, notificaciones Mako, lockscreen con Swaylock-effects, Swayidle, clipboard (`wl-clipboard`), portales XDG, Polkit, audio PipeWire/WirePlumber y XWayland base. | `mango` |
-| `desktop` | `core` más barra Waybar, menú de salida `wlogout`, wallpapers (`swaybg`), capturas con Grim/Slurp/Satty, filtro nocturno Gammastep, grabación con `wf-recorder`, control de brillo con `brightnessctl`, control de medios `playerctl`, applet Bluetooth Blueman, fuentes JetBrains Mono y XWayland-Satellite. | `mango` |
+| `desktop` | `core` más barra Waybar, menú de salida `wlogout`, wallpapers (`swaybg`), capturas con Grim/Slurp/Satty, filtro nocturno Gammastep, grabación con `wf-recorder`, control de brillo con `brightnessctl`, control de medios `playerctl`, gestor Bluetooth Bluetui (se abre desde el icono Bluetooth de Waybar), fuentes JetBrains Mono y XWayland-Satellite. | `mango` |
 
 Ambos perfiles seleccionan el único paquete Stow `mango`. El perfil predeterminado es `desktop`.
 

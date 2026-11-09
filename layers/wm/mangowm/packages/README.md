@@ -15,7 +15,7 @@ versions are never pinned. Provenance is separated into `repo/`, `aur/`, and
 | Selection | Content | Stow Package |
 | --- | --- | --- |
 | `core` | Wayland compositor, Foot terminal, Fuzzel launcher, Mako notifications, lockscreen via Swaylock-effects, Swayidle, clipboard (`wl-clipboard`), XDG portals, Polkit, PipeWire/WirePlumber audio, and base XWayland. | `mango` |
-| `desktop` | `core` plus Waybar, `wlogout` session menu, wallpapers (`swaybg`), screenshots (Grim/Slurp/Satty), Gammastep night light, screen recording (`wf-recorder`), brightness control (`brightnessctl`), media controls (`playerctl`), Blueman Bluetooth applet, JetBrains Mono fonts, and XWayland-Satellite. | `mango` |
+| `desktop` | `core` plus Waybar, `wlogout` session menu, wallpapers (`swaybg`), screenshots (Grim/Slurp/Satty), Gammastep night light, screen recording (`wf-recorder`), brightness control (`brightnessctl`), media controls (`playerctl`), the Bluetui Bluetooth manager (opened from the Waybar Bluetooth icon), JetBrains Mono fonts, and XWayland-Satellite. | `mango` |
 
 Both profiles select the single Stow package `mango`. The default profile is `desktop`.
 

@@ -139,7 +139,6 @@ bspc rule -a brave-browser state=tiled follow=on focus=on
 # Floating applications and utilities
 floating_classes=(
   Arandr arandr
-  Blueman-manager blueman-manager
   Eog eog
   Feh feh
   Imv imv

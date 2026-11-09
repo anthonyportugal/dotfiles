@@ -88,6 +88,11 @@ assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" xdg-user-dirs
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" brightnessctl
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" wf-recorder
+# bluetui (TUI) replaces blueman; Waybar keeps its native bluetooth module.
+assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" bluetui
+if found=$(grep -rn blueman "$MONOREPO_ROOT/layers" --exclude-dir=tests --exclude='*.md'); then
+  fail "blueman sigue referenciado:"$'\n'"$found"
+fi
 assert_manifest_line "$REPO_ROOT/packages/stow/core.txt" mango
 
 if grep -ERq '^(mangowc-git|mangowm-git|hyprlock|hypridle|rofi|wofi|cliphist|wl-clip-persist|python-pywal|pulsemixer|xdg-desktop-portal-gnome)$' \

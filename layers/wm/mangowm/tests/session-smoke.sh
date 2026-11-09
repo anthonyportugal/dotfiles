@@ -134,10 +134,10 @@ shellcheck -x "${shell_files[@]}"
 # Todos los procesos y herramientas externas se reemplazan por dobles. La
 # prueba inspecciona composición sin necesitar Wayland ni tocar el host.
 for command_name in \
-  brightnessctl dbus-update-activation-environment fuzzel gammastep grim magick mako \
+  blueman-manager bluetui brightnessctl dbus-update-activation-environment foot fuzzel gammastep grim magick mako \
   mango mmsg notify-send pgrep pkill playerctl powerprofilesctl satty slurp \
   swaybg swayidle systemctl systemd-run waybar wf-recorder wl-copy wlogout \
-  wpctl xdg-open xdg-user-dir; do
+  overskride rfkill wpctl xdg-open xdg-user-dir; do
   case "$command_name" in
     systemctl|systemd-run|dbus-update-activation-environment)
       ln -s "$REPO_ROOT/tests/fakes/session-control" "$FAKE_BIN/$command_name"
@@ -212,6 +212,14 @@ grep -q '^pkill .*gammastep' "$LOG" || \
   fail 'night-light no invocó pkill para gammastep'
 grep -q '^pkill .*waybar' "$LOG" || \
   fail 'night-light no refrescó waybar mediante señal'
+# The Waybar bluetooth icon stays native; a click opens bluetui in the
+# floating terminal through the terminal helper.
+waybar_config="$TARGET/.config/waybar/config.json"
+[[ $(jq -r '.bluetooth.format' "$waybar_config") == '󰂯' ]] || fail 'waybar perdió el icono de bluetooth'
+bluetooth_click=$(jq -r '.bluetooth["on-click"]' "$waybar_config")
+sh -c "$bluetooth_click"
+grep -q '^foot --config=[^ ]*/mangowm/foot\.ini --app-id=floating-terminal bluetui $' "$LOG" || \
+  fail "el clic de bluetooth no abrió bluetui en el terminal: $bluetooth_click"
 "$TARGET/.local/lib/mangowm/brightness" up
 "$TARGET/.local/lib/mangowm/media" play-pause
 "$TARGET/.local/lib/mangowm/volume" mute
