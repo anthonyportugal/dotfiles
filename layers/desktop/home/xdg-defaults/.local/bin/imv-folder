@@ -2,19 +2,27 @@
 # Opens one image together with every image of its directory, starting at
 # that image, so imv can step through the folder. Several paths, or none,
 # reach imv unchanged.
+#
+# The extensions below match the MimeType list of imv-folder.desktop and the
+# image/* associations in layers/desktop/mimeapps/defaults.list; keep the
+# three in sync (tests/imv-folder-smoke.sh checks it).
 
 set -Eeuo pipefail
+
+IMAGE_EXTENSIONS='avif|bmp|gif|heic|heif|jpe?g|jxl|png|qoi|svg|tiff?|webp'
 
 if (( $# != 1 )) || [[ ! -f "$1" ]]; then
   exec imv "$@"
 fi
 
-file=$(realpath -- "$1")
+# Absolute, but symlinks kept: the folder browsed is the one the image was
+# opened from, not the directory a symlink points into.
+file=$(realpath -s -- "$1")
 directory=${file%/*}
 
-mapfile -d '' images < <(find "$directory" -mindepth 1 -maxdepth 1 -type f \
-  -regextype posix-extended \
-  -iregex '.*\.(avif|bmp|farbfeld|gif|heic|heif|jpe?g|jxl|png|qoi|svg|tiff?|webp)' \
+# -xtype f also lists symlinks to images.
+mapfile -d '' images < <(find "$directory" -mindepth 1 -maxdepth 1 -xtype f \
+  -regextype posix-extended -iregex ".*\\.($IMAGE_EXTENSIONS)" \
   -print0 | sort -zV)
 
 # The opened file is always in the list, whatever its extension.
@@ -23,5 +31,15 @@ for image in "${images[@]}"; do
   [[ "$image" == "$file" ]] && { found=1; break; }
 done
 (( found )) || mapfile -d '' images < <(printf '%s\0' "${images[@]}" "$file" | sort -zV)
+
+# A folder too large for one command line is handed to imv as a directory,
+# which imv reads itself; the image still opens first.
+size=0
+for image in "${images[@]}"; do
+  size=$(( size + ${#image} + 1 ))
+done
+if (( size > ${IMV_FOLDER_MAX_ARGS_BYTES:-$(( $(getconf ARG_MAX) / 2 ))} )); then
+  exec imv -n "$file" "$directory"
+fi
 
 exec imv -n "$file" "${images[@]}"

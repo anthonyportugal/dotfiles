@@ -67,12 +67,42 @@ run "$dir/a.png" "$dir/c.webp"
 run
 (( ${#args[@]} == 0 )) || fail "sin argumentos agregó: ${args[*]}"
 
-# 4. Desktop entry and associations: every image type opens through it.
+# 4. A symlinked image keeps the folder it was opened from, and symlinks to
+# images in that folder are listed.
+mkdir -p -- "$TEST_ROOT/library"
+touch -- "$TEST_ROOT/library/z.png"
+ln -s -- "$TEST_ROOT/library/z.png" "$dir/link.png"
+run "$dir/link.png"
+expected=(-n "$dir/link.png" "$dir/a.png" "$dir/b2.JPG" "$dir/b10.jpeg" "$dir/c.webp" "$dir/link.png")
+[[ "${args[*]}" == "${expected[*]}" ]] || \
+  fail "un symlink no conservó su carpeta: ${args[*]}"
+rm -- "$dir/link.png"
+
+# 5. A folder too large for one command line is handed over as a directory.
+IMV_FOLDER_MAX_ARGS_BYTES=10 run "$dir/a.png"
+[[ "${args[*]}" == "-n $dir/a.png $dir" ]] || \
+  fail "una carpeta enorme no se pasó como directorio: ${args[*]}"
+
+# 6. Desktop entry and associations: every image type opens through it, and
+# the entry, the associations and the wrapper name the same formats.
 grep -qx 'Exec=imv-folder %F' "$DESKTOP_ENTRY" || fail 'la entrada no ejecuta imv-folder %F'
 grep -qx 'NoDisplay=true' "$DESKTOP_ENTRY" || fail 'la entrada aparecería en los lanzadores'
 if grep -n '^image/.*=imv\.desktop' "$DEFAULTS"; then
   fail 'quedan tipos de imagen asociados a imv.desktop'
 fi
 grep -q '^image/png=imv-folder.desktop;$' "$DEFAULTS" || fail 'image/png no usa imv-folder'
+entry_types=$(sed -n 's/^MimeType=//p' "$DESKTOP_ENTRY" | tr ';' '\n' | sed '/^$/d' | sort)
+associated=$(sed -n 's/^\(image\/[^=]*\)=imv-folder\.desktop;$/\1/p' "$DEFAULTS" | sort)
+[[ "$entry_types" == "$associated" ]] || \
+  fail "MimeType y defaults.list difieren:"$'\n'"$(diff <(printf '%s\n' "$entry_types") <(printf '%s\n' "$associated"))"
+for type in $entry_types; do
+  extension=${type#image/}
+  extension=${extension%+xml}
+  touch -- "$dir/format.$extension"
+  run "$dir/a.png"
+  printf '%s\n' "${args[@]}" | grep -qxF -- "$dir/format.$extension" || \
+    fail "imv-folder no lista archivos .$extension ($type)"
+  rm -- "$dir/format.$extension"
+done
 
 printf 'OK: imv-folder-smoke\n'
