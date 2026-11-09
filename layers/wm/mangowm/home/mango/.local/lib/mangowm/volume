@@ -109,8 +109,6 @@ for it in items:
 select_audio_device() {
   mangowm_require fuzzel
   local filter_type=${1:-all}
-  local theme_dir
-  theme_dir=$(mangowm_theme_dir)
 
   declare -A label_to_type=()
   declare -A label_to_target=()
@@ -139,8 +137,7 @@ select_audio_device() {
 
   local selected
   selected=$(printf '%s\n' "${options[@]}" | \
-    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-      --prompt="Dispositivo de Audio ❯ " --lines="$lines" --width=56 || true)
+    mangowm_menu "Dispositivo de Audio ❯ " --lines="$lines" || true)
 
   [[ -n "$selected" ]] || return 0
 

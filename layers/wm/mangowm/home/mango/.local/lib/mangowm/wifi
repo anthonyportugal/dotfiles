@@ -111,8 +111,6 @@ connect_saved_profile() {
 }
 
 manage_saved_connections() {
-  local theme_dir
-  theme_dir=$(mangowm_theme_dir)
 
   local -A label_to_uuid=()
   local -A label_to_name=()
@@ -142,8 +140,7 @@ manage_saved_connections() {
   local lines=${#formatted[@]}
   (( lines > 11 )) && lines=11
   selected=$(printf '%s\n' "${formatted[@]}" | \
-    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-      --prompt="Red Guardada ❯ " --lines="$lines" --width=45 || true)
+    mangowm_menu "Red Guardada ❯ " --lines="$lines" || true)
 
   [[ -n "$selected" ]] || return 0
 
@@ -165,8 +162,7 @@ manage_saved_connections() {
 
   local action
   action=$(printf '%s\n' "${actions[@]}" | \
-    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-      --prompt="$target_name ❯ " --lines=3 --width=35 || true)
+    mangowm_menu "$target_name ❯ " --lines=3 || true)
 
   case "$action" in
     *"Conectar"*)
@@ -193,8 +189,6 @@ manage_saved_connections() {
 
 show_active_connection_menu() {
   local ssid=$1
-  local theme_dir
-  theme_dir=$(mangowm_theme_dir)
 
   local cur_dev
   cur_dev=$(wifi_device)
@@ -214,8 +208,7 @@ show_active_connection_menu() {
 
   local selected
   selected=$(printf '%s\n' "${actions[@]}" | \
-    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-      --prompt="$ssid ❯ " --lines=4 --width=42 || true)
+    mangowm_menu "$ssid ❯ " --lines=4 || true)
 
   case "$selected" in
     *"Desconectar"*)
@@ -289,8 +282,7 @@ connect_wifi_network() {
     )
     local retry_choice
     retry_choice=$(printf '%s\n' "${retry_options[@]}" | \
-      fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-        --prompt="Error en $ssid ❯ " --lines=3 --width=38 || true)
+      mangowm_menu "Error en $ssid ❯ " --lines=3 || true)
 
     case "$retry_choice" in
       *"nueva contraseña"*)
@@ -337,8 +329,6 @@ connect_wifi_network() {
 }
 
 select_wifi_menu() {
-  local theme_dir
-  theme_dir=$(mangowm_theme_dir)
 
   local radio
   radio=$(wifi_radio_status)
@@ -350,8 +340,7 @@ select_wifi_menu() {
     )
     local choice
     choice=$(printf '%s\n' "${disabled_options[@]}" | \
-      fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-        --prompt="Wi-Fi (Desactivado) ❯ " --lines=2 --width=38 || true)
+      mangowm_menu "Wi-Fi (Desactivado) ❯ " --lines=2 || true)
 
     case "$choice" in
       *"Activar Wi-Fi"*)
@@ -447,8 +436,7 @@ select_wifi_menu() {
 
   local selection
   selection=$(printf '%s\n' "${menu_items[@]}" | \
-    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-      --prompt="Wi-Fi ❯ " --lines="$total_lines" --width=46 || true)
+    mangowm_menu "Wi-Fi ❯ " --lines="$total_lines" || true)
 
   [[ -n "$selection" ]] || return 0
 

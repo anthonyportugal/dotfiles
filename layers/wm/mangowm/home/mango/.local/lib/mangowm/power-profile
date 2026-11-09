@@ -74,7 +74,6 @@ case "$command_name" in
   select|menu)
     current=$(get_current)
     mangowm_require fuzzel
-    theme_dir=$(mangowm_theme_dir)
 
     tag_saver=""
     tag_balanced=""
@@ -92,8 +91,7 @@ case "$command_name" in
     )
 
     selected=$(printf '%s\n' "${options[@]}" | \
-      fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-        --prompt="Perfil de Energía ❯ " --lines=3 --width=42 || true)
+      mangowm_menu "Perfil de Energía ❯ " --lines=3 || true)
 
     case "$selected" in
       *"power-saver"*) set_profile power-saver ;;

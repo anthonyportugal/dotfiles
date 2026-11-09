@@ -23,8 +23,9 @@ printf '\n--> 4/13: Executing WM, opt-in layer and overlay smoke tests...\n'
 "$SCRIPT_DIR/optional-layers-smoke.sh"
 "$SCRIPT_DIR/overlay-smoke.sh"
 
-printf '\n--> 5/13: Executing MangoWM scaffold smoke tests...\n'
+printf '\n--> 5/13: Executing MangoWM scaffold and menu smoke tests...\n'
 "$REPO_ROOT/layers/wm/mangowm/tests/scaffold-smoke.sh"
+"$REPO_ROOT/layers/wm/mangowm/tests/menu-smoke.sh"
 
 printf '\n--> 6/13: Executing WM session smoke tests...\n'
 "$REPO_ROOT/layers/wm/bspwm/tests/session-smoke.sh"
