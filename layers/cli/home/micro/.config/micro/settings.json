@@ -1,6 +1,6 @@
 {
   "autoindent": true,
-  "colorscheme": "catppuccin-mocha",
+  "colorscheme": "default",
   "cursorline": true,
   "diffgutter": true,
   "eofnewline": true,

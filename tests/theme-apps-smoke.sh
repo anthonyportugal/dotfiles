@@ -124,12 +124,44 @@ check_terminals() {
     fail "foot y MangoWM renderizan bloques de color distintos"
 }
 
+# CLI tools: every output carries the palette and parses.
+check_cli() {
+  local palette=$1 revision=$2 output
+
+  for output in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml \
+                micro/default.micro fzf/options; do
+    expect_rendered "$revision/$output"
+  done
+  python3 - "$revision/bat/dotfiles.tmTheme" "$palette" <<'PY' || fail "bat/dotfiles.tmTheme no lleva la paleta"
+import plistlib, sys
+theme = plistlib.load(open(sys.argv[1], "rb"))
+palette = dict(line.rstrip("\n").split("=", 1) for line in open(sys.argv[2]) if "=" in line)
+main = theme["settings"][0]["settings"]
+scopes = {entry.get("scope"): entry["settings"] for entry in theme["settings"][1:]}
+assert theme["name"] == palette["id"]
+assert main["background"] == palette["background"]
+assert main["foreground"] == palette["foreground"]
+assert scopes["string"]["foreground"] == palette["syntax_string"]
+assert scopes["entity.name.function, variable.function"]["foreground"] == palette["syntax_function"]
+PY
+  expect_line "$revision/btop/dotfiles.theme" "theme[main_bg]=\"$(palette_value "$palette" background)\""
+  expect_line "$revision/btop/dotfiles.theme" "theme[main_fg]=\"$(palette_value "$palette" foreground)\""
+  expect_line "$revision/lazygit/theme.yml" "      - '$(palette_value "$palette" accent)'"
+  expect_line "$revision/micro/default.micro" \
+    "color-link default \"$(palette_value "$palette" foreground),$(palette_value "$palette" background)\""
+  expect_line "$revision/micro/default.micro" \
+    "color-link current-line-number \"$(palette_value "$palette" accent)\""
+  output=$(cat "$revision/fzf/options")
+  [[ "$output" == *"bg:$(palette_value "$palette" background),"* ]] || fail "fzf/options no lleva el fondo"
+}
+
 rendered=0
 for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   [[ -f "$palette" ]] || continue
   id=$(basename -- "$palette" .conf)
   revision=$(render_in "$id" "$TEST_ROOT/$id")
   check_terminals "$palette" "$revision"
+  check_cli "$palette" "$revision"
   ((rendered++)) || true
 done
 (( rendered >= 14 )) || fail "se esperaban al menos 14 paletas, renderizadas: $rendered"
@@ -164,5 +196,84 @@ if command -v foot >/dev/null 2>&1; then
   HOME="$home" foot --check-config --config="$home/.local/state/dotfiles/theme/current/mangowm/foot.ini" || \
     fail "foot rechazó la plantilla de MangoWM"
 fi
+
+# CLI configs select the rendered outputs by name or through the environment.
+CLI_HOME="$REPO_ROOT/layers/cli/home"
+ENVIRONMENT="$REPO_ROOT/layers/core/home/zsh/.config/zsh/conf.d/10-environment.zsh"
+BAT_HOOK="$CLI_HOME/bat/.local/share/dotfiles/theme/reload.d/bat"
+expect_line "$CLI_HOME/bat/.config/bat/config" '--theme="dotfiles"'
+expect_line "$CLI_HOME/btop/.config/btop/btop.conf" 'color_theme = "dotfiles"'
+grep -Fq '"colorscheme": "default",' "$CLI_HOME/micro/.config/micro/settings.json" || \
+  fail "micro no selecciona el colorscheme renderizado"
+grep -Fq 'theme:' "$CLI_HOME/lazygit/.config/lazygit/config.yml" && fail "lazygit fija su propio tema"
+for config in "$CLI_HOME/lazygit/.config/lazygit/config.yml" "$CLI_HOME/fastfetch/.config/fastfetch/config.jsonc" \
+              "$ENVIRONMENT"; do
+  expect_no_hex "$config"
+done
+for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro/default.micro fzf/options; do
+  expect_no_hex "$SHARED_TEMPLATES/$template"
+done
+
+# The engine links the outputs an application only reads from its own config
+# directory, and only for the applications that are configured.
+LINKS="$TEST_ROOT/home-links"
+mkdir -p "$LINKS/.config/bat/themes" "$LINKS/.config/btop" "$LINKS/.config/micro"
+render_in catppuccin-mocha-pink "$LINKS" >/dev/null
+for link in bat/themes/dotfiles.tmTheme:bat/dotfiles.tmTheme btop/themes/dotfiles.theme:btop/dotfiles.theme \
+            micro/colorschemes/default.micro:micro/default.micro; do
+  [[ "$(readlink -- "$LINKS/.config/${link%%:*}")" == "$LINKS/.local/state/dotfiles/theme/current/${link#*:}" ]] || \
+    fail "render no enlazó ${link%%:*}"
+done
+[[ ! -e "$LINKS/.config/yazi" ]] || fail "render creó la configuración de una aplicación ausente"
+
+# zsh selects the rendered theme for bat once its cache is fresh, and points
+# lazygit and fzf at the rendered files only when they exist.
+# shellcheck disable=SC2016
+zsh_env() {
+  env -i HOME="$1" PATH="$PATH" zsh -fc 'source "$1"; print -r -- "$BAT_THEME|${LG_CONFIG_FILE-}|${FZF_DEFAULT_OPTS_FILE-}"' \
+    _ "$ENVIRONMENT"
+}
+if command -v zsh >/dev/null 2>&1; then
+  EMPTY="$TEST_ROOT/home-empty"
+  mkdir -p "$EMPTY"
+  [[ "$(zsh_env "$EMPTY")" == 'Catppuccin-mocha||' ]] || fail "zsh sin tema renderizado: $(zsh_env "$EMPTY")"
+  mkdir -p "$LINKS/.config/lazygit" "$LINKS/.cache/bat"
+  : > "$LINKS/.config/lazygit/config.yml"
+  [[ "$(zsh_env "$LINKS")" == "Catppuccin-mocha|$LINKS/.config/lazygit/config.yml,$LINKS/.local/state/dotfiles/theme/current/lazygit/theme.yml|$LINKS/.local/state/dotfiles/theme/current/fzf/options" ]] || \
+    fail "zsh con tema renderizado y sin caché de bat: $(zsh_env "$LINKS")"
+  : > "$LINKS/.cache/bat/themes.bin"
+  [[ "$(zsh_env "$LINKS")" == dotfiles\|* ]] || fail "zsh no seleccionó el tema de bat con la caché al día"
+fi
+
+# fzf parses the rendered options file.
+if command -v fzf >/dev/null 2>&1; then
+  status=0
+  printf 'x\n' | FZF_DEFAULT_OPTS_FILE="$LINKS/.local/state/dotfiles/theme/current/fzf/options" \
+    fzf --filter=x >/dev/null || status=$?
+  (( status == 0 )) || fail "fzf rechazó fzf/options ($status)"
+fi
+
+# bat builds its cache from the linked theme and lists it by name.
+if command -v bat >/dev/null 2>&1; then
+  BAT_CONFIG_DIR="$LINKS/.config/bat" BAT_CACHE_PATH="$TEST_ROOT/bat-cache" bat cache --build >/dev/null || \
+    fail "bat no pudo construir la caché con el tema renderizado"
+  BAT_CONFIG_DIR="$LINKS/.config/bat" BAT_CACHE_PATH="$TEST_ROOT/bat-cache" bat --list-themes --color=never | \
+    grep -Fxq dotfiles || fail "bat no lista el tema dotfiles"
+fi
+
+# The bat reload hook rebuilds the cache after `set`, and never fails the
+# switch when bat is missing.
+[[ -x "$BAT_HOOK" ]] || fail "falta el hook de recarga ejecutable de bat"
+STUBS="$TEST_ROOT/stubs"
+mkdir -p "$STUBS"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/bat.args"\n' "$TEST_ROOT" > "$STUBS/bat"
+chmod +x "$STUBS/bat"
+PATH="$STUBS:$PATH" "$BAT_HOOK" || fail "el hook de bat falló"
+[[ "$(<"$TEST_ROOT/bat.args")" == 'cache --build' ]] || fail "el hook de bat no reconstruyó la caché"
+NO_BAT="$TEST_ROOT/no-bat"
+mkdir -p "$NO_BAT"
+ln -s "$(command -v bash)" "$NO_BAT/bash"
+output=$(PATH="$NO_BAT" "$BAT_HOOK" 2>&1) || fail "el hook de bat falló sin bat instalado"
+[[ "$output" == *'bat no está instalado'* ]] || fail "el hook de bat no informó que falta bat: $output"
 
 printf 'OK: %d paletas renderizadas para las aplicaciones\n' "$rendered"

@@ -1,4 +1,6 @@
-# Bat configuration
---theme="Catppuccin-mocha"
+# Bat configuration. "dotfiles" is the theme rendered by dotfiles-theme
+# (~/.config/bat/themes/dotfiles.tmTheme); zsh keeps the vendored
+# Catppuccin-mocha in BAT_THEME until bat's cache holds the current render.
+--theme="dotfiles"
 --style="numbers,changes,header"
 --italic-text=always

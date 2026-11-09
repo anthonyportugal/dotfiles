@@ -1,0 +1,4 @@
+--color=bg+:{{surface}},bg:{{background}},spinner:{{hue_rose}},hl:{{hue_red}}
+--color=fg:{{foreground}},header:{{hue_red}},info:{{hue_purple}},pointer:{{hue_rose}}
+--color=marker:{{hue_indigo}},fg+:{{foreground}},prompt:{{hue_purple}},hl+:{{hue_red}}
+--color=selected-bg:{{surface_hover}}

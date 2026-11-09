@@ -1,25 +1,9 @@
-# Lazygit configuration with native Delta integration and Catppuccin Mocha theme
+# Lazygit configuration with native Delta integration. Colors come from the
+# theme rendered by dotfiles-theme, merged after this file through
+# LG_CONFIG_FILE (see zsh conf.d/10-environment.zsh).
 git:
   diffRenderers:
     - colorArg: always
       command: delta --dark --paging=never
 gui:
   sideBySideView: false
-  theme:
-    activeBorderColor:
-      - '#f5c2e7'
-      - bold
-    inactiveBorderColor:
-      - '#a6adc8'
-    optionsTextColor:
-      - '#89dceb'
-    selectedLineBgColor:
-      - '#313244'
-    cherryPickedCommitBgColor:
-      - '#45475a'
-    cherryPickedCommitFgColor:
-      - '#f5c2e7'
-    unstagedChangesColor:
-      - '#f38ba8'
-    defaultFgColor:
-      - '#cdd6f4'

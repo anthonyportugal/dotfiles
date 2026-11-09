@@ -47,10 +47,14 @@ including `.raw` on a font or cursor key, fails the render.
 - `templates/` holds the outputs every desktop shares; each one is listed
   with its consumer under [Rendered state](#rendered-state). A WM template
   directory cannot take the name of a shared output (`yazi`, `foot`, ...).
+- The bat theme, the btop theme and the micro colorscheme are adapted from
+  the Catppuccin ports (MIT); Catppuccin's rosewater has no schema-2 role and
+  renders as `hue_rose` (flamingo).
 - A window manager layer stows its own templates into
   `~/.local/share/dotfiles/theme/templates/<wm>/` and may stow an executable
   `~/.local/share/dotfiles/theme/reload.d/<wm>` that reloads its session after
-  `dotfiles-theme set`. The hook receives the active directory in
+  `dotfiles-theme set`. Application layers may stow a reload hook too (the cli
+  layer's `bat`). The hook receives the active directory in
   `DOTFILES_THEME_DIR`.
 
 ## Rendered state
@@ -64,20 +68,39 @@ $XDG_STATE_HOME/dotfiles/theme/
     ├── yazi/flavor.toml          # linked as ~/.config/yazi/flavors/theme.yazi
     ├── alacritty/theme.toml      # [general] import of ~/.config/alacritty/alacritty.toml
     ├── foot/theme.ini            # include= of ~/.config/foot/foot.ini
+    ├── bat/dotfiles.tmTheme      # linked as ~/.config/bat/themes/dotfiles.tmTheme
+    ├── btop/dotfiles.theme       # linked as ~/.config/btop/themes/dotfiles.theme
+    ├── micro/default.micro       # linked as ~/.config/micro/colorschemes/default.micro
+    ├── lazygit/theme.yml         # appended to LG_CONFIG_FILE by zsh
+    ├── fzf/options               # FZF_DEFAULT_OPTS_FILE set by zsh
     ├── background
     ├── metadata                  # schema=2, id, family, flavour, accent_name
     └── <wm>/...                  # one directory per installed WM
 ```
 
-Every rendered file must be non-empty or the render fails. The stowed configs
-read these files through the default state path
-(`~/.local/state/dotfiles/theme/current/...`), so each application still starts
-when no theme was rendered yet:
+Every rendered file must be non-empty or the render fails. The terminals read
+their file through the default state path
+(`~/.local/state/dotfiles/theme/current/...`); zsh (`conf.d/10-environment.zsh`)
+points lazygit and fzf at theirs; and after promoting a revision the engine
+links the outputs an application only finds in its own config directory (Yazi,
+bat, btop, micro), only when that directory exists and never over a real file.
+Each application still starts when no theme was rendered yet:
 
-| Application | Without a rendered theme |
-|-------------|--------------------------|
-| alacritty | skips the missing import: default font and colors |
-| foot | reports the missing include and starts with its default font and colors |
+| Application | Selects the theme | Without a rendered theme |
+|-------------|-------------------|--------------------------|
+| alacritty | `[general] import` | skips the missing import: default font and colors |
+| foot | `include=` | reports the missing include and starts with its default font and colors |
+| bat | `--theme="dotfiles"`, `BAT_THEME` | zsh sets `BAT_THEME=Catppuccin-mocha` (vendored) until bat's cache is not older than the rendered theme |
+| btop | `color_theme = "dotfiles"` | falls back to its `Default` theme |
+| micro | `"colorscheme": "default"` | the link shadows micro's builtin `default`, which stays when nothing is linked |
+| lazygit | `LG_CONFIG_FILE` | zsh leaves it unset: lazygit's default colors |
+| fzf | `FZF_DEFAULT_OPTS_FILE` | zsh leaves it unset: fzf's default colors |
+| fastfetch | ANSI color names | follows the terminal palette (no rendered file) |
+
+bat only sees a new palette after `bat cache --build`: the cli layer's
+post-link builds it, and the bat reload hook
+(`~/.local/share/dotfiles/theme/reload.d/bat`) rebuilds it on every `set`. A
+reload hook never fails the switch: it exits 0 and reports a missing tool.
 
 The terminal colors follow the ANSI roles; `16`/`17` are `hue_orange` and
 `hue_rose`. MangoWM's `foot.ini` template repeats the shared `[colors-dark]`

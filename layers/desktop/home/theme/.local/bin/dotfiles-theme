@@ -288,16 +288,27 @@ theme_digest() {
   printf '%s\n' "${digest:0:12}"
 }
 
-link_yazi_flavor() {
-  local link="$CONFIG_HOME/yazi/flavors/theme.yazi"
+# Links $CONFIG_HOME/$1 to the rendered output $2 under current/, only when
+# the application's config directory (the first component of $1) exists. A
+# real file or directory in its place is never replaced.
+link_output() {
+  local link="$CONFIG_HOME/$1" app_dir="$CONFIG_HOME/${1%%/*}"
 
-  [[ -d "$CONFIG_HOME/yazi" ]] || return 0
+  [[ -d "$app_dir" ]] || return 0
   if [[ -e "$link" && ! -L "$link" ]]; then
     warn "no se reemplaza $link: no es un enlace simbólico"
     return 0
   fi
   mkdir -p -- "${link%/*}"
-  ln -sfn -- "$THEME_ROOT/current/yazi" "$link"
+  ln -sfn -- "$THEME_ROOT/current/$2" "$link"
+}
+
+# Outputs an application only finds inside its own config directory.
+link_outputs() {
+  link_output yazi/flavors/theme.yazi yazi
+  link_output bat/themes/dotfiles.tmTheme bat/dotfiles.tmTheme
+  link_output btop/themes/dotfiles.theme btop/dotfiles.theme
+  link_output micro/colorschemes/default.micro micro/default.micro
 }
 
 promote() {
@@ -308,7 +319,7 @@ promote() {
   fi
   ln -s -- "$revision" "$next_link"
   mv -Tf -- "$next_link" "$THEME_ROOT/current"
-  link_yazi_flavor
+  link_outputs
 }
 
 render_theme() {
