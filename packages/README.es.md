@@ -28,13 +28,40 @@ Las fuentes que no son equivalentes se mantienen separadas:
 
 - `cachyos/`: paquetes propios del repositorio CachyOS (e.g. `brave-bin`);
 - `aur/`: fallback explícito, nunca mezclado con paquetes de repositorio;
-- `external/`: fuentes externas a pacman/AUR; actualmente no hay ninguna en base.
+- `external/`: descargas fijadas fuera de pacman/AUR (fuentes, temas de cursor),
+  instaladas por usuario sin root. Vea [Descargas externas](#descargas-externas).
 
 Para el navegador Brave, CachyOS usa `layers/desktop/packages/cachyos/desktop.txt` (paquete binario
 nativo). En Arch Linux genérico, el resolver comprueba primero `core`, `extra`
 y `multilib`, y sólo entonces recurre a `layers/desktop/packages/aur/desktop-fallback.txt`. Las dos
 entradas representan alternativas del mismo paquete, no dos instalaciones
 concurrentes.
+
+## Descargas externas
+
+Una capa lista nombres de recetas en `packages/external/<tier|feature>.txt`; cada
+nombre tiene una receta de solo datos a su lado, `packages/external/<nombre>.conf`:
+
+```ini
+version=2.0.7
+dest=share/icons/Bibata-Modern-Classic
+archive=<sha256> https://example.org/Bibata-Modern-Classic.tar.xz
+# o una línea por archivo:
+# file=<nombre> <sha256> https://example.org/<nombre>
+refresh=fonts   # opcional: reconstruye la caché de fuentes de dest
+```
+
+- Solo se aceptan URLs `https`, y cada descarga debe coincidir con su `sha256`
+  antes de cambiar nada. Nada descargado se ejecuta (sin `curl | sh`).
+- `dest` es `share/<directorio>/<nombre>` bajo `~/.local` y pertenece a la
+  receta: instalar lo reemplaza entero. Un `dest` que dotfiles no instaló nunca
+  se reemplaza; la instalación se detiene y pide moverlo.
+- Un archivo comprimido debe contener un único directorio de primer nivel, que
+  pasa a ser `dest`.
+- El recibo `~/.local/state/dotfiles/external-<nombre>.receipt` guarda el hash de
+  la receta, así que editarla (una versión nueva) la reinstala.
+- Se instalan con los demás paquetes (`--with-packages`, `bootstrap` sin
+  `--stow-only`), después del paso de repositorios, y `doctor` las revisa.
 
 ## Perfiles
 

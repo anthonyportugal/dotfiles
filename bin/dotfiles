@@ -111,6 +111,8 @@ source "$LIB_DIR/packages.sh"
 source "$LIB_DIR/links.sh"
 # shellcheck source=../lib/receipts.sh
 source "$LIB_DIR/receipts.sh"
+# shellcheck source=../lib/external.sh
+source "$LIB_DIR/external.sh"
 # shellcheck source=../lib/components.sh
 source "$LIB_DIR/components.sh"
 # shellcheck source=../lib/layers.sh

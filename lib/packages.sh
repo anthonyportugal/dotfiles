@@ -4,7 +4,8 @@
 # Reads PLATFORM_REQUEST, BACKEND_REQUEST, PACKAGES_DIR (or
 # PACKAGE_BACKENDS_FILE for the backend order), PLATFORM, BACKEND,
 # REPO_PACKAGES, AUR_PACKAGES and EXTERNAL_PACKAGES; fills the INSTALLED_* and
-# MISSING_* package arrays. Requires lib/colors.sh and lib/core.sh.
+# MISSING_* package arrays. Requires lib/colors.sh, lib/core.sh, lib/receipts.sh
+# and lib/external.sh (EXTERNAL_PACKAGES are pinned downloads it installs).
 #
 # shellcheck shell=bash
 
@@ -139,6 +140,8 @@ classify_packages() {
       MISSING_AUR_PACKAGES+=("$package_name")
     fi
   done
+
+  classify_external_packages
 }
 
 # ShellCheck no puede seguir el array que se devuelve mediante nameref.
@@ -206,8 +209,9 @@ show_package_commands() {
   elif (( ${#aur_command[@]} > 0 )); then
     format_command "${aur_command[@]}"
   fi
+  show_external_commands
 
-  if (( ${#repo_command[@]} == 0 && ${#aur_command[@]} == 0 )); then
+  if (( ${#repo_command[@]} == 0 && ${#aur_command[@]} == 0 && ${#MISSING_EXTERNAL_PACKAGES[@]} == 0 )); then
     printf '    (todos los paquetes seleccionados ya están instalados)\n'
   fi
   return "$result"
@@ -216,10 +220,7 @@ show_package_commands() {
 validate_package_plan() {
   local result=0
 
-  if (( ${#EXTERNAL_PACKAGES[@]} > 0 )); then
-    error "no hay adaptador para fuentes externas: ${EXTERNAL_PACKAGES[*]}"
-    result=1
-  fi
+  validate_external_plan || result=1
   if [[ "$BACKEND" == "pacman" && ${#MISSING_AUR_PACKAGES[@]} -gt 0 ]]; then
     error "el perfil necesita AUR pero pacman sólo gestiona repositorios; instale Shelly, paru o yay, o fuerce otro backend"
     result=1
@@ -247,11 +248,14 @@ execute_package_install() {
     info "Instalando paquetes AUR con $BACKEND; revise PKGBUILD y prompts del helper"
     "${aur_command[@]}"
   fi
+  # Per user, after the repository step that may have installed curl.
+  execute_external_install || return 1
 
   classify_packages
-  if (( ${#MISSING_REPO_PACKAGES[@]} > 0 || ${#MISSING_AUR_PACKAGES[@]} > 0 )); then
+  if (( ${#MISSING_REPO_PACKAGES[@]} > 0 || ${#MISSING_AUR_PACKAGES[@]} > 0 || ${#MISSING_EXTERNAL_PACKAGES[@]} > 0 )); then
     print_array "Repo aún faltantes" MISSING_REPO_PACKAGES
     print_array "AUR aún faltantes" MISSING_AUR_PACKAGES
+    print_array "Externos aún faltantes" MISSING_EXTERNAL_PACKAGES
     error "la validación posterior de paquetes falló"
     return 1
   fi

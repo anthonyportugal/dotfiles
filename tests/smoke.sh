@@ -7,8 +7,9 @@ REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 
 printf '==> Running canonical smoke tests for dotfiles (base)...\n'
 
-printf '\n--> 1/13: Executing shared engine (lib/) smoke tests...\n'
+printf '\n--> 1/13: Executing shared engine (lib/) and external download smoke tests...\n'
 "$SCRIPT_DIR/lib-smoke.sh"
+"$SCRIPT_DIR/external-smoke.sh"
 
 printf '\n--> 2/13: Executing layer hook smoke tests...\n'
 "$SCRIPT_DIR/layer-hooks-smoke.sh"

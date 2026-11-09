@@ -27,13 +27,39 @@ Distinct package sources are maintained separately:
 
 - `cachyos/`: Packages native to the CachyOS repository (e.g., `brave-bin`);
 - `aur/`: Explicit fallback source, never mixed with binary repository packages;
-- `external/`: Sources outside pacman/AUR; none are currently declared in base.
+- `external/`: Pinned downloads outside pacman/AUR (fonts, cursor themes),
+  installed per user without root. See [External downloads](#external-downloads).
 
 For the Brave browser, CachyOS utilizes `layers/desktop/packages/cachyos/desktop.txt` (native optimized
 binary). On generic Arch Linux, the resolver checks `core`, `extra`, and
 `multilib` first, falling back to `layers/desktop/packages/aur/desktop-fallback.txt` only when absent.
 Both entries represent alternative sources for the same package, not duplicate
 installations.
+
+## External downloads
+
+A layer lists recipe names in `packages/external/<tier|feature>.txt`; each name
+has a data-only recipe next to it, `packages/external/<name>.conf`:
+
+```ini
+version=2.0.7
+dest=share/icons/Bibata-Modern-Classic
+archive=<sha256> https://example.org/Bibata-Modern-Classic.tar.xz
+# or one line per plain file:
+# file=<name> <sha256> https://example.org/<name>
+refresh=fonts   # optional: rebuilds the font cache of dest
+```
+
+- Only `https` URLs are accepted, and every download must match its `sha256`
+  before anything changes. Nothing downloaded is executed (no `curl | sh`).
+- `dest` is `share/<directory>/<name>` under `~/.local` and belongs to the
+  recipe: an install replaces it whole. A `dest` that dotfiles did not install
+  is never replaced; the install stops and asks you to move it.
+- An archive must hold one top-level directory, which becomes `dest`.
+- The receipt `~/.local/state/dotfiles/external-<name>.receipt` records the
+  recipe's hash, so editing a recipe (a new version) reinstalls it.
+- They install with the other packages (`--with-packages`, `bootstrap`
+  without `--stow-only`), after the repository step, and `doctor` reports them.
 
 ## Profiles
 
