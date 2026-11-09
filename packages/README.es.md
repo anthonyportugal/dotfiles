@@ -61,8 +61,10 @@ Los perfiles son acumulativos:
   Manager. Incluye los emuladores de terminal Alacritty y Foot, visores ligeros
   (IMV, Zathura con motor MuPDF), reproductor multimedia (MPV con integración MPRIS),
   controlador de medios (Playerctl), gestor de archivos Thunar con miniaturas Tumbler,
-  temas Catppuccin (Adw-gtk3-dark y Papirus-Dark) y la tipografía JetBrains Mono. Sus
-  paquetes Stow enlazan las configuraciones de Alacritty, Foot y `xdg-defaults`.
+  temas Catppuccin (Adw-gtk3-dark y Papirus-Dark) y las fuentes: JetBrains Mono Nerd,
+  los símbolos Nerd Font y Noto para texto, CJK y emoji a color. Sus paquetes Stow
+  enlazan las configuraciones de Alacritty, Foot y `xdg-defaults`, cuyos fallbacks
+  de fontconfig dibujan íconos y emoji después de la fuente del rol.
 - **`yazi-extras`**: Habilita previsualizaciones enriquecidas, búsqueda veloz y
   soporte de formatos en el gestor de archivos Yazi (incluyendo `7zip`, `chafa`,
   `fd`, `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg` y `ripgrep`).

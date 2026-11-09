@@ -22,7 +22,7 @@
     separator_color = frame
     highlight = "{{accent}}"
     gap_size = 6
-    font = JetBrains Mono 9
+    font = JetBrainsMono Nerd Font 9
     line_height = 2
     markup = full
     format = "<b>%s</b>\n%b"

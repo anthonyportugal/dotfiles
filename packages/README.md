@@ -60,8 +60,10 @@ Profiles are cumulative:
   Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV,
   Zathura with MuPDF backend), multimedia player (MPV with MPRIS integration), media
   controller (Playerctl), Thunar file manager with Tumbler thumbnailing, Catppuccin
-  themes (Adw-gtk3-dark and Papirus-Dark), and the JetBrains Mono typeface. Its Stow
-  packages link Alacritty, Foot, and `xdg-defaults`.
+  themes (Adw-gtk3-dark and Papirus-Dark), and the fonts: JetBrains Mono Nerd, the
+  Nerd Font symbols, and Noto for text, CJK, and color emoji. Its Stow packages
+  link Alacritty, Foot, and `xdg-defaults`, whose fontconfig fallbacks draw icons
+  and emoji after the role font.
 - **`yazi-extras`**: Enables rich file previews, high-performance search, and
   archive support in the Yazi file manager (including `7zip`, `chafa`, `fd`,
   `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg`, and `ripgrep`).
