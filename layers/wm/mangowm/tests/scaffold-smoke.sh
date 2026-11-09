@@ -127,26 +127,6 @@ if grep -Fq 'render_waybar' "$REPO_ROOT/home/mango/.local/bin/mango-theme"; then
   fail "mango-theme sigue renderizando en lugar de delegar en dotfiles-theme"
 fi
 
-declare -A expected_keys=()
-
-for key in \
-  schema id family flavour accent_name \
-  background_deep background_alt background surface surface_hover surface_strong \
-  foreground foreground_muted foreground_subtle foreground_disabled border \
-  accent accent_fg urgent warning success info \
-  selection_bg selection_fg cursor cursor_fg \
-  ansi_black ansi_red ansi_green ansi_yellow ansi_blue ansi_magenta ansi_cyan ansi_white \
-  ansi_bright_black ansi_bright_red ansi_bright_green ansi_bright_yellow \
-  ansi_bright_blue ansi_bright_magenta ansi_bright_cyan ansi_bright_white \
-  syntax_keyword syntax_string syntax_number syntax_constant syntax_function \
-  syntax_type syntax_property syntax_tag syntax_operator syntax_regex \
-  syntax_variable syntax_punctuation syntax_comment \
-  hue_red hue_orange hue_yellow hue_green hue_teal hue_cyan hue_blue hue_indigo \
-  hue_purple hue_pink hue_rose hue_maroon \
-  font_mono font_text font_display font_inscription cursor_theme cursor_size; do
-  expected_keys[$key]=1
-done
-
 # Catppuccin Mocha accent colors; schema 2 has no per-name keys, so the
 # semantic accent is checked against this table.
 declare -A mocha_accents=(
@@ -155,64 +135,33 @@ declare -A mocha_accents=(
   [green]='#a6e3a1' [teal]='#94e2d5' [sky]='#89dceb' [sapphire]='#74c7ec'
   [blue]='#89b4fa' [lavender]='#b4befe'
 )
+ENGINE="$MONOREPO_ROOT/layers/desktop/home/theme/.local/bin/dotfiles-theme"
+[[ -x "$ENGINE" ]] || fail "falta el motor de temas: $ENGINE"
+VALIDATE_HOME=$(mktemp -d "${TMPDIR:-/tmp}/mangowm-scaffold-smoke.XXXXXX")
+trap 'rm -rf -- "$VALIDATE_HOME"' EXIT
 
+# Value of key $2 in palette $1.
+palette_value() {
+  sed -n "s/^$2=//p" "$1"
+}
+
+# The engine owns the schema: it validates every key, its type and the id;
+# this layer only checks that the palette is a Catppuccin Mocha accent.
 check_palette() {
-  local palette=$1
-  local expected_id
+  local palette=$1 expected_id expected_accent output
+
   expected_id=$(basename -- "$palette" .conf)
-  local expected_accent="${expected_id#catppuccin-mocha-}"
-
-  declare -A seen_keys=()
-  declare -A palette_values=()
-
-  while IFS='=' read -r key value; do
-    [[ -n "$key" && -n "$value" ]] || fail "línea inválida en $palette"
-    [[ -v "expected_keys[$key]" ]] || fail "clave de paleta desconocida: $key en $palette"
-    [[ ! -v "seen_keys[$key]" ]] || fail "clave de paleta duplicada: $key en $palette"
-    seen_keys[$key]=1
-    palette_values[$key]="$value"
-
-    case "$key" in
-      schema)
-        [[ "$value" == 2 ]] || fail "schema de paleta no soportado en $palette"
-        ;;
-      id)
-        [[ "$value" == "$expected_id" ]] || fail "id de paleta inesperado en $palette"
-        ;;
-      family)
-        [[ "$value" == catppuccin ]] || fail "familia de paleta inesperada en $palette"
-        ;;
-      flavour)
-        [[ "$value" == mocha ]] || fail "flavour de paleta inesperado en $palette"
-        ;;
-      accent_name)
-        [[ "$value" == "$expected_accent" ]] || fail "acento de paleta inesperado en $palette"
-        ;;
-      font_*)
-        [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9\ ]*$ ]] || \
-          fail "fuente inválida para $key en $palette"
-        ;;
-      cursor_theme)
-        [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
-          fail "cursor inválido en $palette"
-        ;;
-      cursor_size)
-        [[ "$value" =~ ^[0-9]{2,3}$ ]] || fail "tamaño de cursor inválido en $palette"
-        ;;
-      *)
-        [[ "$value" =~ ^#[0-9a-f]{6}$ ]] || \
-          fail "color inválido para $key en $palette"
-        ;;
-    esac
-  done < "$palette"
-
-  for key in "${!expected_keys[@]}"; do
-    [[ -v "seen_keys[$key]" ]] || fail "falta la clave de paleta $key en $palette"
-  done
-
+  expected_accent="${expected_id#catppuccin-mocha-}"
+  output=$(env -u DOTFILES_THEME HOME="$VALIDATE_HOME" XDG_STATE_HOME="$VALIDATE_HOME/state" \
+    XDG_DATA_HOME="$VALIDATE_HOME/share" XDG_CONFIG_HOME="$VALIDATE_HOME/config" \
+    "$ENGINE" validate "$expected_id" 2>&1) || fail "dotfiles-theme rechazó $palette: $output"
+  [[ "$(palette_value "$palette" family)" == catppuccin ]] || fail "familia de paleta inesperada en $palette"
+  [[ "$(palette_value "$palette" flavour)" == mocha ]] || fail "flavour de paleta inesperado en $palette"
+  [[ "$(palette_value "$palette" accent_name)" == "$expected_accent" ]] || \
+    fail "acento de paleta inesperado en $palette"
   [[ -v "mocha_accents[$expected_accent]" ]] || \
     fail "acento desconocido de Catppuccin Mocha: $expected_accent"
-  [[ "${palette_values[accent]}" == "${mocha_accents[$expected_accent]}" ]] || \
+  [[ "$(palette_value "$palette" accent)" == "${mocha_accents[$expected_accent]}" ]] || \
     fail "el acento semántico en $palette no coincide con el color de $expected_accent"
 }
 

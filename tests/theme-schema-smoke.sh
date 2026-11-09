@@ -50,9 +50,14 @@ for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
     XDG_DATA_HOME="$home/.local/share" XDG_CONFIG_HOME="$home/.config" \
     "$ENGINE" render "$id") || fail "no se pudo renderizar $id"
 
-  if leftovers=$(grep -rlF '{{' "$revision"); then
-    fail "marcadores sin renderizar en $id: $leftovers"
-  fi
+  # grep exits 1 when no marker is left; 2 is an error, never a pass.
+  status=0
+  leftovers=$(grep -rlF '{{' "$revision") || status=$?
+  case "$status" in
+    0) fail "marcadores sin renderizar en $id: $leftovers" ;;
+    1) ;;
+    *) fail "grep falló ($status) en $id" ;;
+  esac
   expect_line "$revision/metadata" 'schema=2'
   expect_line "$revision/metadata" "id=$id"
   expect_line "$revision/mangowm/foot.ini" "regular5=$(palette_value "$palette" ansi_magenta | tr -d '#')"
