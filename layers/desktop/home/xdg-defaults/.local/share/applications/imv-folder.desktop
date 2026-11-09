@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=imv (folder)
+GenericName=Image viewer
+Comment=Open an image with the rest of its folder
+Exec=imv-folder %F
+Icon=multimedia-photo-viewer
+Terminal=false
+NoDisplay=true
+Categories=Graphics;2DGraphics;Viewer;
+MimeType=image/avif;image/bmp;image/gif;image/heif;image/jpeg;image/jxl;image/png;image/qoi;image/svg+xml;image/tiff;image/webp;

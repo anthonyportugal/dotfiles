@@ -59,7 +59,8 @@ Los perfiles son acumulativos:
   Catppuccin Mocha para estas utilidades.
 - **`desktop`**: Aporta utilidades gráficas independientes de la sesión o Window
   Manager. Incluye los emuladores de terminal Alacritty y Foot, visores ligeros
-  (IMV, Zathura con motor MuPDF), reproductor multimedia (MPV con integración MPRIS),
+  (IMV, que abre una imagen junto con el resto de su carpeta mediante
+  `imv-folder`, y Zathura con motor MuPDF), reproductor multimedia (MPV con integración MPRIS),
   controlador de medios (Playerctl), gestor de archivos Thunar con miniaturas Tumbler,
   temas Catppuccin (Adw-gtk3-dark y Papirus-Dark) y las fuentes: JetBrains Mono Nerd,
   los símbolos Nerd Font y Noto para texto, CJK y emoji a color. Sus paquetes Stow

@@ -13,10 +13,11 @@ printf '\n--> 1/13: Executing shared engine (lib/) smoke tests...\n'
 printf '\n--> 2/13: Executing layer hook smoke tests...\n'
 "$SCRIPT_DIR/layer-hooks-smoke.sh"
 
-printf '\n--> 3/13: Executing shared theme engine, mimeapps and font smoke tests...\n'
+printf '\n--> 3/13: Executing shared theme engine, mimeapps, font and image viewer smoke tests...\n'
 "$SCRIPT_DIR/theme-smoke.sh"
 "$SCRIPT_DIR/mimeapps-smoke.sh"
 "$SCRIPT_DIR/fonts-smoke.sh"
+"$SCRIPT_DIR/imv-folder-smoke.sh"
 
 printf '\n--> 4/13: Executing WM, opt-in layer and overlay smoke tests...\n'
 "$SCRIPT_DIR/wm-layers-smoke.sh"

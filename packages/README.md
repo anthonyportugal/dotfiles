@@ -57,8 +57,9 @@ Profiles are cumulative:
   Nerd Fonts symbol glyphs. Its Stow packages deploy Catppuccin Mocha configurations
   for these utilities.
 - **`desktop`**: Delivers session-independent graphical utilities. Includes
-  Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV,
-  Zathura with MuPDF backend), multimedia player (MPV with MPRIS integration), media
+  Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV, which
+  opens an image with the rest of its folder through `imv-folder`, and Zathura with
+  MuPDF backend), multimedia player (MPV with MPRIS integration), media
   controller (Playerctl), Thunar file manager with Tumbler thumbnailing, Catppuccin
   themes (Adw-gtk3-dark and Papirus-Dark), and the fonts: JetBrains Mono Nerd, the
   Nerd Font symbols, and Noto for text, CJK, and color emoji. Its Stow packages
