@@ -37,6 +37,7 @@ mkdir -p "$FAKE_BIN" "$DOWNLOADS"
 # every call; fc-cache logs the directory it was asked to refresh.
 cat > "$FAKE_BIN/curl" <<EOF
 #!/usr/bin/env bash
+printf '%s\n' "\$*" >> '$CURL_LOG.args'
 output='' url=''
 while (( \$# > 0 )); do
   case "\$1" in
@@ -48,6 +49,10 @@ while (( \$# > 0 )); do
   shift
 done
 printf '%s\n' "\$url" >> '$CURL_LOG'
+if [[ "\$url" == */slow ]]; then
+  : > '$TEST_ROOT/slow.started'
+  sleep 30
+fi
 [[ "\$url" == https://example.test/* && -f '$DOWNLOADS'/"\${url##*/}" ]] || exit 22
 cp -- '$DOWNLOADS'/"\${url##*/}" "\$output"
 EOF
@@ -76,6 +81,7 @@ setup_colors
 printf 'font-regular\n' > "$DOWNLOADS/Sans[wght].ttf"
 printf 'font-italic\n' > "$DOWNLOADS/Sans-Italic[wght].ttf"
 printf 'license\n' > "$DOWNLOADS/OFL.txt"
+printf 'readme\n' > "$DOWNLOADS/README.txt"
 mkdir -p "$TEST_ROOT/archive/Cursor/cursors" "$TEST_ROOT/archive/Extra"
 printf 'arrow\n' > "$TEST_ROOT/archive/Cursor/cursors/arrow"
 ln -s arrow "$TEST_ROOT/archive/Cursor/cursors/default"
@@ -150,7 +156,7 @@ plan sans cursor
 compgen -G "$TARGET_DIR/.local/.dotfiles-external.*" >/dev/null && fail 'quedó staging tras instalar'
 
 # 3. Changing a recipe reinstalls it: dest is replaced whole.
-write_fonts_recipe 2 OFL.txt
+write_fonts_recipe 2 README.txt
 plan sans
 [[ "${MISSING_EXTERNAL_PACKAGES[*]}" == sans ]] || fail 'un cambio de receta no pidió reinstalar'
 execute_package_install >/dev/null 2>&1 || fail 'la reinstalación falló'
@@ -220,6 +226,8 @@ invalid 'sin fuentes' 'version=1' 'dest=share/fonts/bad'
 invalid 'clave desconocida' 'version=1' 'dest=share/fonts/bad' \
   "file=OFL.txt $good_sha https://example.test/OFL.txt" 'run=rm -rf ~'
 invalid 'nombre con /' 'version=1' 'dest=share/fonts/bad' "file=../OFL.txt $good_sha https://example.test/OFL.txt"
+invalid 'archivo repetido' 'version=1' 'dest=share/fonts/bad' \
+  "file=OFL.txt $good_sha https://example.test/OFL.txt" "file=OFL.txt $good_sha https://example.test/OFL.txt"
 invalid 'refresh desconocido' 'version=1' 'dest=share/fonts/bad' \
   "file=OFL.txt $good_sha https://example.test/OFL.txt" 'refresh=icons'
 rm -f -- "$PACKAGES_DIR/external/bad.conf"
@@ -229,8 +237,89 @@ if output=$(validate_package_plan 2>&1); then
 fi
 [[ "$output" == *missing* ]] || fail "el error no nombra la receta: $output"
 
-# 8. Repository recipes are valid and pin https downloads.
+# 8. Downloads cannot hang forever on a stalled server.
+if ! grep -q -- '--connect-timeout' "$CURL_LOG.args" || ! grep -q -- '--speed-time' "$CURL_LOG.args"; then
+  fail 'curl se llama sin límites de tiempo'
+fi
+
+# 9. A symlinked directory between ~/.local and dest is refused, so a
+# download never lands in the symlink's target.
+new_target symlink
+mkdir -p "$TARGET_DIR/elsewhere" "$TARGET_DIR/.local/share"
+ln -s "$TARGET_DIR/elsewhere" "$TARGET_DIR/.local/share/icons"
+plan cursor
+if output=$(execute_package_install 2>&1); then
+  fail 'se instaló a través de un directorio symlink'
+fi
+[[ "$output" == *symlink* ]] || fail "el error no menciona el symlink: $output"
+[[ -z $(ls -A "$TARGET_DIR/elsewhere") ]] || fail 'la descarga llegó al destino del symlink'
+
+# 10. When the receipt cannot be written, the install is undone: dest goes
+# away and the next run installs instead of refusing a dest it does not own.
+new_target receipt
+mkdir -p "$TARGET_DIR/.local/state/dotfiles"
+chmod 0555 "$TARGET_DIR/.local/state/dotfiles"
+plan cursor
+if (execute_package_install) >/dev/null 2>&1; then
+  fail 'una instalación sin recibo se dio por buena'
+fi
+[[ ! -e "$TARGET_DIR/.local/share/icons/Cursor" ]] || fail 'dest quedó instalado sin recibo'
+chmod 0755 "$TARGET_DIR/.local/state/dotfiles"
+plan cursor
+execute_package_install >/dev/null 2>&1 || fail 'no se pudo instalar después de arreglar el recibo'
+
+# 11. A replace that cannot move the old dest fails and keeps it intact,
+# without nesting the new payload inside it.
+write_fonts_recipe 4 'Sans-Italic[wght].ttf'
+new_target readonly
+plan sans
+execute_package_install >/dev/null 2>&1 || fail 'la instalación base falló'
+fonts="$TARGET_DIR/.local/share/fonts/sans"
+write_fonts_recipe 5 README.txt
+chmod 0555 "$TARGET_DIR/.local/share/fonts"
+plan sans
+if execute_package_install >/dev/null 2>&1; then
+  fail 'un reemplazo imposible se dio por bueno'
+fi
+chmod 0755 "$TARGET_DIR/.local/share/fonts"
+[[ -f "$fonts/Sans-Italic[wght].ttf" && ! -e "$fonts/payload" && ! -e "$fonts/README.txt" ]] || \
+  fail 'el reemplazo fallido alteró dest'
+write_fonts_recipe 1 'Sans-Italic[wght].ttf'
+
+# 12. curl may be missing when the repository step of the same run installs it.
+(
+  command_exists() { [[ "$1" != curl ]] && command -v "$1" >/dev/null 2>&1; }
+  plan sans
+  MISSING_REPO_PACKAGES=(curl)
+  validate_package_plan >/dev/null 2>&1 || fail 'se rechazó curl pendiente del paso de repositorio'
+  MISSING_REPO_PACKAGES=()
+  if validate_package_plan >/dev/null 2>&1; then
+    fail 'se aceptó un plan sin curl'
+  fi
+)
+
+# 13. An interrupted download leaves no staging behind.
+new_target interrupt
+cat > "$PACKAGES_DIR/external/slow.conf" <<EOF
+version=1
+dest=share/fonts/slow
+file=slow $(sha OFL.txt) https://example.test/slow
+EOF
+rm -f -- "$TEST_ROOT/slow.started"
+( plan slow; execute_package_install ) >/dev/null 2>&1 &
+installer=$!
+for _ in {1..100}; do
+  [[ -e "$TEST_ROOT/slow.started" ]] && break
+  sleep 0.1
+done
+kill -TERM "$installer"
+wait "$installer" 2>/dev/null || true
+compgen -G "$TARGET_DIR/.local/.dotfiles-external.*" >/dev/null && fail 'una interrupción dejó staging'
+rm -f -- "$PACKAGES_DIR/external/slow.conf"
+
+# 14. Repository recipes are valid and pin https downloads.
 names=()
+shopt -s nullglob
 for manifest in "$REPO_ROOT"/layers/*/packages/external/*.txt "$REPO_ROOT"/layers/wm/*/packages/external/*.txt; do
   PACKAGES_DIR=${manifest%/external/*}
   read_manifest "$manifest" names

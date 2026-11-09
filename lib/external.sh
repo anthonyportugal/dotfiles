@@ -24,6 +24,8 @@
 
 INSTALLED_EXTERNAL_PACKAGES=()
 MISSING_EXTERNAL_PACKAGES=()
+# The install in progress, for the SIGINT/SIGTERM cleanup.
+EXTERNAL_STAGING='' EXTERNAL_DEST='' EXTERNAL_DOWNLOAD_PID=''
 
 external_prefix() {
   printf '%s' "$TARGET_DIR/.local"
@@ -43,7 +45,7 @@ external_read_recipe() {
   local name=$1
   local -n recipe_ref=$2
   local -n sources_ref=$3
-  local path raw_line line key value file_name sha url segment
+  local path raw_line line key value file_name sha url segment entry
   local -a fields=() segments=()
   # Letters, digits and ._@+-[] (as in "Font[wght].ttf"); ']' leads the set.
   local file_name_pattern='^[A-Za-z0-9][]A-Za-z0-9._@+[-]*$'
@@ -78,6 +80,9 @@ external_read_recipe() {
         [[ "$key" == file || ${#sources_ref[@]} -eq 0 ]] || { error "$path declara más de un archive"; return 1; }
         recipe_ref[kind]=$key
         [[ "$file_name" =~ $file_name_pattern ]] || { error "nombre de archivo inválido en $path: $file_name"; return 1; }
+        for entry in "${sources_ref[@]}"; do
+          [[ "${entry%% *}" != "$file_name" ]] || { error "archivo repetido en $path: $file_name"; return 1; }
+        done
         [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || { error "sha256 inválido en $path: $sha"; return 1; }
         [[ "$url" =~ ^https://[^[:space:]]+$ ]] || { error "sólo se aceptan URLs https en $path: $url"; return 1; }
         sources_ref+=("$file_name $sha $url")
@@ -145,9 +150,14 @@ validate_external_plan() {
   for name in "${EXTERNAL_PACKAGES[@]}"; do
     external_read_recipe "$name" recipe sources || result=1
   done
+  # A tool may be missing now when the repository step of this same run
+  # installs its package (sha256sum comes from coreutils).
   if (( ${#MISSING_EXTERNAL_PACKAGES[@]} > 0 )); then
-    for tool in curl sha256sum tar; do
-      command_exists "$tool" || { error "$tool es necesario para las descargas externas"; result=1; }
+    for tool in curl:curl sha256sum:coreutils tar:tar; do
+      command_exists "${tool%%:*}" || array_contains MISSING_REPO_PACKAGES "${tool#*:}" || {
+        error "${tool%%:*} es necesario para las descargas externas"
+        result=1
+      }
     done
   fi
   return "$result"
@@ -178,10 +188,16 @@ _external_stage() {
   for entry in "${sources[@]}"; do
     read -r file_name sha url <<< "$entry"
     download="$staging/downloads/$file_name"
-    curl -fsSL --proto '=https' --retry 2 -o "$download" "$url" || {
+    # In the background, so a signal reaches the installer's trap at once.
+    curl -fsSL --proto '=https' --retry 2 --connect-timeout 20 \
+      --speed-limit 1024 --speed-time 60 -o "$download" "$url" &
+    EXTERNAL_DOWNLOAD_PID=$!
+    wait "$EXTERNAL_DOWNLOAD_PID" || {
+      EXTERNAL_DOWNLOAD_PID=''
       error "no se pudo descargar $url"
       return 1
     }
+    EXTERNAL_DOWNLOAD_PID=''
     printf '%s  %s\n' "$sha" "$download" | sha256sum --check --status || {
       error "la suma sha256 de $url no coincide con la receta $name"
       return 1
@@ -210,9 +226,9 @@ _external_stage() {
 # Installs recipe $1 into its dest, replacing only a dest it installed.
 external_install() {
   local name=$1
-  local prefix staging dest status=0
+  local prefix staging dest current segment status=0
   local -A recipe=() receipt=()
-  local -a sources=()
+  local -a sources=() segments=()
 
   external_read_recipe "$name" recipe sources || return 1
   prefix=$(external_prefix)
@@ -224,37 +240,79 @@ external_install() {
     fi
   fi
 
-  mkdir -p -- "$prefix" "${dest%/*}"
+  # Below ~/.local every directory must be real: a symlinked one (a folded
+  # Stow package, say) would send the download into the link's target.
+  current=$prefix
+  IFS=/ read -r -a segments <<< "${recipe[dest]}"
+  for segment in "${segments[@]}"; do
+    current="$current/$segment"
+    [[ ! -L "$current" ]] || { error "$current es un symlink; no se instala $name a través de él"; return 1; }
+  done
+
+  mkdir -p -- "$prefix" "${dest%/*}" || return 1
   # Staged next to dest's filesystem, so the final rename is atomic.
-  staging=$(mktemp -d "$prefix/.dotfiles-external.XXXXXX")
-  if _external_stage "$name" "$staging"; then
-    if [[ -e "$dest" ]]; then
-      mv -- "$dest" "$staging/previous"
-    fi
-    if mv -- "$staging/payload" "$dest"; then
-      write_receipt "external-$name" VERSION="${recipe[version]}" DEST="${recipe[dest]}" \
-        RECIPE_SHA256="$(external_recipe_hash "$name")" >/dev/null
-      if [[ "${recipe[refresh]:-}" == fonts ]] && command_exists fc-cache; then
-        fc-cache -f "$dest" >/dev/null 2>&1 || warn "fc-cache no pudo refrescar $dest"
-      fi
-    else
-      [[ ! -e "$staging/previous" ]] || mv -- "$staging/previous" "$dest"
-      error "no se pudo mover $name a $dest"
-      status=1
-    fi
-  else
+  staging=$(mktemp -d "$prefix/.dotfiles-external.XXXXXX") || return 1
+  EXTERNAL_STAGING=$staging EXTERNAL_DEST=$dest
+  if ! _external_stage "$name" "$staging"; then
     status=1
+  elif [[ -e "$dest" ]] && ! mv -T -- "$dest" "$staging/previous"; then
+    error "no se pudo apartar la versión instalada de $name en $dest"
+    status=1
+  elif ! mv -T -- "$staging/payload" "$dest"; then
+    error "no se pudo mover $name a $dest"
+    status=1
+  elif ! _external_record "$name" "${recipe[version]}" "${recipe[dest]}"; then
+    # Without its receipt the adapter would no longer own dest: undo.
+    error "no se pudo guardar el recibo de $name; se deshace la instalación"
+    mv -T -- "$dest" "$staging/payload"
+    status=1
+  elif [[ "${recipe[refresh]:-}" == fonts ]] && command_exists fc-cache; then
+    fc-cache -f "$dest" >/dev/null 2>&1 || warn "fc-cache no pudo refrescar $dest"
+  fi
+  # A failed swap puts the previous version back.
+  if (( status != 0 )) && [[ ! -e "$dest" && -e "$staging/previous" ]]; then
+    mv -T -- "$staging/previous" "$dest"
   fi
 
-  [[ "$staging" == "$prefix"/.dotfiles-external.* ]] && rm -rf -- "$staging"
+  _external_discard_staging
   return "$status"
 }
 
-execute_external_install() {
-  local name
+# Writes the receipt of recipe $1 (version $2, dest $3) and reads it back:
+# write_receipt reports no failure of its own once errexit is off.
+_external_record() {
+  local name=$1 version=$2 dest=$3 hash
+  local -A written=()
 
+  hash=$(external_recipe_hash "$name")
+  (write_receipt "external-$name" VERSION="$version" DEST="$dest" RECIPE_SHA256="$hash") >/dev/null 2>&1
+  read_receipt "external-$name" written && [[ "${written[RECIPE_SHA256]:-}" == "$hash" ]]
+}
+
+_external_discard_staging() {
+  [[ "$EXTERNAL_STAGING" == "$(external_prefix)"/.dotfiles-external.* ]] && rm -rf -- "$EXTERNAL_STAGING"
+  EXTERNAL_STAGING='' EXTERNAL_DEST=''
+}
+
+# On SIGINT or SIGTERM: stop the download, put back the previous version if
+# the swap was half done, and remove the staging directory.
+_external_interrupted() {
+  [[ -z "$EXTERNAL_DOWNLOAD_PID" ]] || kill "$EXTERNAL_DOWNLOAD_PID" 2>/dev/null || true
+  if [[ -n "$EXTERNAL_STAGING" && -n "$EXTERNAL_DEST" && ! -e "$EXTERNAL_DEST" && -e "$EXTERNAL_STAGING/previous" ]]; then
+    mv -T -- "$EXTERNAL_STAGING/previous" "$EXTERNAL_DEST"
+  fi
+  _external_discard_staging
+  exit 130
+}
+
+execute_external_install() {
+  local name status=0
+
+  trap _external_interrupted INT TERM
   for name in "${MISSING_EXTERNAL_PACKAGES[@]}"; do
     info "Instalando $name (descarga verificada con sha256, sin root)"
-    external_install "$name" || return 1
+    external_install "$name" || { status=1; break; }
   done
+  trap - INT TERM
+  return "$status"
 }

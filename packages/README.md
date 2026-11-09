@@ -52,9 +52,11 @@ refresh=fonts   # optional: rebuilds the font cache of dest
 
 - Only `https` URLs are accepted, and every download must match its `sha256`
   before anything changes. Nothing downloaded is executed (no `curl | sh`).
+  A failed or interrupted install leaves the previous version in place.
 - `dest` is `share/<directory>/<name>` under `~/.local` and belongs to the
   recipe: an install replaces it whole. A `dest` that dotfiles did not install
-  is never replaced; the install stops and asks you to move it.
+  is never replaced; the install stops and asks you to move it. Nor does an
+  install go through a symlinked directory below `~/.local`.
 - An archive must hold one top-level directory, which becomes `dest`.
 - The receipt `~/.local/state/dotfiles/external-<name>.receipt` records the
   recipe's hash, so editing a recipe (a new version) reinstalls it.

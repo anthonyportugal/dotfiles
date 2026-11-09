@@ -248,7 +248,7 @@ execute_package_install() {
     info "Instalando paquetes AUR con $BACKEND; revise PKGBUILD y prompts del helper"
     "${aur_command[@]}"
   fi
-  # Per user, after the repository step that may have installed curl.
+  # Per user, after the repository step, which may install curl itself.
   execute_external_install || return 1
 
   classify_packages
