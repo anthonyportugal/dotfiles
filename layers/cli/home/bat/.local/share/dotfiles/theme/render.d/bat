@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Rebuilds bat's cache after dotfiles-theme promotes a revision (render, set,
+# a desktop apply or a DOTFILES_THEME override), so the "dotfiles" theme
+# linked into ~/.config/bat/themes carries the active palette and zsh selects
+# it. It never fails the render.
+
+config_dir=${BAT_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/bat}
+cache_dir=${BAT_CACHE_PATH:-${XDG_CACHE_HOME:-$HOME/.cache}/bat}
+
+if ! command -v bat >/dev/null 2>&1; then
+  printf 'bat: bat no está instalado; se omite la caché de temas\n'
+  exit 0
+fi
+# bat is not configured by these dotfiles here.
+[[ -d "$config_dir/themes" ]] || exit 0
+# A render into another target (HOME overridden) must not touch the cache of
+# the running session through an inherited XDG_CACHE_HOME.
+if [[ "$cache_dir" != "$HOME"/* ]]; then
+  printf 'bat: la caché %s está fuera de %s; se omite\n' "$cache_dir" "$HOME"
+  exit 0
+fi
+BAT_CONFIG_DIR="$config_dir" BAT_CACHE_PATH="$cache_dir" bat cache --build >/dev/null 2>&1 || \
+  printf 'bat: no se pudo reconstruir la caché de temas\n' >&2
+exit 0

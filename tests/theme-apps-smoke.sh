@@ -88,7 +88,7 @@ render_in() {
   mkdir -p "$home/.local/share/dotfiles/theme/templates"
   cp -R -- "$MANGO_TEMPLATES" "$home/.local/share/dotfiles/theme/templates/"
   env -u DOTFILES_THEME HOME="$home" XDG_STATE_HOME="$home/.local/state" \
-    XDG_DATA_HOME="$home/.local/share" XDG_CONFIG_HOME="$home/.config" \
+    XDG_DATA_HOME="$home/.local/share" XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" \
     "$ENGINE" render "$id" || fail "no se pudo renderizar $id"
 }
 
@@ -242,7 +242,7 @@ fi
 # CLI configs select the rendered outputs by name or through the environment.
 CLI_HOME="$REPO_ROOT/layers/cli/home"
 ENVIRONMENT="$REPO_ROOT/layers/core/home/zsh/.config/zsh/conf.d/10-environment.zsh"
-BAT_HOOK="$CLI_HOME/bat/.local/share/dotfiles/theme/reload.d/bat"
+BAT_HOOK="$CLI_HOME/bat/.local/share/dotfiles/theme/render.d/bat"
 expect_line "$CLI_HOME/bat/.config/bat/config" '--theme="dotfiles"'
 expect_line "$CLI_HOME/btop/.config/btop/btop.conf" 'color_theme = "dotfiles"'
 grep -Fq '"colorscheme": "default",' "$CLI_HOME/micro/.config/micro/settings.json" || \
@@ -317,19 +317,82 @@ if command -v bat >/dev/null 2>&1; then
     grep -Fxq dotfiles || fail "bat no lista el tema dotfiles"
 fi
 
-# The bat reload hook rebuilds the cache after `set`, and never fails the
-# switch when bat is missing.
-[[ -x "$BAT_HOOK" ]] || fail "falta el hook de recarga ejecutable de bat"
+# The bat render hook rebuilds the cache whenever a revision is promoted
+# (render-only paths like a desktop apply or DOTFILES_THEME included) and on
+# every `set`, never on a render that changes nothing, and never fails it.
+[[ -x "$BAT_HOOK" ]] || fail "falta el hook de render ejecutable de bat"
 STUBS="$TEST_ROOT/stubs"
 mkdir -p "$STUBS"
-printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/bat.args"\n' "$TEST_ROOT" > "$STUBS/bat"
-chmod +x "$STUBS/bat"
-PATH="$STUBS:$PATH" "$BAT_HOOK" || fail "el hook de bat falló"
-[[ "$(<"$TEST_ROOT/bat.args")" == 'cache --build' ]] || fail "el hook de bat no reconstruyó la caché"
+cat > "$STUBS/bat" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$TEST_ROOT/bat.args"
+mkdir -p "\$BAT_CACHE_PATH" && : > "\$BAT_CACHE_PATH/themes.bin"
+EOF
+printf '#!/usr/bin/env bash\nexit 0\n' > "$STUBS/gsettings"
+cp -- "$STUBS/gsettings" "$STUBS/notify-send"
+chmod +x "$STUBS/bat" "$STUBS/gsettings" "$STUBS/notify-send"
+bat_builds() {
+  [[ -e "$TEST_ROOT/bat.args" ]] || { printf '0\n'; return 0; }
+  grep -cFx 'cache --build' "$TEST_ROOT/bat.args" || true
+}
+HOOKS="$TEST_ROOT/home-hooks"
+mkdir -p "$HOOKS/.config/bat/themes" "$HOOKS/.local/share/dotfiles/theme/render.d"
+cp -- "$BAT_HOOK" "$HOOKS/.local/share/dotfiles/theme/render.d/bat"
+TM_THEME="$HOOKS/.config/bat/themes/dotfiles.tmTheme"
+BAT_CACHE="$HOOKS/.cache/bat/themes.bin"
+PATH="$STUBS:$PATH" render_in catppuccin-mocha-pink "$HOOKS" >/dev/null
+[[ "$(bat_builds)" == 1 && -e "$BAT_CACHE" && ! "$TM_THEME" -nt "$BAT_CACHE" ]] || \
+  fail "render no reconstruyó la caché de bat ($(bat_builds))"
+if command -v zsh >/dev/null 2>&1; then
+  [[ "$(zsh_env "$HOOKS")" == dotfiles\|* ]] || fail "zsh no seleccionó bat tras un render: $(zsh_env "$HOOKS")"
+fi
+PATH="$STUBS:$PATH" render_in catppuccin-mocha-blue "$HOOKS" >/dev/null
+# Back to a revision rendered before: its tmTheme is older than the cache of
+# the blue theme, so only a rebuild makes the cache match it again.
+PATH="$STUBS:$PATH" render_in catppuccin-mocha-pink "$HOOKS" >/dev/null
+[[ "$(bat_builds)" == 3 ]] || fail "volver a una revisión existente no reconstruyó la caché de bat ($(bat_builds))"
+PATH="$STUBS:$PATH" render_in catppuccin-mocha-pink "$HOOKS" >/dev/null
+[[ "$(bat_builds)" == 3 ]] || fail "un render sin cambios reconstruyó la caché de bat ($(bat_builds))"
+env -u DOTFILES_THEME PATH="$STUBS:$PATH" HOME="$HOOKS" XDG_STATE_HOME="$HOOKS/.local/state" \
+  XDG_DATA_HOME="$HOOKS/.local/share" XDG_CONFIG_HOME="$HOOKS/.config" XDG_CACHE_HOME="$HOOKS/.cache" \
+  "$ENGINE" set catppuccin-mocha-pink >/dev/null || fail "set falló con el hook de bat"
+[[ "$(bat_builds)" == 4 ]] || fail "set no reconstruyó la caché de bat ($(bat_builds))"
+[[ ! -e "$CLI_HOME/bat/.local/share/dotfiles/theme/reload.d/bat" ]] || fail "bat sigue como hook de recarga"
+# A failing or chatty hook only warns: the render succeeds and its stdout is
+# still the revision path alone.
+printf '#!/usr/bin/env bash\necho ruido\nexit 3\n' > "$HOOKS/.local/share/dotfiles/theme/render.d/falla"
+chmod +x "$HOOKS/.local/share/dotfiles/theme/render.d/falla"
+output=$(PATH="$STUBS:$PATH" render_in catppuccin-mocha-blue "$HOOKS" 2>"$TEST_ROOT/hooks.err") || \
+  fail "un hook de render fallido hizo fallar el render"
+[[ "$output" == "$HOOKS/.local/state/dotfiles/theme/catppuccin-mocha-blue-"* && "$output" != *$'\n'* ]] || \
+  fail "la salida de un hook de render se mezcló con la ruta: $output"
+grep -Fq 'falla' "$TEST_ROOT/hooks.err" || fail "no se avisó del hook de render fallido"
+[[ "$(bat_builds)" == 5 ]] || fail "un hook fallido impidió reconstruir la caché de bat ($(bat_builds))"
+
+# Without bat the hook reports it and succeeds; a cache outside HOME (an
+# inherited XDG_CACHE_HOME while rendering into another target) is skipped.
 NO_BAT="$TEST_ROOT/no-bat"
 mkdir -p "$NO_BAT"
 ln -s "$(command -v bash)" "$NO_BAT/bash"
-output=$(PATH="$NO_BAT" "$BAT_HOOK" 2>&1) || fail "el hook de bat falló sin bat instalado"
+output=$(env HOME="$HOOKS" PATH="$NO_BAT" "$BAT_HOOK" 2>&1) || fail "el hook de bat falló sin bat instalado"
 [[ "$output" == *'bat no está instalado'* ]] || fail "el hook de bat no informó que falta bat: $output"
+output=$(env -u BAT_CACHE_PATH -u BAT_CONFIG_DIR HOME="$HOOKS" XDG_CONFIG_HOME="$HOOKS/.config" \
+  XDG_CACHE_HOME="$TEST_ROOT/outside-cache" PATH="$STUBS:$PATH" "$BAT_HOOK" 2>&1) || \
+  fail "el hook de bat falló con la caché fuera de HOME"
+[[ ! -e "$TEST_ROOT/outside-cache" && "$(bat_builds)" == 5 && "$output" == *'fuera de'* ]] || \
+  fail "el hook de bat escribió una caché fuera de HOME: $output"
+
+# The real bat lists the rendered theme after a render-only path, with its
+# cache newer than the tmTheme.
+if command -v bat >/dev/null 2>&1; then
+  REAL="$TEST_ROOT/home-real-bat"
+  mkdir -p "$REAL/.config/bat/themes" "$REAL/.local/share/dotfiles/theme/render.d"
+  cp -- "$BAT_HOOK" "$REAL/.local/share/dotfiles/theme/render.d/bat"
+  render_in catppuccin-mocha-mauve "$REAL" >/dev/null
+  [[ -e "$REAL/.cache/bat/themes.bin" && ! "$REAL/.config/bat/themes/dotfiles.tmTheme" -nt "$REAL/.cache/bat/themes.bin" ]] || \
+    fail "render dejó la caché real de bat más vieja que el tmTheme"
+  BAT_CONFIG_DIR="$REAL/.config/bat" BAT_CACHE_PATH="$REAL/.cache/bat" bat --list-themes --color=never | \
+    grep -Fxq dotfiles || fail "bat no lista el tema dotfiles tras un render"
+fi
 
 printf 'OK: %d paletas renderizadas para las aplicaciones\n' "$rendered"

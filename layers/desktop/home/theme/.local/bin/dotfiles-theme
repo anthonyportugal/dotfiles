@@ -15,11 +15,14 @@ CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
 THEME_ROOT="$STATE_HOME/dotfiles/theme"
 WM_TEMPLATES_DIR="$DATA_HOME/dotfiles/theme/templates"
 RELOAD_DIR="$DATA_HOME/dotfiles/theme/reload.d"
+RENDER_HOOKS_DIR="$DATA_HOME/dotfiles/theme/render.d"
 PALETTES_DIR=''
 SHARED_TEMPLATES_DIR=''
 THEME_ID=''
 PALETTE=''
 RENDER_TEMP=''
+# Set by promote when current now points at another revision.
+PROMOTED_NEW=0
 NAME_PATTERN='^[a-z0-9]+(-[a-z0-9]+)*$'
 
 # Palette values by key, and the value type of every schema key.
@@ -312,18 +315,39 @@ link_outputs() {
 }
 
 promote() {
-  local revision=$1 next_link="$THEME_ROOT/.current.$$"
+  local revision=$1 next_link="$THEME_ROOT/.current.$$" previous=''
 
   if [[ -e "$THEME_ROOT/current" && ! -L "$THEME_ROOT/current" ]]; then
     fail "$THEME_ROOT/current existe y no es un enlace simbólico"
   fi
+  if [[ -L "$THEME_ROOT/current" ]]; then
+    previous=$(readlink -- "$THEME_ROOT/current")
+  fi
+  [[ "$previous" == "$revision" ]] || PROMOTED_NEW=1
   ln -s -- "$revision" "$next_link"
   mv -Tf -- "$next_link" "$THEME_ROOT/current"
   link_outputs
 }
 
+# Runs every executable in render.d after a revision is promoted, so caches
+# built from rendered files (bat) follow every render path, not only `set`.
+# Their stdout goes to stderr: the engine's stdout is the revision path. A
+# failing hook only warns; the theme is already promoted.
+run_render_hooks() {
+  local hook
+
+  [[ -d "$RENDER_HOOKS_DIR" ]] || return 0
+  for hook in "$RENDER_HOOKS_DIR"/*; do
+    [[ -f "$hook" && -x "$hook" ]] || continue
+    DOTFILES_THEME_DIR="$THEME_ROOT/current" "$hook" >&2 || \
+      warn "el hook de render ${hook##*/} falló"
+  done
+}
+
+# Renders and promotes the palette in VALUES. The render.d hooks run when
+# current moves to another revision, or always with $1 = 1 (`set`).
 render_theme() {
-  local revision
+  local revision force_hooks=${1:-0}
 
   mkdir -p -- "$THEME_ROOT"
   command -v flock >/dev/null 2>&1 || fail 'flock es necesario para renderizar temas'
@@ -344,6 +368,9 @@ render_theme() {
   fi
 
   promote "$revision"
+  if (( PROMOTED_NEW == 1 || force_hooks == 1 )); then
+    run_render_hooks
+  fi
   printf '%s\n' "$THEME_ROOT/$revision"
 }
 
@@ -381,7 +408,7 @@ reload_live() {
 set_theme() {
   theme_exists "$1" || fail "tema desconocido: $1"
   read_palette "$1"
-  render_theme
+  render_theme 1
   printf '%s\n' "$1" > "$THEME_ROOT/selected"
   reload_live
   if command -v notify-send >/dev/null 2>&1; then

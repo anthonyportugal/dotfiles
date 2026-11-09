@@ -18,7 +18,7 @@ export FZF_DEFAULT_OPTS="--multi --height=50% --layout=reverse --border"
   local bat_cache="${BAT_CACHE_PATH:-${XDG_CACHE_HOME:-$HOME/.cache}/bat}/themes.bin"
 
   # bat only knows the rendered theme once its cache was rebuilt after the
-  # render (reload hook on `dotfiles-theme set`, or the cli layer's post-link).
+  # render (the render.d hook on every promoted revision, or the cli post-link).
   if [[ -z "${BAT_THEME-}" ]]; then
     if [[ -e "$bat_theme" && -e "$bat_cache" && ! "$bat_theme" -nt "$bat_cache" ]]; then
       export BAT_THEME=dotfiles
