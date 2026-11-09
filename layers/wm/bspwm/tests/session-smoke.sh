@@ -136,7 +136,7 @@ bluetooth_output=$("$CONFIG_ROOT/scripts/polybar-bluetooth")
 grep -qxF gammastep "$REPO_ROOT/packages/repo/desktop.txt" || fail "la capa bspwm no declara gammastep"
 ! grep -rqxF redshift "$REPO_ROOT/packages" || fail "la capa bspwm aún declara redshift"
 # Only the cleanup of a redshift left by the old script may name it.
-if grep -rni redshift "$CONFIG_ROOT" | grep -vE ':[[:space:]]*(#|pkill -x redshift 2>/dev/null \|\| true$)'; then
+if grep -rni redshift "$CONFIG_ROOT" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|pkill -x redshift 2>/dev/null \|\| true$)'; then
   fail "la configuración de bspwm aún usa redshift"
 fi
 grep -q 'pkill -x redshift' "$CONFIG_ROOT/scripts/bspwm-nightlight" || \

@@ -226,7 +226,13 @@ grep -q '^foot --config=[^ ]*/mangowm/foot\.ini --app-id=floating-terminal bluet
 # missing instead of opening a terminal that closes at once.
 mv -- "$FAKE_BIN/bluetui" "$FAKE_BIN/bluetui.off"
 log_lines=$(wc -l < "$LOG")
-sh -c "$bluetooth_click" || true
+# The host's /usr/bin minus bluetui, so a bluetui installed there is not found.
+no_bluetui_bin="$TEST_ROOT/no-bluetui-bin"
+mkdir -p "$no_bluetui_bin"
+for host_command in /usr/bin/*; do
+  [[ "${host_command##*/}" == bluetui ]] || ln -s "$host_command" "$no_bluetui_bin/"
+done
+PATH="$FAKE_BIN:$no_bluetui_bin" sh -c "$bluetooth_click" || true
 click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
 grep -q '^notify-send .*bluetui' <<< "$click_log" || fail "el clic sin bluetui no avisó: $click_log"
 if grep -q '^foot .*bluetui' <<< "$click_log"; then
