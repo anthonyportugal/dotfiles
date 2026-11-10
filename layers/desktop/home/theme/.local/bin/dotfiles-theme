@@ -748,11 +748,12 @@ main() {
       set_theme "$1"
       ;;
     list)
-      case "$#:${1-}" in
-        0:) list_themes ;;
-        1:--tsv) list_themes_tsv ;;
-        *) usage >&2; exit 2 ;;
-      esac
+      # Other arguments are ignored, as before --tsv existed.
+      if [[ "${1-}" == --tsv ]]; then
+        list_themes_tsv
+      else
+        list_themes
+      fi
       ;;
     menu)
       (( $# >= 1 )) || { usage >&2; exit 2; }

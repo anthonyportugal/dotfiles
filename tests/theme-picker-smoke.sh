@@ -140,9 +140,9 @@ tsv=$(in_home '' "$ENGINE" list --tsv)
    $(field catppuccin-mocha-pink 6 <<< "$tsv") == 0 ]] || fail 'list --tsv no siguió la selección'
 rm -f -- "$STATE/selected"
 
-status=0
-in_home '' "$ENGINE" list --json >/dev/null 2>&1 || status=$?
-(( status == 2 )) || fail "list con una opción desconocida devolvió $status"
+# list keeps ignoring other arguments, as it did before --tsv.
+[[ "$(in_home '' "$ENGINE" list extra)" == "$(printf '%s\n' "${plain[@]}")" ]] || \
+  fail 'list con otro argumento cambió su salida'
 help=$(in_home '' "$ENGINE" --help)
 [[ "$help" == *'list [--tsv]'* ]] || fail 'la ayuda no documenta list --tsv'
 
