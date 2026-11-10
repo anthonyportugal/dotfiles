@@ -95,4 +95,11 @@ else
   printf 'SKIP: resolución con fc-match (Noto Color Emoji no instalada)\n'
 fi
 
+# Waybar mixes text and icons in proportional widgets: the Propo variant gives
+# Nerd icons their real advance, so a wide icon does not run into the next
+# module (the plain variant keeps them at one cell and lets them overflow).
+waybar_css="$REPO_ROOT/layers/wm/mangowm/home/mango/.local/share/dotfiles/theme/templates/mangowm/waybar.css"
+grep -q 'font-family: "JetBrainsMono Nerd Font Propo"' "$waybar_css" || \
+  fail 'waybar no usa JetBrainsMono Nerd Font Propo'
+
 printf 'OK: fonts-smoke\n'

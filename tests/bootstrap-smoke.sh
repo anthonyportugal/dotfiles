@@ -122,8 +122,14 @@ grep -q "shell de login.*'/bin/bash'" "$TEST_ROOT/zsh-activation.out" ||
 grep -q 'chsh -s /bin/zsh' "$TEST_ROOT/zsh-activation.out" ||
   fail "doctor no eligió una ruta Zsh registrada"
 
+# The ls fallback, checked on a PATH without eza (the host may have it).
+no_eza_bin="$TEST_ROOT/no-eza-bin"
+mkdir -p "$no_eza_bin"
+for host_command in /usr/bin/*; do
+  [[ "${host_command##*/}" == eza ]] || ln -s "$host_command" "$no_eza_bin/"
+done
 for alias_name in l la ll ld; do
-  alias_definition=$(zsh -dfc 'source "$1"; alias "$2"' \
+  alias_definition=$(PATH="$no_eza_bin" zsh -dfc 'source "$1"; alias "$2"' \
     dotfiles-alias-check \
     "$REPO_ROOT/layers/core/home/zsh/.config/zsh/conf.d/40-aliases.zsh" "$alias_name")
   [[ "$alias_definition" == *'ls --color=auto '* ]] ||
