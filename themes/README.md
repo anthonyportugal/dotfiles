@@ -121,6 +121,7 @@ failing hook only warns, because the theme is already promoted.
 $XDG_STATE_HOME/dotfiles/theme/
 ├── selected                      # saved theme id
 ├── current -> <id>-<digest>      # promoted atomically
+├── swatches/<id>.svg             # menu icons from `list --tsv`: accent disc on the background
 └── <id>-<digest>/
     ├── gtk.css                   # @define-color overrides, imported by ~/.config/gtk-{3.0,4.0}/gtk.css
     ├── yazi/flavor.toml          # linked as ~/.config/yazi/flavors/theme.yazi; previews use the bat theme
@@ -177,8 +178,27 @@ one command.
 ## Commands
 
 ```text
-dotfiles-theme list | current | set <id> | render [id] | validate [id] | path
+dotfiles-theme list [--tsv] | current | set <id> | render [id] | validate [id] | path
 ```
+
+`list` prints one theme id per line, sorted. `list --tsv` is the listing the
+theme menus read: one line per theme, in the same order, with these
+tab-separated columns:
+
+| # | Column | Example |
+|---|--------|---------|
+| 1 | id | `sanctuary-compline-cobalt` |
+| 2 | family | `sanctuary` |
+| 3 | flavour | `compline` |
+| 4 | accent name | `cobalt` |
+| 5 | accent color | `#9bc1fb` |
+| 6 | active (`1` for the selected theme, else `0`) | `0` |
+| 7 | swatch icon path | `~/.local/state/dotfiles/theme/swatches/sanctuary-compline-cobalt.svg` |
+
+The swatches are small SVGs (the accent as a disc with a foreground ring on the
+background) written into the theme state, never into the repository; `list
+--tsv` rewrites a swatch only when it is missing or no longer matches its
+palette.
 
 `set` renders, runs every render hook, saves the selection, syncs the GNOME
 accent color and cursor and runs every reload hook. `path` renders first when nothing is

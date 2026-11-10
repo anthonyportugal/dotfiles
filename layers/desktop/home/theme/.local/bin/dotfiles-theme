@@ -16,10 +16,14 @@ THEME_ROOT="$STATE_HOME/dotfiles/theme"
 WM_TEMPLATES_DIR="$DATA_HOME/dotfiles/theme/templates"
 RELOAD_DIR="$DATA_HOME/dotfiles/theme/reload.d"
 RENDER_HOOKS_DIR="$DATA_HOME/dotfiles/theme/render.d"
+# Color swatch icons of every palette for the theme menus. They are derived
+# from the palettes and rewritten whenever missing or out of date.
+SWATCH_DIR="$THEME_ROOT/swatches"
 PALETTES_DIR=''
 SHARED_TEMPLATES_DIR=''
 THEME_ID=''
 PALETTE=''
+SWATCH_PATH=''
 RENDER_TEMP=''
 # Set by promote when current now points at another revision.
 PROMOTED_NEW=0
@@ -48,7 +52,20 @@ cleanup_render() {
 trap cleanup_render EXIT
 
 usage() {
-  printf 'Uso: %s render [id]|set <id>|list|current|validate [id]|path\n' "$PROGRAM_NAME"
+  cat <<HELP
+Uso: $PROGRAM_NAME <comando> [argumentos]
+
+Comandos:
+  list [--tsv]    Lista los ids de tema, uno por línea. Con --tsv imprime por
+                  tema, separados por tabuladores: id, familia, flavour,
+                  acento, color de acento, activo (1 o 0) y la ruta de su
+                  muestra SVG (se regenera si falta o cambió)
+  current         Muestra el tema activo
+  set <id>        Renderiza y aplica un tema
+  render [id]     Renderiza un tema sin activarlo
+  validate [id]   Valida una paleta
+  path            Muestra la ruta del tema renderizado activo
+HELP
 }
 
 # The engine is stowed as a link into the checkout; the repository is the
@@ -434,6 +451,46 @@ list_themes() {
   done | LC_ALL=C sort
 }
 
+# Writes the swatch icon of the palette in VALUES unless the file already
+# holds it: the background as a rounded square, the accent as a disc with a
+# foreground ring. Stores its path in SWATCH_PATH.
+write_swatch() {
+  local svg current='' temp
+
+  SWATCH_PATH="$SWATCH_DIR/${VALUES[id]}.svg"
+  printf -v svg '%s\n' \
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' \
+    "  <rect x=\"2\" y=\"2\" width=\"44\" height=\"44\" rx=\"10\" fill=\"${VALUES[background]}\" stroke=\"${VALUES[border]}\" stroke-width=\"2\"/>" \
+    "  <circle cx=\"24\" cy=\"24\" r=\"12\" fill=\"${VALUES[accent]}\" stroke=\"${VALUES[foreground]}\" stroke-width=\"2\"/>" \
+    '</svg>'
+  if [[ -f "$SWATCH_PATH" && ! -L "$SWATCH_PATH" ]]; then
+    IFS= read -r -d '' current < "$SWATCH_PATH" || true
+  fi
+  [[ "$current" != "$svg" ]] || return 0
+  mkdir -p -- "$SWATCH_DIR"
+  temp=$(mktemp "$SWATCH_DIR/.swatch.XXXXXX")
+  printf '%s' "$svg" > "$temp"
+  chmod 0644 -- "$temp"
+  mv -Tf -- "$temp" "$SWATCH_PATH"
+}
+
+# One line per theme, in `list` order: id, family, flavour, accent_name,
+# accent, 1 for the active theme (0 otherwise) and its swatch path.
+list_themes_tsv() {
+  local active id is_active
+
+  active=$(resolve_theme_id)
+  while IFS= read -r id; do
+    read_palette "$id"
+    write_swatch
+    is_active=0
+    [[ "$id" != "$active" ]] || is_active=1
+    printf '%s\t%s\t%s\t%s\t%s\t%d\t%s\n' "$id" "${VALUES[family]}" \
+      "${VALUES[flavour]}" "${VALUES[accent_name]}" "${VALUES[accent]}" \
+      "$is_active" "$SWATCH_PATH"
+  done < <(list_themes)
+}
+
 main() {
   local command=${1-}
   shift || true
@@ -450,7 +507,11 @@ main() {
       set_theme "$1"
       ;;
     list)
-      list_themes
+      case "$#:${1-}" in
+        0:) list_themes ;;
+        1:--tsv) list_themes_tsv ;;
+        *) usage >&2; exit 2 ;;
+      esac
       ;;
     current)
       read_palette "$(resolve_theme_id)"

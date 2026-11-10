@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Test double for session programs (notify-send, gsettings, ...): records its
+# name and arguments in $PICKER_LOG and succeeds.
+printf '%s %s\n' "${0##*/}" "$*" >> "${PICKER_LOG:?}"
