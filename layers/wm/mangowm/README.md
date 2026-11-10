@@ -122,16 +122,16 @@ stays installed without passing `--wm` again.
 
 The desktop is styled with **Catppuccin Mocha**, supporting all **14 official accent palettes** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*) with **Pink (`#f5c2e7`)** configured as the initial default.
 
-- **Interactive Theme Selector:** Press `Super + Alt + T` to switch color palettes in real-time via Fuzzel.
+- **Interactive Theme Selector:** Press `Super + Alt + T` to pick a theme in real time via Fuzzel, in three levels: family (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; skipped for a family with one flavour, such as Catppuccin Mocha) → accent. Every entry shows a color swatch, the active theme is marked `(actual)`, and `Esc` goes back one level (it closes the menu from the first). The levels come from `dotfiles-theme menu`.
 - **Theming CLI (`mango-theme`, a front end for `dotfiles-theme`):**
   ```bash
   # Open interactive theme menu
   mango-theme menu
 
-  # Set a specific accent directly (e.g., mauve, blue, teal, peach)
+  # Set a specific theme directly (e.g., mauve, blue, teal, peach)
   mango-theme set catppuccin-mocha-mauve
 
-  # List all available Catppuccin Mocha flavors
+  # List every theme id (Catppuccin Mocha and Sanctuary)
   mango-theme list
 
   # Display current active theme
@@ -167,7 +167,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 
 | Shortcut | Action |
 | :--- | :--- |
-| `Super + Alt + T` | Open interactive Catppuccin Mocha theme switcher (Fuzzel) |
+| `Super + Alt + T` | Open the interactive theme picker (Fuzzel: family → flavour → accent) |
 | `Super + L` | Lock screen immediately (Swaylock) |
 | `Super + X` | Open session power menu (Wlogout) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Fuzzel) |

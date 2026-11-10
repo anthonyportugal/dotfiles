@@ -10,6 +10,7 @@ set -Eeuo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 ENGINE="$REPO_ROOT/layers/desktop/home/theme/.local/bin/dotfiles-theme"
+MANGO_HOME="$REPO_ROOT/layers/wm/mangowm/home/mango"
 TEST_TMP_PARENT=${DOTFILES_TEST_TMPDIR:-/tmp}
 TEST_ROOT=''
 
@@ -64,6 +65,34 @@ field() {
   awk -F '\t' -v id="$1" -v n="$2" '$1 == id { print $n }'
 }
 
+# Labels and icons of the rows menu call $1 received ("label\0icon\x1fpath").
+labels() {
+  tr '\000' '\036' < "$PICKER_DIR/$1.in" | sed 's/\x1e.*$//'
+}
+icons() {
+  tr '\000' '\036' < "$PICKER_DIR/$1.in" | sed -n 's/^.*\x1eicon\x1f//p'
+}
+calls() {
+  cat "$PICKER_DIR/count" 2>/dev/null || printf '0\n'
+}
+# Arguments of menu call $1, one per line.
+call_args() {
+  awk -v n="$1" '/^=== / { on = ($3 == n); next } on' "$PICKER_LOG"
+}
+selected() {
+  cat "$STATE/selected" 2>/dev/null || true
+}
+# Every icon of menu call $1 is an existing swatch, as many as its rows.
+check_icons() {
+  local icon count=0
+  while IFS= read -r icon; do
+    [[ "$icon" == "$STATE/swatches/"*.svg && -s "$icon" ]] || \
+      fail "icono inexistente en la llamada $1: $icon"
+    count=$((count + 1))
+  done < <(icons "$1")
+  (( count == $(labels "$1" | wc -l) )) || fail "filas sin icono en la llamada $1"
+}
+
 # --- 1. Engine listing and swatches ---------------------------------------
 
 mapfile -t plain < <(in_home '' "$ENGINE" list)
@@ -115,6 +144,67 @@ in_home '' "$ENGINE" list --json >/dev/null 2>&1 || status=$?
 (( status == 2 )) || fail "list con una opción desconocida devolvió $status"
 help=$(in_home '' "$ENGINE" --help)
 [[ "$help" == *'list [--tsv]'* ]] || fail 'la ayuda no documenta list --tsv'
+
+# --- 2. MangoWM: mango-theme menu (fuzzel through mangowm_menu) ------------
+
+mkdir -p -- "$H/.local/lib/mangowm" "$H/.local/share/dotfiles/theme/templates"
+ln -s -- "$ENGINE" "$H/.local/bin/dotfiles-theme"
+ln -s -- "$MANGO_HOME/.local/bin/mango-theme" "$H/.local/bin/mango-theme"
+ln -s -- "$MANGO_HOME/.local/lib/mangowm/common" "$H/.local/lib/mangowm/common"
+ln -s -- "$MANGO_HOME/.local/share/dotfiles/theme/templates/mangowm" \
+  "$H/.local/share/dotfiles/theme/templates/mangowm"
+mango_menu() {
+  in_home "$1" "$H/.local/bin/mango-theme" menu
+}
+
+# Esc on the first level exits without applying anything.
+mango_menu 'esc' || fail 'Esc en el primer nivel no salió con 0'
+(( $(calls) == 1 )) || fail "Esc en el primer nivel abrió $(calls) menús"
+[[ "$(labels 1)" == $'Catppuccin  (actual)\nSanctuary' ]] || fail "familias: $(labels 1)"
+[[ "$(icons 1)" == "$STATE/swatches/catppuccin-mocha-pink.svg"$'\n'"$STATE/swatches/sanctuary-compline-amber.svg" ]] || \
+  fail "iconos de familia: $(icons 1)"
+check_icons 1
+call_args 1 | grep -qx -- '--prompt=Tema ❯ ' || fail "prompt de familias: $(call_args 1)"
+[[ -z "$(selected)" ]] || fail 'Esc aplicó un tema'
+
+# Catppuccin has one flavour (mocha): its accents come next, and Esc there
+# goes back to the families.
+mango_menu '1 esc esc'
+(( $(calls) == 3 )) || fail "Catppuccin, Esc, Esc abrió $(calls) menús"
+(( $(labels 2 | wc -l) == 14 )) || fail "acentos de Catppuccin: $(labels 2 | wc -l)"
+labels 2 | grep -qx 'Pink  (actual)' || fail "Pink sin marca de activo: $(labels 2)"
+labels 2 | grep -qx 'Rosewater' || fail 'falta Rosewater'
+(( $(labels 2 | grep -c 'actual') == 1 )) || fail 'más de un acento marcado'
+check_icons 2
+[[ "$(icons 2 | head -1)" == "$STATE/swatches/catppuccin-mocha-blue.svg" ]] || \
+  fail "icono del primer acento: $(icons 2 | head -1)"
+call_args 2 | grep -qx -- '--prompt=Catppuccin · Mocha ❯ ' || fail "prompt de acentos: $(call_args 2)"
+[[ "$(labels 3)" == "$(labels 1)" ]] || fail 'Esc en los acentos no volvió a las familias'
+[[ -z "$(selected)" ]] || fail 'Esc aplicó un tema'
+
+# Sanctuary has three flavours; Esc steps back one level at a time.
+mango_menu '2 1 esc esc esc'
+(( $(calls) == 5 )) || fail "Sanctuary → Compline → Esc ×3 abrió $(calls) menús"
+[[ "$(labels 2)" == $'Compline\nMatins\nVespers' ]] || fail "flavours: $(labels 2)"
+check_icons 2
+call_args 2 | grep -qx -- '--prompt=Sanctuary ❯ ' || fail "prompt de flavours: $(call_args 2)"
+[[ "$(labels 3)" == $'Amber\nAmethyst\nAzure\nCobalt\nEmber\nGilt\nIndigo\nMurrey\nRose\nRuby\nVerdure\nViridian' ]] || \
+  fail "acentos de Compline: $(labels 3)"
+check_icons 3
+[[ "$(labels 4)" == "$(labels 2)" && "$(labels 5)" == "$(labels 1)" ]] || \
+  fail 'Esc no retrocedió nivel por nivel'
+
+# Choosing an accent applies it through dotfiles-theme set.
+mango_menu '2 1 4' >/dev/null || fail 'aplicar Sanctuary Compline Cobalt falló'
+[[ "$(selected)" == sanctuary-compline-cobalt ]] || fail "set no guardó cobalt: $(selected)"
+grep -q '^notify-send .*Tema aplicado.*sanctuary-compline-cobalt' "$PICKER_LOG" || \
+  fail 'set no notificó el tema aplicado'
+mango_menu '2 esc esc'
+[[ "$(labels 1)" == $'Catppuccin\nSanctuary  (actual)' ]] || fail "familia activa: $(labels 1)"
+[[ "$(labels 2)" == $'Compline  (actual)\nMatins\nVespers' ]] || fail "flavour activo: $(labels 2)"
+[[ "$(icons 1 | tail -1)" == "$STATE/swatches/sanctuary-compline-cobalt.svg" ]] || \
+  fail 'la familia activa no muestra la muestra del tema activo'
+rm -f -- "$STATE/selected"
 
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || \
   fail 'el selector modificó el checkout'

@@ -122,16 +122,16 @@ capa sigue instalada sin volver a pasar `--wm`.
  
 El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas de acento oficiales** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*), con **Pink (`#f5c2e7`)** configurado como valor inicial predeterminado.
 
-- **Selector Interactivo de Temas:** Presiona `Super + Alt + T` para cambiar la paleta de colores en tiempo real mediante Fuzzel.
+- **Selector Interactivo de Temas:** Presiona `Super + Alt + T` para elegir un tema en tiempo real mediante Fuzzel, en tres niveles: familia (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; se omite en una familia con un solo flavour, como Catppuccin Mocha) → acento. Cada entrada muestra una muestra de color, el tema activo se marca `(actual)` y `Esc` vuelve un nivel (desde el primero cierra el menú). Los niveles vienen de `dotfiles-theme menu`.
 - **CLI de Tematización (`mango-theme`, interfaz de `dotfiles-theme`):**
   ```bash
   # Abrir el menú interactivo de temas
   mango-theme menu
 
-  # Establecer un acento específico directamente (ej. mauve, blue, teal, peach)
+  # Establecer un tema específico directamente (ej. mauve, blue, teal, peach)
   mango-theme set catppuccin-mocha-mauve
 
-  # Listar todos los acentos disponibles de Catppuccin Mocha
+  # Listar todos los ids de tema (Catppuccin Mocha y Sanctuary)
   mango-theme list
 
   # Mostrar el tema activo actual
@@ -167,7 +167,7 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
 
 | Atajo | Acción |
 | :--- | :--- |
-| `Super + Alt + T` | Abrir selector interactivo de temas Catppuccin Mocha (Fuzzel) |
+| `Super + Alt + T` | Abrir el selector interactivo de temas (Fuzzel: familia → flavour → acento) |
 | `Super + L` | Bloquear pantalla de inmediato (Swaylock) |
 | `Super + X` | Abrir menú de apagado/energía (Wlogout) |
 | `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Fuzzel) |

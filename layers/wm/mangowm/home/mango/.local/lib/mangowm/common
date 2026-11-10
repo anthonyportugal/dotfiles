@@ -84,14 +84,31 @@ mangowm_menu_label() {
   _mangowm_label=$text
 }
 
+# Prints the rows of mangowm_menu from its labels and icons arrays; with no
+# entries, one empty row as before icons existed.
+mangowm_menu_rows() {
+  local i
+
+  (( ${#labels[@]} > 0 )) || { printf '\n'; return 0; }
+  for i in "${!labels[@]}"; do
+    if [[ -n "${icons[i]}" ]]; then
+      printf '%s\0icon\x1f%s\n' "${labels[i]}" "${icons[i]}"
+    else
+      printf '%s\n' "${labels[i]}"
+    fi
+  done
+}
+
 # mangowm_menu <prompt> [fuzzel arguments...] < entries
 # One entry per line; "label<TAB>value" shows the label and returns the value,
-# which may itself hold tabs. Prints nothing when the menu is dismissed.
+# which may itself hold tabs. A label may end in "<US>icon" (the 0x1f unit
+# separator, then an icon name or absolute path), drawn by fuzzel next to the
+# entry. Prints nothing when the menu is dismissed.
 mangowm_menu() {
   local prompt=$1
   shift
-  local theme_dir entry label max_label width widest index
-  local labels=() values=()
+  local theme_dir entry label max_label width widest index icon
+  local labels=() values=() icons=()
 
   theme_dir=$(mangowm_theme_dir) || {
     mangowm_notify critical 'Menú no disponible' \
@@ -103,13 +120,20 @@ mangowm_menu() {
   widest=0
 
   while IFS= read -r entry || [[ -n "$entry" ]]; do
+    label=$entry
+    [[ "$entry" == *$'\t'* ]] && label=${entry%%$'\t'*}
+    icon=''
+    if [[ "$label" == *$'\x1f'* ]]; then
+      icon=${label#*$'\x1f'}
+      label=${label%%$'\x1f'*}
+    fi
     if [[ "$entry" == *$'\t'* ]]; then
       values+=("${entry#*$'\t'}")
-      entry=${entry%%$'\t'*}
     else
-      values+=("$entry")
+      values+=("$label")
     fi
-    mangowm_menu_label label "$entry" "$max_label"
+    icons+=("$icon")
+    mangowm_menu_label label "$label" "$max_label"
     (( ${#label} > widest )) && widest=${#label}
     labels+=("$label")
   done
@@ -120,7 +144,7 @@ mangowm_menu() {
 
   # fuzzel prints the index of the chosen label, so labels need no encoding
   # and duplicated labels still return their own value.
-  index=$(printf '%s\n' "${labels[@]}" | fuzzel --dmenu --index \
+  index=$(mangowm_menu_rows | fuzzel --dmenu --index \
     --config="$theme_dir/fuzzel.ini" --prompt="$prompt" --width="$width" "$@") || return $?
   [[ "$index" =~ ^[0-9]+$ ]] && (( index < ${#values[@]} )) || return 0
   printf '%s\n' "${values[index]}"

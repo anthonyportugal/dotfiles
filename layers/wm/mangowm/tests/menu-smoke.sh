@@ -126,7 +126,19 @@ status=0
 picked=$(printf '%s\n' 'Conectar' | FUZZEL_PICK=0 mangowm_menu 'Red ❯ ') || status=$?
 [[ -z "$picked" && $status -eq 1 ]] || fail "menú cerrado: '$picked', estado $status"
 
-# 8. A theme that cannot be loaded is reported instead of failing silently.
+# 8. "label<US>icon<TAB>value" entries draw the icon with fuzzel's
+# "\0icon\x1f" row suffix; the icon counts for neither the width nor the value.
+picked=$(printf 'Cobalto\037/tmp/cobalt.svg\tsanctuary-compline-cobalt\nSin icono\tplain\n' | \
+  FUZZEL_PICK=1 mangowm_menu 'Tema ❯ ')
+[[ "$picked" == 'sanctuary-compline-cobalt' ]] || fail "con icono devolvió '$picked'"
+printf 'Cobalto\0icon\037/tmp/cobalt.svg\nSin icono\n' > "$TEST_ROOT/icon-rows"
+cmp -s "$ROWS_LOG" "$TEST_ROOT/icon-rows" || \
+  fail "filas con icono inesperadas: $(od -c "$ROWS_LOG" | head -3)"
+picked=$(printf 'Solo\037/tmp/x.svg\n' | FUZZEL_PICK=1 mangowm_menu 'Tema ❯ ')
+[[ "$picked" == 'Solo' ]] || fail "sin valor devolvió '$picked' en vez de la etiqueta"
+[[ $(arg width) == "$MANGOWM_MENU_MIN_WIDTH" ]] || fail 'el icono contó para el ancho'
+
+# 9. A theme that cannot be loaded is reported instead of failing silently.
 mangowm_theme_dir() { return 1; }
 status=0
 printf '%s\n' 'Conectar' | mangowm_menu 'Red ❯ ' >/dev/null || status=$?

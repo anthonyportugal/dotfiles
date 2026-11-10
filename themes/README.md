@@ -179,6 +179,7 @@ one command.
 
 ```text
 dotfiles-theme list [--tsv] | current | set <id> | render [id] | validate [id] | path
+dotfiles-theme menu <command> [args...]
 ```
 
 `list` prints one theme id per line, sorted. `list --tsv` is the listing the
@@ -199,6 +200,16 @@ The swatches are small SVGs (the accent as a disc with a foreground ring on the
 background) written into the theme state, never into the repository; `list
 --tsv` rewrites a swatch only when it is missing or no longer matches its
 palette.
+
+`menu` is the theme picker the WM menus share: family → flavour → accent,
+each entry with its swatch and the active theme marked `(actual)` (also on its
+family and flavour). For each level it runs `<command> [args...] <prompt>`
+with one entry per line on stdin, `label<US>icon<TAB>value` (`US` is the 0x1f
+unit separator, `icon` the swatch path), and reads the chosen value from its
+stdout; a non-zero exit (Esc) goes back one level and leaves from the first. A
+level with a single entry is skipped (Catppuccin has only Mocha), and the
+chosen theme is applied with `set`. `mango-theme menu` passes its fuzzel
+adapter (`mangowm_menu`).
 
 `set` renders, runs every render hook, saves the selection, syncs the GNOME
 accent color and cursor and runs every reload hook. `path` renders first when nothing is
