@@ -122,7 +122,7 @@ stays installed without passing `--wm` again.
 
 The desktop is styled with **Catppuccin Mocha**, supporting all **14 official accent palettes** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*) with **Pink (`#f5c2e7`)** configured as the initial default.
 
-- **Interactive Theme Selector:** Press `Super + Alt + T` to pick a theme in real time via Fuzzel, in three levels: family (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; skipped for a family with one flavour, such as Catppuccin Mocha) → accent. Every entry shows a color swatch, the active theme is marked `(actual)`, and `Esc` goes back one level (it closes the menu from the first). The levels come from `dotfiles-theme menu`.
+- **Interactive Theme Selector:** Press `Super + Alt + T` to pick a theme in real time via Fuzzel, in three levels: family (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; skipped for a family with one flavour, such as Catppuccin Mocha) → accent. Every entry shows a color swatch, the active theme is marked `(actual)`, and `Esc` goes back one level (it closes the menu from the first). The levels come from `dotfiles-theme menu`, shared with the bspwm Rofi picker.
 - **Theming CLI (`mango-theme`, a front end for `dotfiles-theme`):**
   ```bash
   # Open interactive theme menu

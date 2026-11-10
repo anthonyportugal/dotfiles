@@ -119,16 +119,16 @@ capa sigue instalada sin volver a pasar `--wm`.
 
 El escritorio está estilizado con **Catppuccin Mocha**, soportando las **14 paletas oficiales de color de acento** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*) con **Pink (`#f5c2e7`)** configurado como valor inicial por defecto.
 
-- **Selector Interactivo de Temas:** Presiona `Super + Shift + T` para alternar colores de acento en tiempo real mediante Rofi.
+- **Selector Interactivo de Temas:** Presiona `Super + Shift + T` para elegir un tema en tiempo real mediante Rofi, en tres niveles: familia (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; se omite en una familia con un solo flavour, como Catppuccin Mocha) → acento. Cada entrada muestra una muestra de color, el tema activo se marca `(actual)` y `Esc` vuelve un nivel (desde el primero cierra el menú). Los niveles vienen de `dotfiles-theme menu`, compartido con el selector Fuzzel de MangoWM.
 - **CLI Dinámica de Temas (`bspwm-theme`):**
   ```bash
   # Abrir menú interactivo con Rofi
   bspwm-theme menu
 
-  # Aplicar un acento específico directamente (ej. mauve, blue, teal, peach)
+  # Aplicar un tema específico directamente (ej. mauve, blue, teal, peach)
   bspwm-theme set catppuccin-mocha-mauve
 
-  # Listar todos los colores de acento disponibles
+  # Listar todos los ids de tema (Catppuccin Mocha y Sanctuary)
   bspwm-theme list
 
   # Mostrar el tema de acento activo
@@ -168,7 +168,7 @@ El escritorio está estilizado con **Catppuccin Mocha**, soportando las **14 pal
 
 | Atajo | Acción |
 | :--- | :--- |
-| `Super + Shift + T` | Abrir selector interactivo de temas de acento Catppuccin Mocha (Rofi) |
+| `Super + Shift + T` | Abrir el selector interactivo de temas (Rofi: familia → flavour → acento) |
 | `Super + L` | Bloquear pantalla de inmediato (slock / i3lock) |
 | `Super + X` | Abrir menú de apagado/energía (Rofi) |
 | `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Rofi) |

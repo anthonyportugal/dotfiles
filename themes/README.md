@@ -209,7 +209,7 @@ unit separator, `icon` the swatch path), and reads the chosen value from its
 stdout; a non-zero exit (Esc) goes back one level and leaves from the first. A
 level with a single entry is skipped (Catppuccin has only Mocha), and the
 chosen theme is applied with `set`. `mango-theme menu` passes its fuzzel
-adapter (`mangowm_menu`).
+adapter (`mangowm_menu`), `bspwm-theme menu` its Rofi one.
 
 `set` renders, runs every render hook, saves the selection, syncs the GNOME
 accent color and cursor and runs every reload hook. `path` renders first when nothing is

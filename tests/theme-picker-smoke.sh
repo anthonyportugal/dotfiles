@@ -11,6 +11,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
 ENGINE="$REPO_ROOT/layers/desktop/home/theme/.local/bin/dotfiles-theme"
 MANGO_HOME="$REPO_ROOT/layers/wm/mangowm/home/mango"
+BSPWM_CONFIG="$REPO_ROOT/layers/wm/bspwm/home/bspwm/.config/bspwm"
 TEST_TMP_PARENT=${DOTFILES_TEST_TMPDIR:-/tmp}
 TEST_ROOT=''
 
@@ -204,6 +205,47 @@ mango_menu '2 esc esc'
 [[ "$(labels 2)" == $'Compline  (actual)\nMatins\nVespers' ]] || fail "flavour activo: $(labels 2)"
 [[ "$(icons 1 | tail -1)" == "$STATE/swatches/sanctuary-compline-cobalt.svg" ]] || \
   fail 'la familia activa no muestra la muestra del tema activo'
+rm -f -- "$STATE/selected"
+
+# --- 3. bspwm: bspwm-theme menu (rofi), same levels ------------------------
+
+ln -s -- "$BSPWM_CONFIG" "$H/.config/bspwm"
+ln -s -- "$REPO_ROOT/layers/wm/bspwm/home/bspwm/.local/share/dotfiles/theme/templates/bspwm" \
+  "$H/.local/share/dotfiles/theme/templates/bspwm"
+in_home '' "$ENGINE" render >/dev/null
+bspwm_menu() {
+  in_home "$1" "$H/.config/bspwm/scripts/bspwm-theme" menu
+}
+
+bspwm_menu 'esc' || fail 'Esc en el primer nivel de rofi no salió con 0'
+(( $(calls) == 1 )) || fail "Esc en rofi abrió $(calls) menús"
+[[ "$(labels 1)" == $'Catppuccin  (actual)\nSanctuary' ]] || fail "familias en rofi: $(labels 1)"
+check_icons 1
+call_args 1 | grep -qx -- '-dmenu' || fail 'rofi sin -dmenu'
+call_args 1 | grep -qx 'Tema ❯' || fail "prompt de rofi: $(call_args 1)"
+call_args 1 | grep -q 'show-icons: true' || fail 'rofi sin iconos'
+call_args 1 | grep -Fqx -- "@import \"$STATE/current/bspwm/rofi-colors.rasi\"" || \
+  fail 'rofi no importó los colores del tema renderizado'
+grep -q 'catppuccin-mocha-' "$BSPWM_CONFIG/scripts/bspwm-theme" && \
+  fail 'bspwm-theme conserva la lista fija de acentos'
+
+bspwm_menu '1 esc esc'
+(( $(calls) == 3 )) || fail "rofi: Catppuccin, Esc, Esc abrió $(calls) menús"
+(( $(labels 2 | wc -l) == 14 )) || fail "acentos de Catppuccin en rofi: $(labels 2 | wc -l)"
+labels 2 | grep -qx 'Pink  (actual)' || fail 'Pink sin marca de activo en rofi'
+check_icons 2
+call_args 2 | grep -qx 'Catppuccin · Mocha ❯' || fail "prompt de acentos en rofi: $(call_args 2)"
+[[ "$(labels 3)" == "$(labels 1)" ]] || fail 'Esc en rofi no volvió a las familias'
+
+bspwm_menu '2 1 esc esc esc'
+(( $(calls) == 5 )) || fail "rofi: Sanctuary → Compline → Esc ×3 abrió $(calls) menús"
+[[ "$(labels 2)" == $'Compline\nMatins\nVespers' ]] || fail "flavours en rofi: $(labels 2)"
+[[ "$(labels 4)" == "$(labels 2)" && "$(labels 5)" == "$(labels 1)" ]] || \
+  fail 'Esc en rofi no retrocedió nivel por nivel'
+[[ -z "$(selected)" ]] || fail 'Esc en rofi aplicó un tema'
+
+bspwm_menu '2 3 12' >/dev/null || fail 'aplicar Sanctuary Vespers Viridian con rofi falló'
+[[ "$(selected)" == sanctuary-vespers-viridian ]] || fail "rofi no aplicó viridian: $(selected)"
 rm -f -- "$STATE/selected"
 
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || \

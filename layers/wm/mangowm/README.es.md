@@ -122,7 +122,7 @@ capa sigue instalada sin volver a pasar `--wm`.
  
 El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas de acento oficiales** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*), con **Pink (`#f5c2e7`)** configurado como valor inicial predeterminado.
 
-- **Selector Interactivo de Temas:** Presiona `Super + Alt + T` para elegir un tema en tiempo real mediante Fuzzel, en tres niveles: familia (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; se omite en una familia con un solo flavour, como Catppuccin Mocha) → acento. Cada entrada muestra una muestra de color, el tema activo se marca `(actual)` y `Esc` vuelve un nivel (desde el primero cierra el menú). Los niveles vienen de `dotfiles-theme menu`.
+- **Selector Interactivo de Temas:** Presiona `Super + Alt + T` para elegir un tema en tiempo real mediante Fuzzel, en tres niveles: familia (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; se omite en una familia con un solo flavour, como Catppuccin Mocha) → acento. Cada entrada muestra una muestra de color, el tema activo se marca `(actual)` y `Esc` vuelve un nivel (desde el primero cierra el menú). Los niveles vienen de `dotfiles-theme menu`, compartido con el selector Rofi de bspwm.
 - **CLI de Tematización (`mango-theme`, interfaz de `dotfiles-theme`):**
   ```bash
   # Abrir el menú interactivo de temas

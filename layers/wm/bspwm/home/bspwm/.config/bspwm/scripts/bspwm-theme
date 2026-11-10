@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # bspwm front end for the shared theme engine (dotfiles-theme, desktop layer).
-# `menu` opens the Rofi accent picker; every other command is forwarded.
+# `menu` opens the Rofi theme picker (family -> flavour -> accent, driven by
+# `dotfiles-theme menu`); every other command is forwarded.
 
 set -Eeuo pipefail
 
@@ -16,10 +17,11 @@ usage() {
 Uso: $PROGRAM_NAME <comando> [argumentos]
 
 Comandos (todos salvo menu los ejecuta dotfiles-theme):
-  list              Lista todos los temas y colores de acento disponibles
+  list [--tsv]      Lista todos los temas (--tsv: familia, flavour, acento...)
   current           Muestra el tema actualmente activo
-  set <id>          Compila y aplica un tema de acento Catppuccin Mocha
-  menu              Abre el selector interactivo de temas con Rofi
+  set <id>          Compila y aplica un tema (Catppuccin Mocha o Sanctuary)
+  menu              Abre el selector de temas con Rofi: familia, flavour y
+                    acento con muestras de color; Esc vuelve un nivel
   render [id]       Compila un tema a estado local sin activarlo
   validate [id]     Valida la sintaxis e integridad de una paleta
   path              Muestra la ruta del tema compilado activo
@@ -36,40 +38,46 @@ engine() {
   fi
 }
 
-theme_menu() {
-  local choice bin rofi_dir="${XDG_CONFIG_HOME:-$HOME/.config}/bspwm/themes/catppuccin/rofi"
-  local options=(
-    "🌸  Pink      (catppuccin-mocha-pink)      #f5c2e7"
-    "🟣  Mauve     (catppuccin-mocha-mauve)     #cba6f7"
-    "🪻  Lavender  (catppuccin-mocha-lavender)  #b4befe"
-    "🔵  Blue      (catppuccin-mocha-blue)      #89b4fa"
-    "🔷  Sapphire  (catppuccin-mocha-sapphire)  #74c7ec"
-    "🩵  Sky       (catppuccin-mocha-sky)       #89dceb"
-    "🌊  Teal      (catppuccin-mocha-teal)      #94e2d5"
-    "🟢  Green     (catppuccin-mocha-green)     #a6e3a1"
-    "🟡  Yellow    (catppuccin-mocha-yellow)    #f9e2af"
-    "🍑  Peach     (catppuccin-mocha-peach)     #fab387"
-    "🌺  Maroon    (catppuccin-mocha-maroon)    #eba0ac"
-    "🔴  Red       (catppuccin-mocha-red)       #f38ba8"
-    "🦩  Flamingo  (catppuccin-mocha-flamingo)  #f2cdcd"
-    "🌹  Rosewater (catppuccin-mocha-rosewater) #f5e0dc"
-  )
-  local -a rofi_args=(
-    -dmenu
-    -i
-    -p "Tema ❯"
-    -mesg "Selecciona un color de acento Catppuccin Mocha"
-    -theme "$rofi_dir/launcher.rasi"
-    -theme-str 'configuration { show-icons: false; } window { width: 520px; } listview { lines: 14; } element-icon { enabled: false; }'
-  )
+# One level of the engine's picker (`dotfiles-theme menu`): entries
+# "label<US>icon<TAB>value" on stdin, the prompt in $1. Rofi shows each label
+# with its swatch icon and returns the row index; the value goes to stdout.
+menu_level() {
+  local prompt=$1 entry label index lines
+  local rofi_dir="${XDG_CONFIG_HOME:-$HOME/.config}/bspwm/themes/catppuccin/rofi"
+  local colors="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme/current/bspwm/rofi-colors.rasi"
+  local -a values=() labels=() icons=() rofi_args
 
   command -v rofi >/dev/null 2>&1 || fail "rofi es necesario para abrir el menú interactivo"
-  choice=$(printf '%s\n' "${options[@]}" | rofi "${rofi_args[@]}" || true)
-  [[ -n "$choice" ]] || return 0
-  if [[ "$choice" =~ \((catppuccin-mocha-[a-z]+)\) ]]; then
-    bin=$(engine)
-    "$bin" set "${BASH_REMATCH[1]}"
+  while IFS= read -r entry || [[ -n "$entry" ]]; do
+    label=${entry%%$'\t'*}
+    values+=("${entry#*$'\t'}")
+    labels+=("${label%%$'\x1f'*}")
+    if [[ "$label" == *$'\x1f'* ]]; then
+      icons+=("${label#*$'\x1f'}")
+    else
+      icons+=('')
+    fi
+  done
+  lines=${#labels[@]}
+  (( lines <= 15 )) || lines=15
+  rofi_args=(
+    -dmenu
+    -i
+    -format i
+    -p "${prompt%"${prompt##*[! ]}"}"
+    -mesg "Esc vuelve al nivel anterior"
+    -theme "$rofi_dir/launcher.rasi"
+  )
+  if [[ -r "$colors" ]]; then
+    rofi_args+=(-theme-str "@import \"$colors\"")
   fi
+  rofi_args+=(-theme-str "configuration { show-icons: true; } window { width: 420px; } listview { lines: $lines; } element-icon { size: 28px; }")
+
+  index=$(for index in "${!labels[@]}"; do
+      printf '%s\0icon\x1f%s\n' "${labels[index]}" "${icons[index]}"
+    done | rofi "${rofi_args[@]}") || return 1
+  [[ "$index" =~ ^[0-9]+$ ]] && (( index < ${#values[@]} )) || return 1
+  printf '%s\n' "${values[index]}"
 }
 
 main() {
@@ -77,7 +85,12 @@ main() {
 
   case "$command_name" in
     menu)
-      theme_menu
+      bin=$(engine)
+      exec "$bin" menu "$(realpath -- "${BASH_SOURCE[0]}")" menu-level
+      ;;
+    menu-level)
+      (( $# == 2 )) || exit 2
+      menu_level "$2"
       ;;
     help|-h|--help)
       usage
