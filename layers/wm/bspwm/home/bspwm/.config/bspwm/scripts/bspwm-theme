@@ -22,6 +22,7 @@ Comandos (todos salvo menu los ejecuta dotfiles-theme):
   set <id>          Compila y aplica un tema (Catppuccin Mocha o Sanctuary)
   menu              Abre el selector de temas con Rofi: familia, flavour y
                     acento con muestras de color; Esc vuelve un nivel
+  pick              Selector en la terminal (fzf) con vista previa de la paleta
   render [id]       Compila un tema a estado local sin activarlo
   validate [id]     Valida la sintaxis e integridad de una paleta
   path              Muestra la ruta del tema compilado activo

@@ -68,6 +68,10 @@ Comandos:
                   "etiqueta<US>icono<TAB>valor" (US es el byte 0x1f), en su
                   entrada; imprime el valor elegido o sale con un estado
                   distinto de 0 con Esc, que vuelve al nivel anterior
+  pick            Selector en la terminal con fzf: todos los temas, el activo
+                  marcado (actual) y una vista previa de la paleta; Enter
+                  aplica con set, Esc sale sin cambios
+  preview <id>    Imprime en truecolor los colores y las fuentes de un tema
   set <id>        Renderiza y aplica un tema
   render [id]     Renderiza un tema sin activarlo
   validate [id]   Valida una paleta
@@ -638,6 +642,96 @@ theme_menu() {
   done
 }
 
+# Prints "r;g;b" for the color #rrggbb in $1.
+rgb_of() {
+  local hex=${1#\#}
+
+  printf '%d;%d;%d' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+}
+
+# A truecolor block of the palette color $1, $2 cells wide.
+color_block() {
+  local width=${2:-6} cells
+
+  printf -v cells '%*s' "$width" ''
+  printf '\e[48;2;%sm%s\e[0m' "$(rgb_of "${VALUES[$1]}")" "$cells"
+}
+
+# Lines "block  key  #hex" for the keys in $@.
+preview_roles() {
+  local key
+
+  for key in "$@"; do
+    printf '  %s  %-20s %s\n' "$(color_block "$key")" "$key" "${VALUES[$key]}"
+  done
+}
+
+# Truecolor swatches of every color group and the font roles of theme $1,
+# for the `pick` preview pane.
+preview_theme() {
+  local key color
+
+  theme_exists "$1" || fail "tema desconocido: $1"
+  read_palette "$1"
+  printf '%s · %s · %s  (%s)\n\n' "$(title_name "${VALUES[family]}")" \
+    "$(title_name "${VALUES[flavour]}")" "$(title_name "${VALUES[accent_name]}")" "$1"
+  printf 'Superficies\n'
+  preview_roles background_deep background_alt background surface \
+    surface_hover surface_strong border
+  printf '\nTexto\n'
+  preview_roles foreground foreground_muted foreground_subtle foreground_disabled
+  printf '\nAcento\n'
+  preview_roles accent accent_fg selection_bg cursor
+  printf '  \e[48;2;%sm\e[38;2;%sm  Aa acento  \e[0m \e[48;2;%sm\e[38;2;%sm  Aa texto  \e[0m\n' \
+    "$(rgb_of "${VALUES[accent]}")" "$(rgb_of "${VALUES[accent_fg]}")" \
+    "$(rgb_of "${VALUES[background]}")" "$(rgb_of "${VALUES[foreground]}")"
+  printf '\nEstados\n'
+  preview_roles urgent warning success info
+  printf '\nANSI\n  '
+  for color in black red green yellow blue magenta cyan white; do
+    color_block "ansi_$color" 4
+  done
+  printf '\n  '
+  for color in black red green yellow blue magenta cyan white; do
+    color_block "ansi_bright_$color" 4
+  done
+  printf '\n\nTonos\n  '
+  for key in red orange yellow green teal cyan blue indigo purple pink rose maroon; do
+    color_block "hue_$key" 3
+  done
+  printf '\n\nFuentes\n'
+  for key in font_mono font_text font_display font_inscription; do
+    printf '  %-17s %s\n' "${key#font_}" "${VALUES[$key]}"
+  done
+  printf '  %-17s %s %s\n' cursor "${VALUES[cursor_theme]}" "${VALUES[cursor_size]}"
+}
+
+# fzf over every theme: "id<TAB>label" lines (only the label is shown, after
+# an accent dot), the preview pane runs `preview`, Enter applies with `set`
+# and Esc leaves without changes.
+pick_theme() {
+  local id t_family t_flavour t_accent_name t_accent t_active label engine selection
+
+  command -v fzf >/dev/null 2>&1 || \
+    fail "fzf no está instalado; instálalo o usa '$PROGRAM_NAME set <id>'"
+  [[ -t 1 ]] || \
+    fail "pick necesita una terminal; usa '$PROGRAM_NAME set <id>' o el menú del WM"
+  printf -v engine '%q' "$SCRIPT_PATH"
+  selection=$(
+    list_themes_tsv | while IFS=$'\t' read -r id t_family t_flavour t_accent_name t_accent t_active _; do
+      label="$(title_name "$t_family") · $(title_name "$t_flavour") · $(title_name "$t_accent_name")"
+      [[ "$t_active" != 1 ]] || label+=$MENU_ACTIVE_MARK
+      printf '%s\t\e[38;2;%sm●\e[0m %s\n' "$id" "$(rgb_of "$t_accent")" "$label"
+    done | fzf --ansi --delimiter=$'\t' --with-nth=2 --prompt='Tema ❯ ' \
+      --header='Enter aplica · Esc sale' --preview="$engine preview {1}" \
+      --preview-window=right,60%
+  ) || return 0
+  id=${selection%%$'\t'*}
+  [[ -n "$id" ]] || return 0
+  theme_exists "$id" || fail "tema desconocido: $id"
+  set_theme "$id"
+}
+
 main() {
   local command=${1-}
   shift || true
@@ -663,6 +757,14 @@ main() {
     menu)
       (( $# >= 1 )) || { usage >&2; exit 2; }
       theme_menu "$@"
+      ;;
+    pick)
+      (( $# == 0 )) || { usage >&2; exit 2; }
+      pick_theme
+      ;;
+    preview)
+      (( $# == 1 )) || { usage >&2; exit 2; }
+      preview_theme "$1"
       ;;
     current)
       read_palette "$(resolve_theme_id)"

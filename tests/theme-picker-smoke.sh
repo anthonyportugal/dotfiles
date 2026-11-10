@@ -248,6 +248,68 @@ bspwm_menu '2 3 12' >/dev/null || fail 'aplicar Sanctuary Vespers Viridian con r
 [[ "$(selected)" == sanctuary-vespers-viridian ]] || fail "rofi no aplicó viridian: $(selected)"
 rm -f -- "$STATE/selected"
 
+# --- 4. TUI: dotfiles-theme preview and pick (fzf) -------------------------
+
+preview=$(in_home '' "$ENGINE" preview sanctuary-compline-cobalt)
+[[ "$preview" == *'#9bc1fb'* ]] || fail 'preview no muestra el acento'
+[[ "$preview" == *$'\e[48;2;155;193;251m'* ]] || fail 'preview sin muestra truecolor del acento'
+for role in background_deep surface_strong foreground_disabled accent_fg urgent \
+  ansi_black ansi_bright_white hue_red hue_maroon; do
+  value=$(grep "^$role=" "$REPO_ROOT/themes/palettes/sanctuary-compline-cobalt.conf" | cut -d= -f2)
+  hex=${value#\#}
+  printf -v escape '\e[48;2;%d;%d;%dm' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+  [[ "$preview" == *"$escape"* ]] || fail "preview sin la muestra de $role"
+done
+for font in 'JetBrainsMono Nerd Font' 'Hanken Grotesk' 'Cormorant Garamond' Cinzel Bibata-Modern-Classic; do
+  [[ "$preview" == *"$font"* ]] || fail "preview sin la fuente $font"
+done
+status=0
+in_home '' "$ENGINE" preview no-existe >/dev/null 2>&1 || status=$?
+(( status == 1 )) || fail "preview de un tema desconocido devolvió $status"
+
+# Without fzf, or without a terminal, pick explains why and changes nothing.
+mkdir -p -- "$TEST_ROOT/no-fzf"
+cp -P -- "$BIN"/* "$TEST_ROOT/no-fzf/"
+rm -f -- "$TEST_ROOT/no-fzf/fzf"
+status=0
+message=$(env -i PATH="$TEST_ROOT/no-fzf" HOME="$H" XDG_STATE_HOME="$H/.local/state" \
+  XDG_DATA_HOME="$H/.local/share" XDG_CONFIG_HOME="$H/.config" "$ENGINE" pick 2>&1) || status=$?
+(( status == 1 )) && [[ "$message" == *'fzf no está instalado'* ]] || \
+  fail "pick sin fzf: estado $status, '$message'"
+status=0
+message=$(in_home '1' "$ENGINE" pick 2>&1) || status=$?
+(( status == 1 )) && [[ "$message" == *'necesita una terminal'* ]] || \
+  fail "pick sin terminal: estado $status, '$message'"
+(( $(calls) == 0 )) || fail 'pick sin terminal abrió fzf'
+[[ -z "$(selected)" ]] || fail 'pick sin fzf o sin terminal aplicó un tema'
+
+# In a terminal (script gives it a pseudo-terminal), fzf lists every theme with
+# the active one marked and the preview wired; Enter applies, Esc leaves.
+SCRIPT=$(command -v script) || fail 'falta script (util-linux) para simular una terminal'
+pick_in_tty() {
+  in_home "$1" "$SCRIPT" -qefc "$ENGINE pick" /dev/null < /dev/null
+}
+pick_in_tty 'esc' >/dev/null || fail 'Esc en pick no salió con 0'
+(( $(calls) == 1 )) || fail "pick abrió fzf $(calls) veces"
+(( $(wc -l < "$PICKER_DIR/1.in") == 50 )) || fail 'pick no listó los 50 temas'
+[[ "$(cut -f1 "$PICKER_DIR/1.in")" == "$(printf '%s\n' "${plain[@]}")" ]] || \
+  fail 'pick no lista los ids en la primera columna'
+grep -q $'^catppuccin-mocha-pink\t.*Catppuccin · Mocha · Pink  (actual)$' "$PICKER_DIR/1.in" || \
+  fail "pick sin la marca del tema activo: $(grep pink "$PICKER_DIR/1.in")"
+(( $(grep -c '(actual)' "$PICKER_DIR/1.in") == 1 )) || fail 'pick marcó más de un tema'
+grep -q $'^sanctuary-matins-gilt\t.*Sanctuary · Matins · Gilt$' "$PICKER_DIR/1.in" || \
+  fail 'pick sin etiqueta legible para Sanctuary'
+call_args 1 | grep -qx -- "--preview=$ENGINE preview {1}" || fail "pick sin vista previa: $(call_args 1)"
+call_args 1 | grep -qx -- '--with-nth=2' || fail 'pick muestra el id además de la etiqueta'
+[[ -z "$(selected)" ]] || fail 'Esc en pick aplicó un tema'
+pick_in_tty '20' >/dev/null || fail 'Enter en pick falló'
+chosen=$(sed -n 20p "$PICKER_DIR/1.in" | cut -f1)
+[[ "$(selected)" == "$chosen" ]] || fail "pick aplicó '$(selected)' en vez de $chosen"
+grep -q "^notify-send .*Tema aplicado.*$chosen" "$PICKER_LOG" || fail 'pick no pasó por set'
+rm -f -- "$STATE/selected"
+help=$(in_home '' "$ENGINE" --help)
+[[ "$help" == *'pick'* && "$help" == *'preview <id>'* ]] || fail 'la ayuda no documenta pick y preview'
+
 [[ "$(git -C "$REPO_ROOT" status --porcelain)" == "$CHECKOUT_STATE" ]] || \
   fail 'el selector modificó el checkout'
 printf 'OK: theme-picker-smoke\n'

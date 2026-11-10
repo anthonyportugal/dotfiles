@@ -179,7 +179,7 @@ one command.
 
 ```text
 dotfiles-theme list [--tsv] | current | set <id> | render [id] | validate [id] | path
-dotfiles-theme menu <command> [args...]
+dotfiles-theme menu <command> [args...] | pick | preview <id>
 ```
 
 `list` prints one theme id per line, sorted. `list --tsv` is the listing the
@@ -210,6 +210,13 @@ stdout; a non-zero exit (Esc) goes back one level and leaves from the first. A
 level with a single entry is skipped (Catppuccin has only Mocha), and the
 chosen theme is applied with `set`. `mango-theme menu` passes its fuzzel
 adapter (`mangowm_menu`), `bspwm-theme menu` its Rofi one.
+
+`pick` is the terminal picker: fzf over every theme (an accent-colored dot and
+"Family · Flavour · Accent", the active one marked `(actual)`), with a preview
+pane that runs `preview <id>`: truecolor swatches of the surfaces, text,
+accent, status, the 16 ANSI colors and the hues, plus the font and cursor
+roles. Enter applies with `set`, Esc leaves without changes. It exits 1 with a
+message when fzf is missing or stdout is not a terminal.
 
 `set` renders, runs every render hook, saves the selection, syncs the GNOME
 accent color and cursor and runs every reload hook. `path` renders first when nothing is

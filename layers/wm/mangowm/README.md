@@ -134,6 +134,9 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
   # List every theme id (Catppuccin Mocha and Sanctuary)
   mango-theme list
 
+  # Pick a theme in the terminal (fzf) with a palette preview
+  mango-theme pick
+
   # Display current active theme
   mango-theme current
   ```

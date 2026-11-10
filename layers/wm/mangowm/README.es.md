@@ -134,6 +134,9 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
   # Listar todos los ids de tema (Catppuccin Mocha y Sanctuary)
   mango-theme list
 
+  # Elegir un tema en la terminal (fzf) con vista previa de la paleta
+  mango-theme pick
+
   # Mostrar el tema activo actual
   mango-theme current
   ```

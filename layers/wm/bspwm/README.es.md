@@ -131,6 +131,9 @@ El escritorio está estilizado con **Catppuccin Mocha**, soportando las **14 pal
   # Listar todos los ids de tema (Catppuccin Mocha y Sanctuary)
   bspwm-theme list
 
+  # Elegir un tema en la terminal (fzf) con vista previa de la paleta
+  bspwm-theme pick
+
   # Mostrar el tema de acento activo
   bspwm-theme current
   ```
