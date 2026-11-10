@@ -198,4 +198,17 @@ grep -Fq 'MangoWM' "$REPO_ROOT/README.md" || \
 grep -Fq 'MangoWM' "$REPO_ROOT/README.es.md" || \
   fail "README.es.md no describe MangoWM"
 
+
+# Every right-side Waybar module shares the padded rule, so no icon sits
+# flush against its neighbour (custom/keyboard once had no rule at all).
+waybar_config="$REPO_ROOT/home/mango/.config/waybar/config.json"
+waybar_css="$REPO_ROOT/home/mango/.local/share/dotfiles/theme/templates/mangowm/waybar.css"
+padded_rule=$(awk '/#bluetooth,/ && /#wireplumber/ { print; exit }' "$waybar_css")
+[[ -n "$padded_rule" ]] || fail 'no se encontró la regla con padding de los módulos de Waybar'
+while IFS= read -r module; do
+  selector="#${module//\//-}"
+  [[ "$padded_rule" == *"$selector,"* || "$padded_rule" == *"$selector {"* ]] || \
+    fail "el módulo $module de Waybar no tiene padding"
+done < <(jq -r '."modules-right"[]' "$waybar_config")
+
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'

@@ -35,7 +35,7 @@ window#waybar {
   color: @text;
 }
 #custom-launcher, #custom-recording, #mpris, #custom-nightlight, #custom-idle, #idle_inhibitor, #tray,
-#wireplumber, #backlight, #network, #bluetooth, #custom-power-profile, #battery, #clock, #custom-power {
+#wireplumber, #backlight, #network, #bluetooth, #custom-keyboard, #custom-power-profile, #battery, #clock, #custom-power {
   padding: 0 8px;
   margin: 0;
   background: transparent;
