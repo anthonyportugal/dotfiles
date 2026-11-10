@@ -374,16 +374,18 @@ render_theme() {
   printf '%s\n' "$THEME_ROOT/$revision"
 }
 
+# Nearest GNOME accent for accent_name: Catppuccin accents, then Sanctuary
+# pigments by the OKLCH hue of their glass color.
 gnome_accent() {
   case "${VALUES[accent_name]}" in
-    blue|sapphire) printf 'blue\n' ;;
-    teal|sky) printf 'teal\n' ;;
-    green) printf 'green\n' ;;
-    yellow) printf 'yellow\n' ;;
-    peach) printf 'orange\n' ;;
-    red|maroon) printf 'red\n' ;;
-    pink|flamingo) printf 'pink\n' ;;
-    mauve|lavender) printf 'purple\n' ;;
+    blue|sapphire|cobalt|indigo) printf 'blue\n' ;;
+    teal|sky|azure) printf 'teal\n' ;;
+    green|verdure|viridian) printf 'green\n' ;;
+    yellow|gilt|amber) printf 'yellow\n' ;;
+    peach|ember) printf 'orange\n' ;;
+    red|maroon|ruby) printf 'red\n' ;;
+    pink|flamingo|rose|murrey) printf 'pink\n' ;;
+    mauve|lavender|amethyst) printf 'purple\n' ;;
     *) printf 'slate\n' ;;
   esac
 }

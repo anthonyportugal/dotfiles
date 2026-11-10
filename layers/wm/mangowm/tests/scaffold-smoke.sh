@@ -151,15 +151,24 @@ palette_value() {
 }
 
 # The engine owns the schema: it validates every key, its type and the id;
-# this layer only checks that the palette is a Catppuccin Mocha accent.
+# this layer only checks that a Catppuccin palette is a Mocha accent.
+# Sanctuary palettes are generated and checked by tests/sanctuary-smoke.sh.
 check_palette() {
   local palette=$1 expected_id expected_accent output
 
   expected_id=$(basename -- "$palette" .conf)
-  expected_accent="${expected_id#catppuccin-mocha-}"
   output=$(env -u DOTFILES_THEME HOME="$VALIDATE_HOME" XDG_STATE_HOME="$VALIDATE_HOME/state" \
     XDG_DATA_HOME="$VALIDATE_HOME/share" XDG_CONFIG_HOME="$VALIDATE_HOME/config" \
     "$ENGINE" validate "$expected_id" 2>&1) || fail "dotfiles-theme rechazó $palette: $output"
+  case "$expected_id" in
+    catppuccin-mocha-*) ;;
+    sanctuary-*)
+      [[ "$(palette_value "$palette" family)" == sanctuary ]] || fail "familia de paleta inesperada en $palette"
+      return 0
+      ;;
+    *) fail "paleta de familia desconocida: $palette" ;;
+  esac
+  expected_accent="${expected_id#catppuccin-mocha-}"
   [[ "$(palette_value "$palette" family)" == catppuccin ]] || fail "familia de paleta inesperada en $palette"
   [[ "$(palette_value "$palette" flavour)" == mocha ]] || fail "flavour de paleta inesperado en $palette"
   [[ "$(palette_value "$palette" accent_name)" == "$expected_accent" ]] || \
@@ -174,7 +183,7 @@ found_palettes=0
 for palette_file in "$MONOREPO_ROOT"/themes/palettes/*.conf; do
   [[ -f "$palette_file" ]] || continue
   check_palette "$palette_file"
-  ((found_palettes++)) || true
+  [[ "$palette_file" != */catppuccin-mocha-*.conf ]] || ((found_palettes++)) || true
 done
 [[ "$found_palettes" -ge 14 ]] || fail "se esperaban al menos 14 paletas Catppuccin Mocha, encontradas: $found_palettes"
 

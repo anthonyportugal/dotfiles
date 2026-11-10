@@ -32,9 +32,20 @@ SOFTWARE.
 
 ## Catppuccin palette
 
-`themes/palettes/*.conf` contain color values from the Catppuccin Mocha
+`themes/palettes/catppuccin-mocha-*.conf` contain color values from the Catppuccin Mocha
 palette, used as data by the theme engine and its templates. No GTK theme archive or application port is vendored.
 
 - Project: https://github.com/catppuccin/catppuccin
 - License: MIT
 - Copyright: Catppuccin contributors
+
+## Sanctuary design tokens
+
+`themes/sources/sanctuary-ds-tokens-0.3.0/palette.json` is a copy of
+`dist/palette.json` from `@sanctuary-ds/tokens` 0.3.0, and
+`themes/palettes/sanctuary-*.conf` are generated from it by
+`themes/tools/generate-sanctuary-palettes`.
+
+- Project: Sanctuary design system (`@sanctuary-ds/tokens`)
+- License: MIT
+- Copyright: (c) 2026 Anthony Portugal

@@ -49,12 +49,21 @@ STATE="$H/.local/state/dotfiles/theme"
 TEMPLATES="$H/.local/share/dotfiles/theme/templates"
 mkdir -p "$H/.config/yazi"
 
-# list: one entry per palette in themes/palettes.
+# list: one entry per palette in themes/palettes, sorted (14 Catppuccin Mocha
+# and 36 Sanctuary; tests/sanctuary-smoke.sh checks the Sanctuary ids).
 mapfile -t themes < <(theme_in "$H" list)
-(( ${#themes[@]} == 14 )) || fail "list devolvió ${#themes[@]} temas en lugar de 14"
+(( ${#themes[@]} == 50 )) || fail "list devolvió ${#themes[@]} temas en lugar de 50"
+catppuccin=0
 for theme in "${themes[@]}"; do
-  [[ "$theme" == catppuccin-mocha-* ]] || fail "tema inesperado en list: $theme"
+  case "$theme" in
+    catppuccin-mocha-*) ((catppuccin++)) || true ;;
+    sanctuary-*) ;;
+    *) fail "tema inesperado en list: $theme" ;;
+  esac
 done
+(( catppuccin == 14 )) || fail "list devolvió $catppuccin temas Catppuccin en lugar de 14"
+[[ "$(printf '%s\n' "${themes[@]}")" == "$(printf '%s\n' "${themes[@]}" | LC_ALL=C sort)" ]] || \
+  fail "list no devolvió los temas ordenados"
 
 # render without a selection uses the pink default and the shared outputs.
 theme_in "$H" render >/dev/null || fail "render falló en un home vacío"

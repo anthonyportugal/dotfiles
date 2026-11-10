@@ -41,6 +41,51 @@ sapphire, `cursor` = the accent; the ANSI colors match the foot terminal
 white = text); `hue_rose` = flamingo, `hue_indigo` = lavender, `hue_purple` =
 mauve, `hue_cyan` = sky.
 
+### Families
+
+| Family | Ids | Source |
+|--------|-----|--------|
+| Catppuccin | `catppuccin-mocha-<accent>`, 14 accents | hand-written from the Catppuccin Mocha palette |
+| Sanctuary | `sanctuary-<flavor>-<pigment>`: flavors `compline`, `vespers`, `matins` (`lauds` is light and left out); pigments `amber amethyst azure cobalt ember gilt indigo murrey rose ruby verdure viridian` | generated from `@sanctuary-ds/tokens` |
+
+The Sanctuary palettes are generated, never edited by hand.
+`tools/generate-sanctuary-palettes` (python3, standard library) reads
+`sources/sanctuary-ds-tokens-0.3.0/palette.json` (`dist/palette.json` of
+`@sanctuary-ds/tokens` 0.3.0, vendored unchanged), refuses it unless its
+sha256 is the pinned
+`f6a05e1b2bb3effd84236bd479ea4ba7a91fd2c39f412f64469021ac4bd5bb24`, and
+writes the 36 `palettes/sanctuary-*.conf`, removing any other
+`sanctuary-*.conf`:
+
+```sh
+themes/tools/generate-sanctuary-palettes          # regenerate
+themes/tools/generate-sanctuary-palettes --check  # writes nothing; exit 1 and lists each difference
+```
+
+`tests/sanctuary-smoke.sh` runs `--check`, so the committed palettes always
+equal the generator output. To move to another release, vendor it under a new
+`sources/sanctuary-ds-tokens-<version>/` and update the path and hash in the
+generator.
+
+Sanctuary roles (one flavor's `colors`, `<p>` = the pigment): `background_deep`
+and `background_alt` = `surface-sunken`, `background` = `surface`, `surface` =
+`surface-raised-2`, `surface_hover` = `surface-raised-3`, `surface_strong` =
+`surface-raised-4`, `foreground`/`_muted`/`_subtle`/`_disabled` =
+`text`/`text-muted`/`text-subtle`/`text-disabled`, `border` = `lead`,
+`accent`/`cursor` = `glass-<p>`, `accent_fg`/`cursor_fg` = `glass-<p>-on`,
+`selection_bg`/`selection_fg` = `glass-<p>-pane`/`glass-<p>-on-pane`,
+`urgent` = `danger`, `warning`, `success`, `info`, the ANSI and syntax roles
+= `ansi-*` and `syntax-*`; hues red/orange/yellow/green/teal/cyan/blue/indigo/
+purple/pink/rose/maroon = `glass-` ruby/ember/gilt/verdure/viridian/azure/
+cobalt/indigo/amethyst/rose/amber/murrey. Fonts: `JetBrainsMono Nerd Font`,
+`Hanken Grotesk`, `Cormorant Garamond`, `Cinzel`; cursor
+`Bibata-Modern-Classic` 24.
+
+The GNOME accent of a Sanctuary theme is the GNOME accent nearest to the
+pigment's OKLCH hue: cobalt and indigo blue, azure teal, verdure and viridian
+green, gilt and amber yellow, ember orange, ruby red, rose and murrey pink,
+amethyst purple.
+
 ## Templates
 
 Templates are plain files where `{{key}}` becomes the palette value of any key

@@ -29,7 +29,7 @@ Configuración pública, modular y portable para **Arch Linux**, en un solo repo
 - 🎛️ **Orquestación Multi-WM:** MangoWM (Wayland) y BSPWM (X11) son capas que comparten un motor de temas; instala una o ambas.
 - 🔄 **CLI de Ciclo de Vida Seguro:** Comandos integrados `sync`, `update` (con protección para evitar sobreescribir árboles de trabajo con cambios locales) y diagnósticos `doctor`.
 - 🚀 **Despliegue en un Solo Comando:** Asistente interactivo ejecutable directamente con `curl` en instalaciones limpias.
-- 🎨 **Estética Visual Unificada:** Un motor de temas (`dotfiles-theme`, ver `themes/README.md`) renderiza la paleta activa (Catppuccin Mocha por defecto) para GTK, las terminales, Yazi y las herramientas CLI.
+- 🎨 **Estética Visual Unificada:** Un motor de temas (`dotfiles-theme`, ver `themes/README.md`) renderiza la paleta activa (Catppuccin Mocha por defecto, además de los temas Sanctuary compline, vespers y matins) para GTK, las terminales, Yazi y las herramientas CLI.
 
 ---
 

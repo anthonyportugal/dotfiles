@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""Generate themes/palettes/sanctuary-<flavor>-<pigment>.conf (schema 2).
+
+Dev-time tool: reads the vendored @sanctuary-ds/tokens palette.json, checks
+it against the pinned sha256 and writes one palette per flavor (compline,
+vespers, matins; lauds is light and left out) and pigment. Palettes that no
+longer match a flavor/pigment pair are removed. With --check it writes
+nothing, lists every difference and exits 1 when the committed palettes are
+not the generator output.
+"""
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+from pathlib import Path
+
+THEMES = Path(__file__).resolve().parents[1]
+SOURCE = THEMES / "sources" / "sanctuary-ds-tokens-0.3.0" / "palette.json"
+SOURCE_SHA256 = "f6a05e1b2bb3effd84236bd479ea4ba7a91fd2c39f412f64469021ac4bd5bb24"
+PALETTES = THEMES / "palettes"
+
+FLAVORS = ("compline", "vespers", "matins")
+PIGMENTS = (
+    "amber", "amethyst", "azure", "cobalt", "ember", "gilt",
+    "indigo", "murrey", "rose", "ruby", "verdure", "viridian",
+)
+ANSI = ("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
+SYNTAX = (
+    "keyword", "string", "number", "constant", "function", "type", "property",
+    "tag", "operator", "regex", "variable", "punctuation", "comment",
+)
+# Decorative hue -> pigment (each rendered as glass-<pigment>).
+HUES = (
+    ("red", "ruby"), ("orange", "ember"), ("yellow", "gilt"),
+    ("green", "verdure"), ("teal", "viridian"), ("cyan", "azure"),
+    ("blue", "cobalt"), ("indigo", "indigo"), ("purple", "amethyst"),
+    ("pink", "rose"), ("rose", "amber"), ("maroon", "murrey"),
+)
+FONTS = (
+    ("font_mono", "JetBrainsMono Nerd Font"),
+    ("font_text", "Hanken Grotesk"),
+    ("font_display", "Cormorant Garamond"),
+    ("font_inscription", "Cinzel"),
+)
+CURSOR = (("cursor_theme", "Bibata-Modern-Classic"), ("cursor_size", "24"))
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def fail(message):
+    print(f"generate-sanctuary-palettes: {message}", file=sys.stderr)
+    sys.exit(2)
+
+
+def load_source():
+    try:
+        data = SOURCE.read_bytes()
+    except OSError as error:
+        fail(f"no se pudo leer {SOURCE}: {error}")
+    digest = hashlib.sha256(data).hexdigest()
+    if digest != SOURCE_SHA256:
+        fail(f"sha256 inesperado en {SOURCE.name}: {digest} (fijado {SOURCE_SHA256})")
+    return json.loads(data)
+
+
+def color_roles(pigment):
+    """Schema-2 color keys in palette order -> palette.json role."""
+    glass = f"glass-{pigment}"
+    roles = [
+        ("background_deep", "surface-sunken"),
+        ("background_alt", "surface-sunken"),
+        ("background", "surface"),
+        ("surface", "surface-raised-2"),
+        ("surface_hover", "surface-raised-3"),
+        ("surface_strong", "surface-raised-4"),
+        ("foreground", "text"),
+        ("foreground_muted", "text-muted"),
+        ("foreground_subtle", "text-subtle"),
+        ("foreground_disabled", "text-disabled"),
+        ("border", "lead"),
+        ("accent", glass),
+        ("accent_fg", f"{glass}-on"),
+        ("urgent", "danger"),
+        ("warning", "warning"),
+        ("success", "success"),
+        ("info", "info"),
+        ("selection_bg", f"{glass}-pane"),
+        ("selection_fg", f"{glass}-on-pane"),
+        ("cursor", glass),
+        ("cursor_fg", f"{glass}-on"),
+    ]
+    roles += [(f"ansi_{name}", f"ansi-{name}") for name in ANSI]
+    roles += [(f"ansi_bright_{name}", f"ansi-bright-{name}") for name in ANSI]
+    roles += [(f"syntax_{name}", f"syntax-{name}") for name in SYNTAX]
+    roles += [(f"hue_{hue}", f"glass-{name}") for hue, name in HUES]
+    return roles
+
+
+def render(source, flavor, pigment):
+    try:
+        colors = source["flavors"][flavor]["colors"]
+    except KeyError:
+        fail(f"palette.json no tiene el flavor {flavor}")
+    lines = [
+        "schema=2",
+        f"id=sanctuary-{flavor}-{pigment}",
+        "family=sanctuary",
+        f"flavour={flavor}",
+        f"accent_name={pigment}",
+    ]
+    for key, role in color_roles(pigment):
+        token = colors.get(role)
+        if not isinstance(token, dict) or "alpha" in token:
+            fail(f"{flavor}: falta el rol opaco {role}")
+        value = token.get("hex", "")
+        if not HEX.match(value):
+            fail(f"{flavor}: {role} no es #rrggbb: {value!r}")
+        lines.append(f"{key}={value.lower()}")
+    lines += [f"{key}={value}" for key, value in FONTS + CURSOR]
+    return "\n".join(lines) + "\n"
+
+
+def expected_palettes():
+    source = load_source()
+    return {
+        f"sanctuary-{flavor}-{pigment}.conf": render(source, flavor, pigment)
+        for flavor in FLAVORS
+        for pigment in PIGMENTS
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--check", action="store_true",
+        help="no escribe nada; sale con 1 si las paletas difieren del generador",
+    )
+    args = parser.parse_args()
+
+    expected = expected_palettes()
+    existing = {path.name for path in PALETTES.glob("sanctuary-*.conf")}
+    differences = []
+    for name, content in expected.items():
+        path = PALETTES / name
+        if name not in existing:
+            differences.append(f"falta {name}")
+        elif path.read_text(encoding="utf-8") != content:
+            differences.append(f"difiere {name}")
+    stale = sorted(existing - expected.keys())
+    differences += [f"sobra {name}" for name in stale]
+
+    if args.check:
+        for line in differences:
+            print(line, file=sys.stderr)
+        if differences:
+            print(
+                f"{len(differences)} paleta(s) Sanctuary desactualizada(s); "
+                "ejecuta themes/tools/generate-sanctuary-palettes",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"OK: {len(expected)} paletas Sanctuary al día")
+        return 0
+
+    for name, content in expected.items():
+        (PALETTES / name).write_text(content, encoding="utf-8")
+    for name in stale:
+        (PALETTES / name).unlink()
+    print(f"OK: {len(expected)} paletas Sanctuary escritas, {len(stale)} eliminada(s)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

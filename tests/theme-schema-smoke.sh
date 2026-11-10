@@ -69,6 +69,6 @@ for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   ((rendered++)) || true
 done
 
-(( rendered >= 14 )) || fail "se esperaban al menos 14 paletas, renderizadas: $rendered"
+(( rendered >= 50 )) || fail "se esperaban al menos 50 paletas, renderizadas: $rendered"
 
 printf 'OK: %d paletas schema 2 renderizadas sin marcadores pendientes\n' "$rendered"

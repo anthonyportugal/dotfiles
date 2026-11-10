@@ -206,7 +206,7 @@ for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   check_gtk "$palette" "$revision"
   ((rendered++)) || true
 done
-(( rendered >= 14 )) || fail "se esperaban al menos 14 paletas, renderizadas: $rendered"
+(( rendered >= 50 )) || fail "se esperaban al menos 50 paletas, renderizadas: $rendered"
 
 # One color definition for foot: the MangoWM template carries the same
 # [colors-dark] block as the shared template.
