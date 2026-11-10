@@ -8,6 +8,15 @@ printf -v command_line '%q ' "$name" "$@"
 printf '%s\n' "$command_line" >> "$MANGOWM_TEST_LOG"
 
 case "$name" in
+  rfkill)
+    # MANGOWM_TEST_RFKILL=soft|hard reports the bluetooth radio as blocked.
+    if [[ "${1-}" == list ]]; then
+      printf '0: hci0: Bluetooth\n'
+      printf '\tSoft blocked: %s\n' "$([[ "${MANGOWM_TEST_RFKILL-}" == soft ]] && echo yes || echo no)"
+      printf '\tHard blocked: %s\n' "$([[ "${MANGOWM_TEST_RFKILL-}" == hard ]] && echo yes || echo no)"
+    fi
+    exit 0
+    ;;
   pgrep)
     exit 1
     ;;

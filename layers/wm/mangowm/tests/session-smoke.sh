@@ -239,6 +239,20 @@ if grep -q '^foot .*bluetui' <<< "$click_log"; then
   fail 'el clic sin bluetui abrió el terminal igualmente'
 fi
 mv -- "$FAKE_BIN/bluetui.off" "$FAKE_BIN/bluetui"
+# A soft-blocked radio is unblocked first (bluetui exits at once on it); a
+# hard-blocked one only explains itself.
+log_lines=$(wc -l < "$LOG")
+MANGOWM_TEST_RFKILL=soft sh -c "$bluetooth_click"
+click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
+grep -q '^rfkill unblock bluetooth' <<< "$click_log" || fail "no se desbloqueó el bluetooth: $click_log"
+grep -q '^foot .*bluetui' <<< "$click_log" || fail "tras desbloquear no se abrió bluetui: $click_log"
+log_lines=$(wc -l < "$LOG")
+MANGOWM_TEST_RFKILL=hard sh -c "$bluetooth_click" || true
+click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
+grep -q '^notify-send .*hardware' <<< "$click_log" || fail "el bloqueo por hardware no avisó: $click_log"
+if grep -qE '^(foot|rfkill unblock)' <<< "$click_log"; then
+  fail "con bloqueo por hardware se intentó abrir o desbloquear: $click_log"
+fi
 "$TARGET/.local/lib/mangowm/brightness" up
 "$TARGET/.local/lib/mangowm/media" play-pause
 "$TARGET/.local/lib/mangowm/volume" mute
