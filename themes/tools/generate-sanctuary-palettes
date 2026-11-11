@@ -17,8 +17,8 @@ import sys
 from pathlib import Path
 
 THEMES = Path(__file__).resolve().parents[1]
-SOURCE = THEMES / "sources" / "sanctuary-ds-tokens-0.3.0" / "palette.json"
-SOURCE_SHA256 = "f6a05e1b2bb3effd84236bd479ea4ba7a91fd2c39f412f64469021ac4bd5bb24"
+SOURCE = THEMES / "sources" / "sanctuary-ds-tokens-0.3.2" / "palette.json"
+SOURCE_SHA256 = "7ed4faba62272916336118cc58c638c7eaf50205e0496c4d9a3c1bf5ba0cfac7"
 PALETTES = THEMES / "palettes"
 
 FLAVORS = ("compline", "vespers", "matins")

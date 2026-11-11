@@ -76,10 +76,10 @@ for flavor in "${FLAVORS[@]}"; do
   done
 done
 
-# 3. The S9a mapping, spot-checked against palette.json 0.3.0 (compline).
+# 3. The S9a mapping, spot-checked against palette.json 0.3.2 (compline).
 P="$PALETTES/sanctuary-compline-cobalt.conf"
-for line in schema=2 background_deep=#070b14 background_alt=#070b14 background=#0d111b \
-  surface=#1b202b foreground=#eee7d9 border=#363d4d accent=#9bc1fb accent_fg=#001237 \
+for line in schema=2 background_deep=#090b10 background_alt=#090b10 background=#0f1217 \
+  surface=#1d2026 foreground=#eee7d9 border=#393d46 accent=#9bc1fb accent_fg=#001237 \
   selection_bg=#043377 selection_fg=#e1ecfe cursor=#9bc1fb cursor_fg=#001237 \
   hue_blue=#9bc1fb 'font_mono=JetBrainsMono Nerd Font' 'font_text=Hanken Grotesk' \
   'font_display=Cormorant Garamond' font_inscription=Cinzel \

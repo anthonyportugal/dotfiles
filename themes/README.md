@@ -50,10 +50,10 @@ mauve, `hue_cyan` = sky.
 
 The Sanctuary palettes are generated, never edited by hand.
 `tools/generate-sanctuary-palettes` (python3, standard library) reads
-`sources/sanctuary-ds-tokens-0.3.0/palette.json` (`dist/palette.json` of
-`@sanctuary-ds/tokens` 0.3.0, vendored unchanged), refuses it unless its
+`sources/sanctuary-ds-tokens-0.3.2/palette.json` (`dist/palette.json` of
+`@sanctuary-ds/tokens` 0.3.2, vendored unchanged), refuses it unless its
 sha256 is the pinned
-`f6a05e1b2bb3effd84236bd479ea4ba7a91fd2c39f412f64469021ac4bd5bb24`, and
+`7ed4faba62272916336118cc58c638c7eaf50205e0496c4d9a3c1bf5ba0cfac7`, and
 writes the 36 `palettes/sanctuary-*.conf`, removing any other
 `sanctuary-*.conf`:
 

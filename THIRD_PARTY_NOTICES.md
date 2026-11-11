@@ -41,8 +41,8 @@ palette, used as data by the theme engine and its templates. No GTK theme archiv
 
 ## Sanctuary design tokens
 
-`themes/sources/sanctuary-ds-tokens-0.3.0/palette.json` is a copy of
-`dist/palette.json` from `@sanctuary-ds/tokens` 0.3.0, and
+`themes/sources/sanctuary-ds-tokens-0.3.2/palette.json` is a copy of
+`dist/palette.json` from `@sanctuary-ds/tokens` 0.3.2, and
 `themes/palettes/sanctuary-*.conf` are generated from it by
 `themes/tools/generate-sanctuary-palettes`.
 
