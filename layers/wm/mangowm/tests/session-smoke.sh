@@ -288,6 +288,11 @@ touch "$TARGET/Pictures/Wallpapers/sample.png"
 grep -Fqx "bind=SUPER,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo Super+W para seleccionar wallpaper'
+grep -Fqx "bind=SUPER+SHIFT,B,spawn,\$HOME/.local/lib/mangowm/bluetooth" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo Super+Shift+B para abrir bluetui'
+grep -Fq 'Super + Shift + B ' "$TARGET/.local/lib/mangowm/keybinds" || \
+  fail 'la ayuda de atajos no muestra Super+Shift+B'
 
 HOME="$ORIGINAL_HOME" PATH="$ORIGINAL_PATH" "$DOTFILES" doctor --profile core --wm mangowm \
   --wm-profile desktop --stow-only --target "$TARGET" >/dev/null 2>&1 || fail 'doctor falló tras la sesión'

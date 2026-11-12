@@ -175,6 +175,7 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
 | `Super + X` | Abrir menú de apagado/energía (Wlogout) |
 | `Super + Shift + P` | Abrir selector interactivo de perfiles de energía (Fuzzel) |
 | `Super + Shift + W` | Abrir selector interactivo de redes Wi-Fi (Fuzzel) |
+| `Super + Shift + B` | Abrir el gestor Bluetooth (bluetui en terminal flotante) |
 | `Super + V` | Abrir menú interactivo de control de volumen (Fuzzel) |
 | `Super + N` | Alternar filtro de luz nocturna (Gammastep con indicador en Waybar) |
 | `Super + W` / `Super + Ctrl + W` | Seleccionar fondo desde la galería vía Fuzzel (Swaybg) |

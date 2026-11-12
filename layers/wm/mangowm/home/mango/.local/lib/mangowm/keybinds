@@ -17,6 +17,7 @@ keybindings=(
   "🖼️   Super + W                     Selector de Wallpapers"
   "🎨  Super + Alt + T               Selector de Tema / Acento de Color"
   "📶  Super + Shift + W             Menú de Redes Wi-Fi"
+  "󰂯   Super + Shift + B             Gestor Bluetooth (bluetui)"
   "📸  Super + S / Print             Captura de Pantalla Completa"
   "📸  Super + Shift + S             Captura de Pantalla con Anotación (Satty)"
   "🎯  Super + P                     Selector de Color de Pantalla"

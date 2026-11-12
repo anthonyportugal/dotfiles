@@ -175,6 +175,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 | `Super + X` | Open session power menu (Wlogout) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Fuzzel) |
 | `Super + Shift + W` | Open interactive Wi-Fi network selector (Fuzzel) |
+| `Super + Shift + B` | Open the Bluetooth manager (bluetui in a floating terminal) |
 | `Super + V` | Open interactive audio volume control menu (Fuzzel) |
 | `Super + N` | Toggle warm night light (Gammastep with real-time Waybar status) |
 | `Super + W` / `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel (Swaybg) |
