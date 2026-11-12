@@ -1,5 +1,6 @@
 # Base development tools.
 actionlint
+direnv
 github-cli
 jq
 shellcheck

@@ -79,9 +79,11 @@ Some layers are never part of a profile and apply only when asked for with `--la
 
 | Layer / feature | Contents |
 | :--- | :--- |
-| **`dev`** | Development tools: `actionlint`, `github-cli`, `jq`, `shellcheck`, `shfmt`; Docker doctor checks. Requires `cli`. |
+| **`dev`** | Development tools: `actionlint`, `direnv` (hooked into zsh), `github-cli`, `jq`, `shellcheck`, `shfmt`; Docker doctor checks. Requires `cli`. |
 | **`dev-containers`** | Feature of `dev`: `docker`, `docker-compose`, `lazydocker` |
 | **`dev-js`** | Feature of `dev`: `pnpm`, with its global binaries on `PATH` |
+| **`dev-go`** | Feature of `dev`: `go`, `golangci-lint`, `delve` |
+| **`dev-tauri`** | Feature of `dev`: `rustup` and the Tauri v2 system libraries (`webkit2gtk-4.1`, `libayatana-appindicator`, ...). After installing, run `rustup default stable` once. |
 
 `~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.

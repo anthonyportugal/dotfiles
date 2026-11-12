@@ -1,0 +1,14 @@
+# Feature dev-tauri: Rust through rustup plus the Tauri v2 system libraries
+# (https://v2.tauri.app/start/prerequisites/). libappindicator-gtk3 left the
+# official repositories; Tauri also loads libayatana-appindicator for tray icons.
+appmenu-gtk-module
+base-devel
+curl
+file
+libayatana-appindicator
+librsvg
+openssl
+rustup
+webkit2gtk-4.1
+wget
+xdotool

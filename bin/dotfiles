@@ -207,7 +207,7 @@ Comandos:
 Opciones:
   --profile core|cli|desktop       Perfil acumulativo (default: desktop).
   --lang en|es                     Idioma de la interfaz (default: en; setup sigue a \$LANG).
-  --feature NOMBRE                 Feature opt-in (yazi-extras, dev-containers, dev-js); aplica
+  --feature NOMBRE                 Feature opt-in (yazi-extras, dev-containers, dev-js, dev-go, dev-tauri); aplica
                                    también la capa que la declara.
   --layer NOMBRE                   Capa opcional que ningún perfil incluye (dev); se puede repetir.
   --overlay RUTA                   Repositorio con layers/ propias (p. ej. ~/.dotfiles-private); cada
@@ -290,7 +290,7 @@ Commands:
 Options:
   --profile core|cli|desktop       Cumulative profile (default: desktop).
   --lang en|es                     Interface language (default: en; setup follows \$LANG).
-  --feature NAME                   Opt-in feature (yazi-extras, dev-containers, dev-js); also
+  --feature NAME                   Opt-in feature (yazi-extras, dev-containers, dev-js, dev-go, dev-tauri); also
                                    applies the layer declaring it.
   --layer NAME                     Opt-in layer no profile includes (dev); repeatable.
   --overlay DIR                    Repository with its own layers/ (e.g. ~/.dotfiles-private); each
