@@ -76,8 +76,15 @@ first_covering() {
 }
 
 installed=''
-command -v fc-list >/dev/null 2>&1 && installed=$(fc-list : family)
-if grep -q 'Noto Color Emoji' <<< "$installed"; then
+command -v fc-list >/dev/null 2>&1 && installed=$(fc-list : family | tr ',' '\n')
+# Without the text fallbacks fonts.conf names, digits legitimately reach the
+# emoji font, so only a host with all of them (noto-fonts, noto-fonts-emoji)
+# can judge the resolution order.
+missing=''
+for family in 'Noto Color Emoji' 'Noto Sans Mono' 'Noto Sans' 'Noto Serif'; do
+  grep -qxF -- "$family" <<< "$installed" || missing+=" '$family'"
+done
+if [[ -z "$missing" ]]; then
   export XDG_CONFIG_HOME="$REPO_ROOT/layers/desktop/home/xdg-defaults/.config"
   for pattern in monospace sans-serif serif 'JetBrainsMono Nerd Font'; do
     emoji=$(first_covering "$pattern" 1f600)
@@ -92,7 +99,7 @@ if grep -q 'Noto Color Emoji' <<< "$installed"; then
       fail 'monospace no dibuja texto con JetBrainsMono Nerd Font'
   fi
 else
-  printf 'SKIP: resolución con fc-match (Noto Color Emoji no instalada)\n'
+  printf 'SKIP: resolución con fc-match (faltan las fuentes:%s)\n' "$missing"
 fi
 
 # Waybar mixes text and icons in proportional widgets: the Propo variant gives
