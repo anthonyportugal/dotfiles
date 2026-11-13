@@ -113,7 +113,7 @@ failing hook only warns, because the theme is already promoted.
 | Directory | Runs | Used by |
 |-----------|------|---------|
 | `render.d/` | after `current` moves to another revision (`render`, a desktop apply, `DOTFILES_THEME`, `path`) and on every `set`; its stdout goes to stderr | the cli layer's `bat`, which rebuilds bat's cache |
-| `reload.d/` | after `set` only, to reload a live session | `mangowm`, `bspwm` |
+| `reload.d/` | after `set` only, to reload a live session | `mangowm`, `bspwm`, `nvim` (dev layer: running Neovim servers re-apply the `dotfiles` colorscheme) |
 
 ## Rendered state
 
@@ -132,6 +132,7 @@ $XDG_STATE_HOME/dotfiles/theme/
     ├── micro/default.micro       # linked as ~/.config/micro/colorschemes/default.micro
     ├── lazygit/theme.yml         # appended to LG_CONFIG_FILE by zsh
     ├── fzf/options               # FZF_DEFAULT_OPTS_FILE set by zsh
+    ├── nvim/palette.lua          # read by ~/.config/nvim/colors/dotfiles.lua (dev layer)
     ├── background
     ├── metadata                  # schema=2, id, family, flavour, accent_name
     └── <wm>/...                  # one directory per installed WM
@@ -156,6 +157,7 @@ Each application still starts when no theme was rendered yet:
 | micro | `"colorscheme": "default"` | the link shadows micro's builtin `default`, which stays when nothing is linked |
 | lazygit | `LG_CONFIG_FILE` | zsh leaves it unset: lazygit's default colors |
 | fzf | `FZF_DEFAULT_OPTS_FILE` | zsh leaves it unset: fzf's default colors |
+| Neovim (dev layer) | the `colorscheme` option in `lua/plugins/colorscheme.lua` loads `colors/dotfiles.lua`, which builds the highlights with mini.base16 from the rendered palette | tokyonight (LazyVim's default) |
 | fastfetch | ANSI color names | follows the terminal palette (no rendered file) |
 
 bat only sees a new palette after `bat cache --build`: the cli layer's

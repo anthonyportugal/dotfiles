@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Live reload of running Neovim instances after `dotfiles-theme set`: each
+# server re-applies the dotfiles colorscheme when it is the active one; others
+# are left alone. Neovim listens on $XDG_RUNTIME_DIR/nvim.<pid>.0 by default,
+# or under $TMPDIR (else /tmp)/nvim.<user>/<random>/ without XDG_RUNTIME_DIR.
+# When this hook runs without XDG_RUNTIME_DIR, the instances may still have
+# had it (a desktop session), so both the usual /run/user/<uid> and the
+# temporary directory are searched.
+
+set -uo pipefail
+
+command -v nvim >/dev/null 2>&1 || exit 0
+
+shopt -s nullglob
+if [[ -n ${XDG_RUNTIME_DIR:-} ]]; then
+  servers=("$XDG_RUNTIME_DIR"/nvim.*.0)
+else
+  servers=("/run/user/$(id -u)"/nvim.*.0 "${TMPDIR:-/tmp}/nvim.$(id -un)"/*/nvim.*.0)
+fi
+
+for server in "${servers[@]}"; do
+  [[ -S "$server" ]] || continue
+  # shellcheck disable=SC2016  # Vimscript, evaluated by Neovim
+  timeout 2 nvim --server "$server" --remote-expr \
+    'execute("if get(g:, \"colors_name\", \"\") ==# \"dotfiles\" | colorscheme dotfiles | endif")' \
+    >/dev/null 2>&1 || true
+done

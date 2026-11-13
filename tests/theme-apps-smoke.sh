@@ -153,6 +153,43 @@ PY
     "color-link current-line-number \"$(palette_value "$palette" accent)\""
   output=$(cat "$revision/fzf/options")
   [[ "$output" == *"bg:$(palette_value "$palette" background),"* ]] || fail "fzf/options no lleva el fondo"
+  expect_rendered "$revision/nvim/palette.lua"
+  expect_line "$revision/nvim/palette.lua" "    base00 = \"$(palette_value "$palette" background)\","
+  expect_line "$revision/nvim/palette.lua" "    base0D = \"$(palette_value "$palette" syntax_function)\","
+  expect_line "$revision/nvim/palette.lua" "  accent = \"$(palette_value "$palette" accent)\","
+  if command -v luac >/dev/null; then
+    luac -p -- "$revision/nvim/palette.lua" || fail "nvim/palette.lua no es Lua válido"
+  fi
+  check_nvim_colorscheme "$revision"
+}
+
+# Loads Neovim's dotfiles colorscheme against revision $1 under a stub `vim`
+# and mini.base16 (LuaJIT, as Neovim): it must name itself and set only hex
+# colors. Skipped without luajit.
+check_nvim_colorscheme() {
+  local state
+
+  command -v luajit >/dev/null || return 0
+  state=$(mktemp -d -p "$TEST_ROOT")
+  mkdir -p "$state/dotfiles/theme"
+  ln -s "$1" "$state/dotfiles/theme/current"
+  XDG_STATE_HOME="$state" luajit - "$REPO_ROOT/layers/dev/home/nvim/.config/nvim/colors/dotfiles.lua" <<'LUA' || \
+    fail "el colorscheme dotfiles de Neovim falló con ${1#"$TEST_ROOT"/}"
+local function hex(group, value)
+  assert(type(value) ~= "string" or value:match("^#%x%x%x%x%x%x$"), group .. ": " .. tostring(value))
+end
+vim = {
+  env = { XDG_STATE_HOME = os.getenv("XDG_STATE_HOME") }, o = {}, g = {}, cmd = function() end,
+  api = { nvim_set_hl = function(_, group, spec) for _, v in pairs(spec) do hex(group, v) end end },
+}
+package.preload["mini.base16"] = function()
+  return { setup = function(config) for k, v in pairs(config.palette) do hex(k, v) end end }
+end
+package.path = arg[1]:gsub("/colors/dotfiles.lua$", "/lua/?.lua;") .. package.path
+dofile(arg[1])
+assert(vim.g.colors_name == "dotfiles", "colors_name")
+assert(vim.o.background == "dark" or vim.o.background == "light", "background")
+LUA
 }
 
 # Fails when rendered file $2 holds a #rrggbb color that is not a value of
@@ -248,12 +285,53 @@ expect_line "$CLI_HOME/btop/.config/btop/btop.conf" 'color_theme = "dotfiles"'
 grep -Fq '"colorscheme": "default",' "$CLI_HOME/micro/.config/micro/settings.json" || \
   fail "micro no selecciona el colorscheme renderizado"
 grep -Fq 'theme:' "$CLI_HOME/lazygit/.config/lazygit/config.yml" && fail "lazygit fija su propio tema"
+# Neovim (dev layer) reads the rendered palette from the state path and falls
+# back to a bundled colorscheme without one.
+NVIM_CONFIG="$REPO_ROOT/layers/dev/home/nvim/.config/nvim"
+grep -Fq '/dotfiles/theme/current/nvim/palette.lua' "$NVIM_CONFIG/lua/dotfiles/theme.lua" || \
+  fail "Neovim no ubica la paleta renderizada en el estado del tema"
+# The colorscheme option picks "dotfiles" with a rendered palette that loads,
+# and tokyonight without a palette or when "dotfiles" fails (LuaJIT, stub vim).
+nvim_picks() {
+  XDG_STATE_HOME="$1" luajit - "$NVIM_CONFIG" "${2:-}" <<'LUA'
+package.path = arg[1] .. "/lua/?.lua;" .. package.path
+local picked
+vim = {
+  env = { XDG_STATE_HOME = os.getenv("XDG_STATE_HOME"), HOME = os.getenv("HOME") },
+  uv = { fs_stat = function(path) local f = io.open(path) if f then f:close() return {} end end },
+  cmd = { colorscheme = function(name)
+    if name == "dotfiles" and arg[2] == "broken" then error("broken palette") end
+    picked = name
+  end },
+}
+local specs = dofile(arg[1] .. "/lua/plugins/colorscheme.lua")
+for _, spec in ipairs(specs) do
+  if spec.opts and spec.opts.colorscheme then spec.opts.colorscheme() end
+end
+print(picked)
+LUA
+}
+if command -v luajit >/dev/null; then
+  NVIM_STATE=$(mktemp -d -p "$TEST_ROOT")
+  [[ "$(nvim_picks "$NVIM_STATE")" == tokyonight ]] || fail "sin paleta Neovim no usó tokyonight"
+  mkdir -p "$NVIM_STATE/dotfiles/theme/current/nvim"
+  printf 'return {}\n' > "$NVIM_STATE/dotfiles/theme/current/nvim/palette.lua"
+  [[ "$(nvim_picks "$NVIM_STATE")" == dotfiles ]] || fail "con paleta Neovim no eligió el colorscheme dotfiles"
+  [[ "$(nvim_picks "$NVIM_STATE" broken)" == tokyonight ]] || \
+    fail "con el colorscheme dotfiles roto Neovim no volvió a tokyonight"
+else
+  printf 'SKIP: selección y carga del colorscheme de Neovim (falta luajit)\n'
+fi
+for config in "$NVIM_CONFIG/colors/dotfiles.lua" "$NVIM_CONFIG/lua/plugins/colorscheme.lua" \
+              "$NVIM_CONFIG/lua/dotfiles/theme.lua"; do
+  expect_no_hex "$config"
+done
 for config in "$CLI_HOME/lazygit/.config/lazygit/config.yml" "$CLI_HOME/fastfetch/.config/fastfetch/config.jsonc" \
               "$ENVIRONMENT"; do
   expect_no_hex "$config"
 done
 for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro/default.micro fzf/options \
-                yazi/flavor.toml; do
+                yazi/flavor.toml nvim/palette.lua; do
   expect_no_hex "$SHARED_TEMPLATES/$template"
 done
 for version in 3.0 4.0; do
@@ -381,6 +459,34 @@ output=$(env -u BAT_CACHE_PATH -u BAT_CONFIG_DIR HOME="$HOOKS" XDG_CONFIG_HOME="
   fail "el hook de bat falló con la caché fuera de HOME"
 [[ ! -e "$TEST_ROOT/outside-cache" && "$(bat_builds)" == 5 && "$output" == *'fuera de'* ]] || \
   fail "el hook de bat escribió una caché fuera de HOME: $output"
+
+# The Neovim reload hook (dev layer) asks every Neovim server socket to
+# re-apply the dotfiles colorscheme, skips non-sockets, and does nothing
+# without Neovim.
+NVIM_HOOK="$REPO_ROOT/layers/dev/home/nvim/.local/share/dotfiles/theme/reload.d/nvim"
+[[ -x "$NVIM_HOOK" ]] || fail "falta el hook de recarga ejecutable de Neovim"
+NVIM_RUNTIME=$(mktemp -d -p "$TEST_ROOT")
+NVIM_STUBS="$TEST_ROOT/nvim-stubs"
+mkdir -p "$NVIM_STUBS"
+# shellcheck disable=SC2016  # expanded by the stub
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "%s/nvim-calls"\n' "$TEST_ROOT" > "$NVIM_STUBS/nvim"
+chmod +x "$NVIM_STUBS/nvim"
+python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$NVIM_RUNTIME/nvim.42.0"
+touch -- "$NVIM_RUNTIME/nvim.43.0"
+env XDG_RUNTIME_DIR="$NVIM_RUNTIME" PATH="$NVIM_STUBS:$PATH" "$NVIM_HOOK" || fail "el hook de Neovim falló"
+[[ "$(wc -l < "$TEST_ROOT/nvim-calls")" == 1 ]] || fail "el hook de Neovim no habló solo con el socket: $(<"$TEST_ROOT/nvim-calls")"
+grep -Fq -- "--server $NVIM_RUNTIME/nvim.42.0 --remote-expr" "$TEST_ROOT/nvim-calls" || \
+  fail "el hook de Neovim no pidió recargar el colorscheme: $(<"$TEST_ROOT/nvim-calls")"
+grep -Fq 'colorscheme dotfiles' "$TEST_ROOT/nvim-calls" || fail "el hook de Neovim no reaplica el colorscheme dotfiles"
+env XDG_RUNTIME_DIR="$NVIM_RUNTIME" PATH="$NO_BAT" "$NVIM_HOOK" || fail "el hook de Neovim falló sin Neovim instalado"
+# Without XDG_RUNTIME_DIR Neovim keeps its sockets under $TMPDIR/nvim.<user>/<random>/.
+NVIM_TMP=$(mktemp -d -p "$TEST_ROOT")
+mkdir -p "$NVIM_TMP/nvim.$(id -un)/abc123"
+python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$NVIM_TMP/nvim.$(id -un)/abc123/nvim.7.0"
+rm -f -- "$TEST_ROOT/nvim-calls"
+env -u XDG_RUNTIME_DIR TMPDIR="$NVIM_TMP" PATH="$NVIM_STUBS:$PATH" "$NVIM_HOOK" || fail "el hook de Neovim falló sin XDG_RUNTIME_DIR"
+grep -Fq -- "--server $NVIM_TMP/nvim.$(id -un)/abc123/nvim.7.0 --remote-expr" "$TEST_ROOT/nvim-calls" 2>/dev/null || \
+  fail "sin XDG_RUNTIME_DIR el hook de Neovim no encontró el servidor en TMPDIR"
 
 # The real bat lists the rendered theme after a render-only path, with its
 # cache newer than the tmTheme.

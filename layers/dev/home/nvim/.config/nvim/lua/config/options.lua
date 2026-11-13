@@ -1,0 +1,2 @@
+-- Loaded by LazyVim (see lua/lazyvim/config/options.lua for its defaults).
+-- Add personal options here.

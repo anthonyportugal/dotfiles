@@ -79,12 +79,26 @@ Algunas capas nunca forman parte de un perfil y solo se aplican si se piden con 
 
 | Capa / feature | Contenido |
 | :--- | :--- |
-| **`dev`** | Herramientas de desarrollo: `actionlint`, `direnv` (con su hook en zsh), `github-cli`, `hyperfine`, `jq`, `oha`, `shellcheck`, `shfmt`, `xh`; comprobaciones de Docker en doctor. Requiere `cli`. |
+| **`dev`** | Herramientas de desarrollo: Neovim con LazyVim (`nvim`, ver más abajo), `actionlint`, `direnv` (con su hook en zsh), `github-cli`, `hyperfine`, `jq`, `oha`, `shellcheck`, `shfmt`, `xh`; comprobaciones de Docker en doctor. Requiere `cli`. |
 | **`dev-containers`** | Feature de `dev`: `docker`, `docker-compose`, `lazydocker` |
 | **`dev-js`** | Feature de `dev`: `pnpm`, con sus binarios globales en el `PATH` |
 | **`dev-go`** | Feature de `dev`: `go`, `golangci-lint`, `delve` |
 | **`dev-tauri`** | Feature de `dev`: `rustup` y las bibliotecas de sistema de Tauri v2 (`webkit2gtk-4.1`, `libayatana-appindicator`, ...). `rustup` entra en conflicto con el paquete `rust`: desinstale `rust` antes (`sudo pacman -Rns rust`). Tras instalarla, ejecute una vez `rustup default stable`. |
 | **`dev-herdr`** | Feature de `dev`: `herdr-bin` desde AUR (requiere un helper de AUR como Shelly, paru o yay), la TUI de herdr para supervisar varios agentes de código en una terminal. |
+
+#### Neovim (LazyVim)
+
+La capa `dev` enlaza `~/.config/nvim` desde [`layers/dev/home/nvim`](layers/dev/home/nvim/.config/nvim). Se construye en tres niveles:
+
+- **[lazy.nvim](https://github.com/folke/lazy.nvim)** es el gestor de plugins. En el primer `nvim` se clona a sí mismo e instala cada plugin, y registra los commits exactos en `~/.config/nvim/lazy-lock.json` (un archivo local, fuera de este repositorio). `:Lazy` los muestra y actualiza.
+- **[LazyVim](https://www.lazyvim.org)** es un conjunto de plugins sobre él: valores por defecto del editor, LSP, autocompletado, treesitter, un buscador e integración con git.
+- **Los extras** añaden un lenguaje o herramienta cada uno: su servidor de lenguaje, los parsers de treesitter y el formateador/linter. [`lua/config/lazy.lua`](layers/dev/home/nvim/.config/nvim/lua/config/lazy.lua) importa TypeScript/React, Vue, Angular, Astro, Tailwind, Go, Rust, JSON, YAML, TOML, Docker, Markdown, Prettier, ESLint, el depurador y el ejecutor de tests. Un stack nuevo es un import más (por ejemplo `lang.dart` para Flutter); `:LazyExtras` los lista todos.
+
+Los colores siguen la paleta activa: el colorscheme `dotfiles` lee la paleta que renderiza `dotfiles-theme` (capa desktop), y `dotfiles-theme set` la vuelve a aplicar en las instancias de Neovim abiertas. Sin paleta renderizada Neovim usa tokyonight.
+
+Con `nvim` instalado, el archivo de zsh de la capa lo convierte en el editor: `EDITOR`, `VISUAL` y `GIT_EDITOR` (solo reemplaza los valores `micro` de `core`: un editor que hayas exportado tú se conserva, y git también lo usa). Micro sigue instalado por `cli` y es el editor sin la capa `dev`.
+
+Mason (`:Mason`) instala los servidores de lenguaje en `~/.local/share/nvim`. Los servidores de la familia TypeScript necesitan Node.js con `npm` (feature `dev-js`), y las herramientas de Go necesitan `go` (feature `dev-go`).
 
 `~/.config/mimeapps.list` se genera, no se enlaza: las aplicaciones escriben en él, así que un enlace les dejaría modificar el checkout. La capa `desktop` mezcla
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) en él en cada apply. Las claves del repo siempre ganan, y se conserva cualquier otra entrada que haya registrado una aplicación. `doctor` avisa cuando una clave del repo se desvió.

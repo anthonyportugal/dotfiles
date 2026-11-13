@@ -1,0 +1,2 @@
+-- Loaded by LazyVim (see lua/lazyvim/config/autocmds.lua for its defaults).
+-- Add personal autocmds here.
