@@ -9,6 +9,7 @@ git-delta
 glow
 lazygit
 micro
+nvtop
 sad
 starship
 tealdeer
