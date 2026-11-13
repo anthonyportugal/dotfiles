@@ -79,7 +79,7 @@ Algunas capas nunca forman parte de un perfil y solo se aplican si se piden con 
 
 | Capa / feature | Contenido |
 | :--- | :--- |
-| **`dev`** | Herramientas de desarrollo: `actionlint`, `direnv` (con su hook en zsh), `github-cli`, `jq`, `shellcheck`, `shfmt`, `xh`; comprobaciones de Docker en doctor. Requiere `cli`. |
+| **`dev`** | Herramientas de desarrollo: `actionlint`, `direnv` (con su hook en zsh), `github-cli`, `hyperfine`, `jq`, `oha`, `shellcheck`, `shfmt`, `xh`; comprobaciones de Docker en doctor. Requiere `cli`. |
 | **`dev-containers`** | Feature de `dev`: `docker`, `docker-compose`, `lazydocker` |
 | **`dev-js`** | Feature de `dev`: `pnpm`, con sus binarios globales en el `PATH` |
 | **`dev-go`** | Feature de `dev`: `go`, `golangci-lint`, `delve` |
