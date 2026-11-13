@@ -3,6 +3,7 @@ brightnessctl
 gammastep
 grim
 imagemagick
+jq
 libnotify
 satty
 slurp

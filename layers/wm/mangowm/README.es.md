@@ -162,7 +162,8 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
 | Atajo | Acción |
 | :--- | :--- |
 | `Super + C` / `Super + Shift + C` | Cerrar / Forzar cierre de ventana enfocada |
-| `Super + T` | Alternar disposiciones (*Dwindle, Tile, Grid, Monocle, Scroller*) |
+| `Super + T` | Alternar la lista corta de disposiciones (*Dwindle, Tile, Monocle*; `circle_layout` en `30-layout.conf`) |
+| `Super + Shift + T` | Elegir cualquier disposición desde un menú (también con un clic en el indicador de Waybar) |
 | `Super + Escape` | Recargar configuración de MangoWM |
 | `Super + Shift + Escape` | Salir de la sesión MangoWM |
 
