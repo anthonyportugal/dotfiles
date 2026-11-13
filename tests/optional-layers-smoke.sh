@@ -82,6 +82,7 @@ dev_plan=$(layer_section "$output" dev)
 [[ -n "$dev_plan" ]] || fail "--layer dev no planificó la capa dev: $output"
 [[ "$dev_plan" == *shellcheck* ]] || fail "la capa dev no planificó sus herramientas base: $dev_plan"
 plans_repo_package "$dev_plan" direnv || fail "la capa dev no planificó direnv: $dev_plan"
+plans_repo_package "$dev_plan" xh || fail "la capa dev no planificó xh: $dev_plan"
 [[ "$dev_plan" != *docker* && "$dev_plan" != *pnpm* ]] || fail "la capa dev planificó features no pedidas: $dev_plan"
 
 # A feature of an opt-in layer pulls the layer in and adds its packages.

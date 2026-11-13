@@ -79,7 +79,7 @@ Some layers are never part of a profile and apply only when asked for with `--la
 
 | Layer / feature | Contents |
 | :--- | :--- |
-| **`dev`** | Development tools: `actionlint`, `direnv` (hooked into zsh), `github-cli`, `jq`, `shellcheck`, `shfmt`; Docker doctor checks. Requires `cli`. |
+| **`dev`** | Development tools: `actionlint`, `direnv` (hooked into zsh), `github-cli`, `jq`, `shellcheck`, `shfmt`, `xh`; Docker doctor checks. Requires `cli`. |
 | **`dev-containers`** | Feature of `dev`: `docker`, `docker-compose`, `lazydocker` |
 | **`dev-js`** | Feature of `dev`: `pnpm`, with its global binaries on `PATH` |
 | **`dev-go`** | Feature of `dev`: `go`, `golangci-lint`, `delve` |

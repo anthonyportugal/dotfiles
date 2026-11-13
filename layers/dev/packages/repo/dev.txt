@@ -5,3 +5,4 @@ github-cli
 jq
 shellcheck
 shfmt
+xh
