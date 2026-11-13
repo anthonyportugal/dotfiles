@@ -84,6 +84,7 @@ Algunas capas nunca forman parte de un perfil y solo se aplican si se piden con 
 | **`dev-js`** | Feature de `dev`: `pnpm`, con sus binarios globales en el `PATH` |
 | **`dev-go`** | Feature de `dev`: `go`, `golangci-lint`, `delve` |
 | **`dev-tauri`** | Feature de `dev`: `rustup` y las bibliotecas de sistema de Tauri v2 (`webkit2gtk-4.1`, `libayatana-appindicator`, ...). `rustup` entra en conflicto con el paquete `rust`: desinstale `rust` antes (`sudo pacman -Rns rust`). Tras instalarla, ejecute una vez `rustup default stable`. |
+| **`dev-herdr`** | Feature de `dev`: `herdr-bin` desde AUR (requiere un helper de AUR como Shelly, paru o yay), la TUI de herdr para supervisar varios agentes de código en una terminal. |
 
 `~/.config/mimeapps.list` se genera, no se enlaza: las aplicaciones escriben en él, así que un enlace les dejaría modificar el checkout. La capa `desktop` mezcla
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) en él en cada apply. Las claves del repo siempre ganan, y se conserva cualquier otra entrada que haya registrado una aplicación. `doctor` avisa cuando una clave del repo se desvió.

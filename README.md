@@ -84,6 +84,7 @@ Some layers are never part of a profile and apply only when asked for with `--la
 | **`dev-js`** | Feature of `dev`: `pnpm`, with its global binaries on `PATH` |
 | **`dev-go`** | Feature of `dev`: `go`, `golangci-lint`, `delve` |
 | **`dev-tauri`** | Feature of `dev`: `rustup` and the Tauri v2 system libraries (`webkit2gtk-4.1`, `libayatana-appindicator`, ...). `rustup` conflicts with the `rust` package: remove `rust` first (`sudo pacman -Rns rust`). After installing, run `rustup default stable` once. |
+| **`dev-herdr`** | Feature of `dev`: `herdr-bin` from AUR (needs an AUR helper such as Shelly, paru or yay), the herdr TUI to supervise several coding agents in one terminal. |
 
 `~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.

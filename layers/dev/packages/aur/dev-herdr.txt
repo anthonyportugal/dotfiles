@@ -1,0 +1,4 @@
+# AUR development tools without an official repository package.
+# herdr-bin repackages the upstream release binary of github.com/herdrdev/herdr
+# with a pinned sha256 (the herdr package builds from source and lags behind).
+herdr-bin

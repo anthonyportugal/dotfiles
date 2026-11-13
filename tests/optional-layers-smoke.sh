@@ -64,6 +64,13 @@ plans_repo_package() {
   [[ " $packages " == *" $2 "* ]]
 }
 
+# Same as plans_repo_package, for the AUR packages of a plan section.
+plans_aur_package() {
+  local packages
+  packages=$(awk '/Paquetes AUR:/ { sub(/.*Paquetes AUR: */, ""); print; exit }' <<< "$1")
+  [[ " $packages " == *" $2 "* ]]
+}
+
 # The help documents the selector.
 output=$(run help)
 [[ "$output" == *'--layer'* ]] || fail "la ayuda no documenta --layer"
@@ -86,6 +93,7 @@ plans_repo_package "$dev_plan" xh || fail "la capa dev no planificó xh: $dev_pl
 for package in hyperfine oha; do
   plans_repo_package "$dev_plan" "$package" || fail "la capa dev no planificó $package: $dev_plan"
 done
+! plans_aur_package "$dev_plan" herdr-bin || fail "la capa dev base planificó herdr-bin de AUR: $dev_plan"
 [[ "$dev_plan" != *docker* && "$dev_plan" != *pnpm* ]] || fail "la capa dev planificó features no pedidas: $dev_plan"
 
 # A feature of an opt-in layer pulls the layer in and adds its packages.
@@ -105,6 +113,11 @@ for package in rustup webkit2gtk-4.1 base-devel libayatana-appindicator librsvg 
   plans_repo_package "$dev_plan" "$package" || fail "dev-tauri no añadió $package a la capa dev: $output"
 done
 ! plans_repo_package "$dev_plan" golangci-lint || fail "dev-tauri planificó paquetes de dev-go: $dev_plan"
+# dev-herdr adds an AUR package, so it plans with an AUR backend.
+output=$(plan_packages --profile core --feature dev-herdr --backend shelly) || \
+  fail "el plan con dev-herdr falló: $output"
+dev_plan=$(layer_section "$output" dev)
+plans_aur_package "$dev_plan" herdr-bin || fail "dev-herdr no añadió herdr-bin desde AUR: $output"
 
 # --feature dev-containers alone raises the profile to cli too.
 output=$(plan_packages --profile core --feature dev-containers) || fail "el plan con dev-containers falló: $output"
