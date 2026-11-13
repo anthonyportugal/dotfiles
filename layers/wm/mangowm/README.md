@@ -162,7 +162,8 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 | Shortcut | Action |
 | :--- | :--- |
 | `Super + C` / `Super + Shift + C` | Close / Kill focused window |
-| `Super + T` | Cycle tiling layouts (*Dwindle, Tile, Grid, Monocle, Scroller*) |
+| `Super + T` | Cycle the short layout list (*Dwindle, Tile, Monocle*; `circle_layout` in `30-layout.conf`) |
+| `Super + Shift + T` | Pick any layout from a menu (also a click on the Waybar layout indicator) |
 | `Super + Escape` | Reload MangoWM configuration |
 | `Super + Shift + Escape` | Quit MangoWM session |
 

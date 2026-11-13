@@ -294,6 +294,29 @@ grep -Fqx "bind=SUPER+SHIFT,B,spawn,\$HOME/.local/lib/mangowm/bluetooth" \
 grep -Fq 'Super + Shift + B ' "$TARGET/.local/lib/mangowm/keybinds" || \
   fail 'la ayuda de atajos no muestra Super+Shift+B'
 
+# Super+T cycles a short list of layouts; Super+Shift+T and the Waybar module
+# open a picker with every layout mango reports.
+grep -Fqx 'circle_layout=dwindle,tile,monocle' "$TARGET/.config/mango/conf.d/30-layout.conf" || \
+  fail 'Super+T no tiene una lista corta de layouts (circle_layout)'
+grep -Fqx "bind=SUPER+SHIFT,T,spawn,\$HOME/.local/lib/mangowm/layout" \
+  "$TARGET/.config/mango/conf.d/40-bindings.conf" || fail 'falta el atajo Super+Shift+T para elegir layout'
+grep -Fq 'Super + Shift + T ' "$TARGET/.local/lib/mangowm/keybinds" || \
+  fail 'la ayuda de atajos no muestra Super+Shift+T'
+grep -Fq 'Dwindle / Tiling' "$TARGET/.local/lib/mangowm/keybinds" && \
+  fail 'la ayuda de Super+T no refleja los layouts que alterna'
+jq -e '."modules-center" | index("mango/layout")' "$TARGET/.config/waybar/config.json" >/dev/null || \
+  fail 'Waybar no muestra el layout de mango'
+[[ $(jq -r '."mango/layout"."on-click"' "$TARGET/.config/waybar/config.json") == \
+   "\$HOME/.local/lib/mangowm/layout" ]] || fail 'el módulo de layout no abre el selector'
+: > "$LOG"
+MANGOWM_TEST_FUZZEL_PICK=1 "$TARGET/.local/lib/mangowm/layout" || fail 'el selector de layouts falló'
+grep -Fq 'mmsg dispatch setlayout\,scroller' "$LOG" || \
+  fail "el selector no aplicó el layout elegido: $(<"$LOG")"
+grep -Fq 'fuzzel ' "$LOG" || fail 'el selector de layouts no abrió fuzzel'
+: > "$LOG"
+"$TARGET/.local/lib/mangowm/layout" || fail 'el selector de layouts falló al cerrarlo'
+grep -Fq 'setlayout' "$LOG" && fail 'el selector aplicó un layout sin elegir ninguno'
+
 HOME="$ORIGINAL_HOME" PATH="$ORIGINAL_PATH" "$DOTFILES" doctor --profile core --wm mangowm \
   --wm-profile desktop --stow-only --target "$TARGET" >/dev/null 2>&1 || fail 'doctor falló tras la sesión'
 HOME="$ORIGINAL_HOME" PATH="$ORIGINAL_PATH" "$DOTFILES" unlink --profile core --wm mangowm \

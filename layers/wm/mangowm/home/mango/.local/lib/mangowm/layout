@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Layout picker: lists every layout mango reports (`mmsg get layouts`), marks
+# the one of the focused monitor and applies the chosen one to its current tag.
+# Super+T only cycles the short circle_layout list; this reaches all of them.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require mmsg
+mangowm_require fuzzel
+
+layouts=$(mmsg get layouts) || {
+  mangowm_notify critical 'Layouts no disponibles' 'mmsg no pudo listar los layouts de mango'
+  exit 1
+}
+current=$(mmsg get all-monitors 2>/dev/null | jq -r '[.monitors[] | select(.active)][0].layout_symbol // ""') || current=''
+
+# One row per layout: "<marker> name (symbol)<TAB>name".
+choice=$(jq -r --arg current "$current" \
+  '.layouts[] | "\(if .symbol == $current then "●" else " " end) \(.name) (\(.symbol))\t\(.name)"' \
+  <<< "$layouts" | mangowm_menu 'Layout ❯ ') || exit 0
+[[ -n "$choice" ]] || exit 0
+mmsg dispatch "setlayout,$choice"

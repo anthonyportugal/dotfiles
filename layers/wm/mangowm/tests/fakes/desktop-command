@@ -20,6 +20,13 @@ case "$name" in
   pgrep)
     exit 1
     ;;
+  fuzzel)
+    # MANGOWM_TEST_FUZZEL_PICK=<index> picks that row (--index); unset dismisses.
+    cat > /dev/null
+    [[ -n "${MANGOWM_TEST_FUZZEL_PICK-}" ]] || exit 1
+    printf '%s\n' "$MANGOWM_TEST_FUZZEL_PICK"
+    exit 0
+    ;;
   pkill)
     exit 0
     ;;
@@ -31,7 +38,10 @@ case "$name" in
             printf 'us\n'
             ;;
           all-monitors)
-            printf '{"monitors":[{"name":"eDP-1","active":true,"width":1920,"height":1080}]}\n'
+            printf '{"monitors":[{"name":"eDP-1","active":true,"width":1920,"height":1080,"layout_symbol":"DW"}]}\n'
+            ;;
+          layouts)
+            printf '{"layouts":[{"symbol":"T","name":"tile"},{"symbol":"S","name":"scroller"},{"symbol":"DW","name":"dwindle"}]}\n'
             ;;
           *)
             ;;
