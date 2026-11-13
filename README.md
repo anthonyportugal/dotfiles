@@ -92,7 +92,7 @@ The `dev` layer links `~/.config/nvim` from [`layers/dev/home/nvim`](layers/dev/
 
 - **[lazy.nvim](https://github.com/folke/lazy.nvim)** is the plugin manager. On the first `nvim` it clones itself and installs every plugin, recording the exact commits in `~/.config/nvim/lazy-lock.json` (a local file, not part of this repo). `:Lazy` shows and updates them.
 - **[LazyVim](https://www.lazyvim.org)** is a plugin set on top of it: editor defaults, LSP, completion, treesitter, a picker and git integration.
-- **Extras** add one language or tool each: its language server, treesitter parsers and formatter/linter. [`lua/config/lazy.lua`](layers/dev/home/nvim/.config/nvim/lua/config/lazy.lua) imports TypeScript/React, Vue, Angular, Astro, Tailwind, Go, Rust, JSON, YAML, TOML, Docker, Markdown, Prettier, ESLint, the debugger and the test runner. A new stack is one more import (for example `lang.dart` for Flutter); `:LazyExtras` lists them all.
+- **Extras** add one language or tool each: its language server, treesitter parsers and formatter/linter. [`lua/config/lazy.lua`](layers/dev/home/nvim/.config/nvim/lua/config/lazy.lua) imports TypeScript/React, Vue, Angular, Astro, Tailwind, Go, Rust, JSON, YAML, TOML, Docker, Markdown, Prettier, ESLint, the debugger and the test runner. A new stack is one more import (for example `lang.dart` for Flutter); `:LazyExtras` lists them all. New to Vim? `:Tutor` is Neovim's interactive 30-minute tutorial.
 
 Colors follow the active palette: the `dotfiles` colorscheme reads the palette that `dotfiles-theme` renders (desktop layer), and `dotfiles-theme set` re-applies it in running Neovim instances. Without a rendered palette Neovim uses tokyonight.
 
