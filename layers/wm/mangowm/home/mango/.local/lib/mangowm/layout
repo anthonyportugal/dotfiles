@@ -9,16 +9,17 @@ source "$HOME/.local/lib/mangowm/common"
 
 mangowm_require mmsg
 mangowm_require fuzzel
+mangowm_require jq
 
-layouts=$(mmsg get layouts) || {
-  mangowm_notify critical 'Layouts no disponibles' 'mmsg no pudo listar los layouts de mango'
+# One row per layout: "<marker> name (symbol)<TAB>name"; the marker flags the
+# focused monitor's layout. A failure here is reported, unlike a dismissed menu.
+current=$(mmsg get all-monitors 2>/dev/null | jq -r '[.monitors[] | select(.active)][0].layout_symbol // ""') || current=''
+rows=$(mmsg get layouts | jq -er --arg current "$current" \
+  '.layouts[] | "\(if .symbol == $current then "●" else " " end) \(.name) (\(.symbol))\t\(.name)"') || {
+  mangowm_notify critical 'Layouts no disponibles' 'mmsg no devolvió la lista de layouts de mango'
   exit 1
 }
-current=$(mmsg get all-monitors 2>/dev/null | jq -r '[.monitors[] | select(.active)][0].layout_symbol // ""') || current=''
 
-# One row per layout: "<marker> name (symbol)<TAB>name".
-choice=$(jq -r --arg current "$current" \
-  '.layouts[] | "\(if .symbol == $current then "●" else " " end) \(.name) (\(.symbol))\t\(.name)"' \
-  <<< "$layouts" | mangowm_menu 'Layout ❯ ') || exit 0
+choice=$(mangowm_menu 'Layout ❯ ' <<< "$rows") || exit 0
 [[ -n "$choice" ]] || exit 0
 mmsg dispatch "setlayout,$choice"
