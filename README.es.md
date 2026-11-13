@@ -94,6 +94,8 @@ La capa `dev` enlaza `~/.config/nvim` desde [`layers/dev/home/nvim`](layers/dev/
 - **[LazyVim](https://www.lazyvim.org)** es un conjunto de plugins sobre él: valores por defecto del editor, LSP, autocompletado, treesitter, un buscador e integración con git.
 - **Los extras** añaden un lenguaje o herramienta cada uno: su servidor de lenguaje, los parsers de treesitter y el formateador/linter. [`lua/config/lazy.lua`](layers/dev/home/nvim/.config/nvim/lua/config/lazy.lua) importa TypeScript/React, Vue, Angular, Astro, Tailwind, Go, Rust, JSON, YAML, TOML, Docker, Markdown, Prettier, ESLint, el depurador y el ejecutor de tests. Un stack nuevo es un import más (por ejemplo `lang.dart` para Flutter); `:LazyExtras` los lista todos.
 
+Los colores siguen la paleta activa: el colorscheme `dotfiles` lee la paleta que renderiza `dotfiles-theme` (capa desktop), y `dotfiles-theme set` la vuelve a aplicar en las instancias de Neovim abiertas. Sin paleta renderizada Neovim usa tokyonight.
+
 Mason (`:Mason`) instala los servidores de lenguaje en `~/.local/share/nvim`. Los servidores de la familia TypeScript necesitan Node.js con `npm` (feature `dev-js`), y las herramientas de Go necesitan `go` (feature `dev-go`).
 
 `~/.config/mimeapps.list` se genera, no se enlaza: las aplicaciones escriben en él, así que un enlace les dejaría modificar el checkout. La capa `desktop` mezcla
