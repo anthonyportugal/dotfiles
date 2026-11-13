@@ -56,6 +56,14 @@ plan_packages() {
   run bootstrap --packages-only --backend pacman --platform arch --target "$H" "$@" 2>&1
 }
 
+# Whether the repo packages of a plan section $1 include the exact name $2
+# (a substring test would let `go` pass on golangci-lint or "Features: dev-go").
+plans_repo_package() {
+  local packages
+  packages=$(awk '/Paquetes repo:/ { sub(/.*Paquetes repo: */, ""); print; exit }' <<< "$1")
+  [[ " $packages " == *" $2 "* ]]
+}
+
 # The help documents the selector.
 output=$(run help)
 [[ "$output" == *'--layer'* ]] || fail "la ayuda no documenta --layer"
@@ -73,7 +81,7 @@ output=$(plan_packages --profile core --layer dev) || fail "el plan con --layer 
 dev_plan=$(layer_section "$output" dev)
 [[ -n "$dev_plan" ]] || fail "--layer dev no planificó la capa dev: $output"
 [[ "$dev_plan" == *shellcheck* ]] || fail "la capa dev no planificó sus herramientas base: $dev_plan"
-[[ "$dev_plan" == *direnv* ]] || fail "la capa dev no planificó direnv: $dev_plan"
+plans_repo_package "$dev_plan" direnv || fail "la capa dev no planificó direnv: $dev_plan"
 [[ "$dev_plan" != *docker* && "$dev_plan" != *pnpm* ]] || fail "la capa dev planificó features no pedidas: $dev_plan"
 
 # A feature of an opt-in layer pulls the layer in and adds its packages.
@@ -85,14 +93,14 @@ output=$(plan_packages --profile core --feature dev-js) || fail "el plan con dev
 output=$(plan_packages --profile core --feature dev-go) || fail "el plan con dev-go falló: $output"
 dev_plan=$(layer_section "$output" dev)
 for package in go golangci-lint delve; do
-  [[ "$dev_plan" == *"$package"* ]] || fail "dev-go no añadió $package a la capa dev: $output"
+  plans_repo_package "$dev_plan" "$package" || fail "dev-go no añadió $package a la capa dev: $output"
 done
 output=$(plan_packages --profile core --feature dev-tauri) || fail "el plan con dev-tauri falló: $output"
 dev_plan=$(layer_section "$output" dev)
 for package in rustup webkit2gtk-4.1 base-devel libayatana-appindicator librsvg xdotool; do
-  [[ "$dev_plan" == *"$package"* ]] || fail "dev-tauri no añadió $package a la capa dev: $output"
+  plans_repo_package "$dev_plan" "$package" || fail "dev-tauri no añadió $package a la capa dev: $output"
 done
-[[ "$dev_plan" != *golangci-lint* ]] || fail "dev-tauri planificó paquetes de dev-go: $dev_plan"
+! plans_repo_package "$dev_plan" golangci-lint || fail "dev-tauri planificó paquetes de dev-go: $dev_plan"
 
 # --feature dev-containers alone raises the profile to cli too.
 output=$(plan_packages --profile core --feature dev-containers) || fail "el plan con dev-containers falló: $output"
