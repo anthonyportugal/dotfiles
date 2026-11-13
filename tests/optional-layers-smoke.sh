@@ -225,9 +225,10 @@ output=$(dev_editor "$NVIM_BIN")
 [[ "$output" == 'nvim nvim nvim' ]] || fail "con Neovim la capa dev no lo hizo el editor: $output"
 output=$(dev_editor "$PNPM_NONE")
 [[ "$output" == 'micro micro unset' ]] || fail "sin Neovim la capa dev cambió el editor: $output"
-# An editor the user chose (exported before core's micro default) is kept.
+# An editor the user chose (exported before core's micro default) is kept, and
+# git follows it instead of core.editor (micro).
 output=$(dev_editor "$NVIM_BIN" helix)
-[[ "$output" == 'helix helix unset' ]] || fail "con Neovim la capa dev pisó el editor elegido: $output"
+[[ "$output" == 'helix helix helix' ]] || fail "con Neovim la capa dev pisó el editor elegido o git no lo sigue: $output"
 mkdir -p "$pnpm_home/bin"
 printf '#!/bin/sh\n' > "$pnpm_home/pnpm"
 chmod +x "$pnpm_home/pnpm"

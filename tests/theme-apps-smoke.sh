@@ -293,8 +293,7 @@ grep -Fq '/dotfiles/theme/current/nvim/palette.lua' "$NVIM_CONFIG/lua/dotfiles/t
 # The colorscheme option picks "dotfiles" with a rendered palette that loads,
 # and tokyonight without a palette or when "dotfiles" fails (LuaJIT, stub vim).
 nvim_picks() {
-  command -v luajit >/dev/null || { printf '%s\n' "$2"; return; }
-  XDG_STATE_HOME="$1" luajit - "$NVIM_CONFIG" "${3:-}" <<'LUA'
+  XDG_STATE_HOME="$1" luajit - "$NVIM_CONFIG" "${2:-}" <<'LUA'
 package.path = arg[1] .. "/lua/?.lua;" .. package.path
 local picked
 vim = {
@@ -312,13 +311,17 @@ end
 print(picked)
 LUA
 }
-NVIM_STATE=$(mktemp -d -p "$TEST_ROOT")
-[[ "$(nvim_picks "$NVIM_STATE" tokyonight)" == tokyonight ]] || fail "sin paleta Neovim no usó tokyonight"
-mkdir -p "$NVIM_STATE/dotfiles/theme/current/nvim"
-printf 'return {}\n' > "$NVIM_STATE/dotfiles/theme/current/nvim/palette.lua"
-[[ "$(nvim_picks "$NVIM_STATE" dotfiles)" == dotfiles ]] || fail "con paleta Neovim no eligió el colorscheme dotfiles"
-[[ "$(nvim_picks "$NVIM_STATE" tokyonight broken)" == tokyonight ]] || \
-  fail "con el colorscheme dotfiles roto Neovim no volvió a tokyonight"
+if command -v luajit >/dev/null; then
+  NVIM_STATE=$(mktemp -d -p "$TEST_ROOT")
+  [[ "$(nvim_picks "$NVIM_STATE")" == tokyonight ]] || fail "sin paleta Neovim no usó tokyonight"
+  mkdir -p "$NVIM_STATE/dotfiles/theme/current/nvim"
+  printf 'return {}\n' > "$NVIM_STATE/dotfiles/theme/current/nvim/palette.lua"
+  [[ "$(nvim_picks "$NVIM_STATE")" == dotfiles ]] || fail "con paleta Neovim no eligió el colorscheme dotfiles"
+  [[ "$(nvim_picks "$NVIM_STATE" broken)" == tokyonight ]] || \
+    fail "con el colorscheme dotfiles roto Neovim no volvió a tokyonight"
+else
+  printf 'SKIP: selección y carga del colorscheme de Neovim (falta luajit)\n'
+fi
 for config in "$NVIM_CONFIG/colors/dotfiles.lua" "$NVIM_CONFIG/lua/plugins/colorscheme.lua" \
               "$NVIM_CONFIG/lua/dotfiles/theme.lua"; do
   expect_no_hex "$config"

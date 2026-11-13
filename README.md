@@ -96,7 +96,7 @@ The `dev` layer links `~/.config/nvim` from [`layers/dev/home/nvim`](layers/dev/
 
 Colors follow the active palette: the `dotfiles` colorscheme reads the palette that `dotfiles-theme` renders (desktop layer), and `dotfiles-theme set` re-applies it in running Neovim instances. Without a rendered palette Neovim uses tokyonight.
 
-With `nvim` installed, the layer's zsh file makes it the editor: `EDITOR`, `VISUAL` and `GIT_EDITOR` (replacing only the `micro` defaults of `core`: an editor you exported yourself is kept). Micro stays installed by `cli` and remains the editor without the `dev` layer.
+With `nvim` installed, the layer's zsh file makes it the editor: `EDITOR`, `VISUAL` and `GIT_EDITOR` (replacing only the `micro` defaults of `core`: an editor you exported yourself is kept, and git follows it too). Micro stays installed by `cli` and remains the editor without the `dev` layer.
 
 Mason (`:Mason`) installs the language servers under `~/.local/share/nvim`. The TypeScript-family servers need Node.js with `npm` (feature `dev-js`), and the Go tools need `go` (feature `dev-go`).
 

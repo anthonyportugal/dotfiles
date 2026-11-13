@@ -20,10 +20,11 @@ fi
 
 # Neovim (LazyVim) is the editor when installed. It replaces only core's micro
 # default (${EDITOR:-micro} loads before this file), so an editor exported
-# earlier is kept; git's own core.editor (micro) yields to GIT_EDITOR.
-# private.zsh and local.zsh, sourced later, can still override all three.
+# earlier is kept. git follows the resulting EDITOR through GIT_EDITOR, which
+# wins over its core.editor (micro). private.zsh and local.zsh, sourced later,
+# can still override all three.
 if (( $+commands[nvim] )); then
   [[ -n $EDITOR && $EDITOR != micro ]] || export EDITOR=nvim
   [[ -n $VISUAL && $VISUAL != micro ]] || export VISUAL=nvim
-  [[ $EDITOR != nvim || -n $GIT_EDITOR ]] || export GIT_EDITOR=nvim
+  [[ -n $GIT_EDITOR ]] || export GIT_EDITOR=$EDITOR
 fi

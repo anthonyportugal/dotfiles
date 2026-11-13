@@ -96,7 +96,7 @@ La capa `dev` enlaza `~/.config/nvim` desde [`layers/dev/home/nvim`](layers/dev/
 
 Los colores siguen la paleta activa: el colorscheme `dotfiles` lee la paleta que renderiza `dotfiles-theme` (capa desktop), y `dotfiles-theme set` la vuelve a aplicar en las instancias de Neovim abiertas. Sin paleta renderizada Neovim usa tokyonight.
 
-Con `nvim` instalado, el archivo de zsh de la capa lo convierte en el editor: `EDITOR`, `VISUAL` y `GIT_EDITOR` (solo reemplaza los valores `micro` de `core`: un editor que hayas exportado tú se conserva). Micro sigue instalado por `cli` y es el editor sin la capa `dev`.
+Con `nvim` instalado, el archivo de zsh de la capa lo convierte en el editor: `EDITOR`, `VISUAL` y `GIT_EDITOR` (solo reemplaza los valores `micro` de `core`: un editor que hayas exportado tú se conserva, y git también lo usa). Micro sigue instalado por `cli` y es el editor sin la capa `dev`.
 
 Mason (`:Mason`) instala los servidores de lenguaje en `~/.local/share/nvim`. Los servidores de la familia TypeScript necesitan Node.js con `npm` (feature `dev-js`), y las herramientas de Go necesitan `go` (feature `dev-go`).
 
