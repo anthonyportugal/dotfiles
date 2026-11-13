@@ -214,7 +214,7 @@ chmod +x "$DIRENV_BIN/direnv"
 # GIT_EDITOR, over core's micro default); without it, micro stays.
 dev_editor() {
   # shellcheck disable=SC2016  # expanded by the zsh it runs
-  env -u GIT_EDITOR EDITOR=micro VISUAL=micro HOME="$H" PATH="$1" "$ZSH_BIN" -dfc \
+  env -u GIT_EDITOR EDITOR="${2:-micro}" VISUAL="${2:-micro}" HOME="$H" PATH="$1" "$ZSH_BIN" -dfc \
     'source "$1"; print -r -- "$EDITOR $VISUAL ${GIT_EDITOR:-unset}"' _ "$dev_link"
 }
 NVIM_BIN="$TEST_ROOT/nvim-bin"
@@ -225,6 +225,9 @@ output=$(dev_editor "$NVIM_BIN")
 [[ "$output" == 'nvim nvim nvim' ]] || fail "con Neovim la capa dev no lo hizo el editor: $output"
 output=$(dev_editor "$PNPM_NONE")
 [[ "$output" == 'micro micro unset' ]] || fail "sin Neovim la capa dev cambió el editor: $output"
+# An editor the user chose (exported before core's micro default) is kept.
+output=$(dev_editor "$NVIM_BIN" helix)
+[[ "$output" == 'helix helix unset' ]] || fail "con Neovim la capa dev pisó el editor elegido: $output"
 mkdir -p "$pnpm_home/bin"
 printf '#!/bin/sh\n' > "$pnpm_home/pnpm"
 chmod +x "$pnpm_home/pnpm"

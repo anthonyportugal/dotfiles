@@ -185,6 +185,7 @@ vim = {
 package.preload["mini.base16"] = function()
   return { setup = function(config) for k, v in pairs(config.palette) do hex(k, v) end end }
 end
+package.path = arg[1]:gsub("/colors/dotfiles.lua$", "/lua/?.lua;") .. package.path
 dofile(arg[1])
 assert(vim.g.colors_name == "dotfiles", "colors_name")
 assert(vim.o.background == "dark" or vim.o.background == "light", "background")
@@ -287,11 +288,39 @@ grep -Fq 'theme:' "$CLI_HOME/lazygit/.config/lazygit/config.yml" && fail "lazygi
 # Neovim (dev layer) reads the rendered palette from the state path and falls
 # back to a bundled colorscheme without one.
 NVIM_CONFIG="$REPO_ROOT/layers/dev/home/nvim/.config/nvim"
-grep -Fq '/dotfiles/theme/current/nvim/palette.lua' "$NVIM_CONFIG/colors/dotfiles.lua" || \
-  fail "el colorscheme dotfiles de Neovim no lee la paleta renderizada"
-grep -Fq 'colorscheme = function' "$NVIM_CONFIG/lua/plugins/colorscheme.lua" || \
-  fail "Neovim no elige entre la paleta renderizada y su colorscheme de respaldo"
-for config in "$NVIM_CONFIG/colors/dotfiles.lua" "$NVIM_CONFIG/lua/plugins/colorscheme.lua"; do
+grep -Fq '/dotfiles/theme/current/nvim/palette.lua' "$NVIM_CONFIG/lua/dotfiles/theme.lua" || \
+  fail "Neovim no ubica la paleta renderizada en el estado del tema"
+# The colorscheme option picks "dotfiles" with a rendered palette that loads,
+# and tokyonight without a palette or when "dotfiles" fails (LuaJIT, stub vim).
+nvim_picks() {
+  command -v luajit >/dev/null || { printf '%s\n' "$2"; return; }
+  XDG_STATE_HOME="$1" luajit - "$NVIM_CONFIG" "${3:-}" <<'LUA'
+package.path = arg[1] .. "/lua/?.lua;" .. package.path
+local picked
+vim = {
+  env = { XDG_STATE_HOME = os.getenv("XDG_STATE_HOME"), HOME = os.getenv("HOME") },
+  uv = { fs_stat = function(path) local f = io.open(path) if f then f:close() return {} end end },
+  cmd = { colorscheme = function(name)
+    if name == "dotfiles" and arg[2] == "broken" then error("broken palette") end
+    picked = name
+  end },
+}
+local specs = dofile(arg[1] .. "/lua/plugins/colorscheme.lua")
+for _, spec in ipairs(specs) do
+  if spec.opts and spec.opts.colorscheme then spec.opts.colorscheme() end
+end
+print(picked)
+LUA
+}
+NVIM_STATE=$(mktemp -d -p "$TEST_ROOT")
+[[ "$(nvim_picks "$NVIM_STATE" tokyonight)" == tokyonight ]] || fail "sin paleta Neovim no usó tokyonight"
+mkdir -p "$NVIM_STATE/dotfiles/theme/current/nvim"
+printf 'return {}\n' > "$NVIM_STATE/dotfiles/theme/current/nvim/palette.lua"
+[[ "$(nvim_picks "$NVIM_STATE" dotfiles)" == dotfiles ]] || fail "con paleta Neovim no eligió el colorscheme dotfiles"
+[[ "$(nvim_picks "$NVIM_STATE" tokyonight broken)" == tokyonight ]] || \
+  fail "con el colorscheme dotfiles roto Neovim no volvió a tokyonight"
+for config in "$NVIM_CONFIG/colors/dotfiles.lua" "$NVIM_CONFIG/lua/plugins/colorscheme.lua" \
+              "$NVIM_CONFIG/lua/dotfiles/theme.lua"; do
   expect_no_hex "$config"
 done
 for config in "$CLI_HOME/lazygit/.config/lazygit/config.yml" "$CLI_HOME/fastfetch/.config/fastfetch/config.jsonc" \
@@ -447,6 +476,14 @@ grep -Fq -- "--server $NVIM_RUNTIME/nvim.42.0 --remote-expr" "$TEST_ROOT/nvim-ca
   fail "el hook de Neovim no pidió recargar el colorscheme: $(<"$TEST_ROOT/nvim-calls")"
 grep -Fq 'colorscheme dotfiles' "$TEST_ROOT/nvim-calls" || fail "el hook de Neovim no reaplica el colorscheme dotfiles"
 env XDG_RUNTIME_DIR="$NVIM_RUNTIME" PATH="$NO_BAT" "$NVIM_HOOK" || fail "el hook de Neovim falló sin Neovim instalado"
+# Without XDG_RUNTIME_DIR Neovim keeps its sockets under $TMPDIR/nvim.<user>/<random>/.
+NVIM_TMP=$(mktemp -d -p "$TEST_ROOT")
+mkdir -p "$NVIM_TMP/nvim.$(id -un)/abc123"
+python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$NVIM_TMP/nvim.$(id -un)/abc123/nvim.7.0"
+rm -f -- "$TEST_ROOT/nvim-calls"
+env -u XDG_RUNTIME_DIR TMPDIR="$NVIM_TMP" PATH="$NVIM_STUBS:$PATH" "$NVIM_HOOK" || fail "el hook de Neovim falló sin XDG_RUNTIME_DIR"
+grep -Fq -- "--server $NVIM_TMP/nvim.$(id -un)/abc123/nvim.7.0 --remote-expr" "$TEST_ROOT/nvim-calls" 2>/dev/null || \
+  fail "sin XDG_RUNTIME_DIR el hook de Neovim no encontró el servidor en TMPDIR"
 
 # The real bat lists the rendered theme after a render-only path, with its
 # cache newer than the tmTheme.

@@ -2,8 +2,7 @@
 -- dotfiles-theme (desktop layer) into the state directory. mini.base16 builds
 -- the full highlight set (editor, treesitter, LSP and plugin integrations) from
 -- 16 colors; the palette's own roles then refine the groups below.
-local state = vim.env.XDG_STATE_HOME or (vim.env.HOME .. "/.local/state")
-local file = state .. "/dotfiles/theme/current/nvim/palette.lua"
+local file = require("dotfiles.theme").palette_path()
 local ok, p = pcall(dofile, file)
 if not ok or type(p) ~= "table" then
   error("dotfiles colorscheme: no rendered palette at " .. file .. " (run dotfiles-theme render)")
