@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Single theme engine shared by every window manager. It parses a palette from
-# themes/palettes/, renders the shared outputs (GTK, Yazi, background,
-# metadata) plus every installed WM template directory, and atomically
-# promotes the result to $XDG_STATE_HOME/dotfiles/theme/current.
+# themes/palettes/, renders the shared outputs (GTK, Yazi, terminals, CLI
+# tools, background, metadata) plus every installed WM template directory,
+# and atomically promotes the result to $XDG_STATE_HOME/dotfiles/theme/current.
 
 set -Eeuo pipefail
 
@@ -15,15 +15,23 @@ CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
 THEME_ROOT="$STATE_HOME/dotfiles/theme"
 WM_TEMPLATES_DIR="$DATA_HOME/dotfiles/theme/templates"
 RELOAD_DIR="$DATA_HOME/dotfiles/theme/reload.d"
+RENDER_HOOKS_DIR="$DATA_HOME/dotfiles/theme/render.d"
+# Color swatch icons of every palette for the theme menus. They are derived
+# from the palettes and rewritten whenever missing or out of date.
+SWATCH_DIR="$THEME_ROOT/swatches"
 PALETTES_DIR=''
 SHARED_TEMPLATES_DIR=''
 THEME_ID=''
 PALETTE=''
+SWATCH_PATH=''
 RENDER_TEMP=''
+# Set by promote when current now points at another revision.
+PROMOTED_NEW=0
 NAME_PATTERN='^[a-z0-9]+(-[a-z0-9]+)*$'
 
-declare -A COLORS=()
-declare -A EXPECTED=()
+# Palette values by key, and the value type of every schema key.
+declare -A VALUES=()
+declare -A KEY_TYPES=()
 declare -a WM_DIRS=()
 
 fail() {
@@ -44,7 +52,31 @@ cleanup_render() {
 trap cleanup_render EXIT
 
 usage() {
-  printf 'Uso: %s render [id]|set <id>|list|current|validate [id]|path\n' "$PROGRAM_NAME"
+  cat <<HELP
+Uso: $PROGRAM_NAME <comando> [argumentos]
+
+Comandos:
+  list [--tsv]    Lista los ids de tema, uno por línea. Con --tsv imprime por
+                  tema, separados por tabuladores: id, familia, flavour,
+                  acento, color de acento, activo (1 o 0) y la ruta de su
+                  muestra SVG (se regenera si falta o cambió)
+  current         Muestra el tema activo
+  menu <comando> [argumentos]
+                  Selector familia → flavour → acento con un menú externo
+                  (lo usan mango-theme y bspwm-theme): ejecuta el comando con
+                  el prompt como último argumento y una entrada por línea,
+                  "etiqueta<US>icono<TAB>valor" (US es el byte 0x1f), en su
+                  entrada; imprime el valor elegido o sale con un estado
+                  distinto de 0 con Esc, que vuelve al nivel anterior
+  pick            Selector en la terminal con fzf: todos los temas, el activo
+                  marcado (actual) y una vista previa de la paleta; Enter
+                  aplica con set, Esc sale sin cambios
+  preview <id>    Imprime en truecolor los colores y las fuentes de un tema
+  set <id>        Renderiza y aplica un tema
+  render [id]     Renderiza un tema sin activarlo
+  validate [id]   Valida una paleta
+  path            Muestra la ruta del tema renderizado activo
+HELP
 }
 
 # The engine is stowed as a link into the checkout; the repository is the
@@ -88,18 +120,50 @@ resolve_theme_id() {
   fi
 }
 
+# Schema 2 keys and their value type: meta, color, font or cursor_*. Every key
+# is required exactly once.
 declare_schema() {
   local key
 
-  for key in \
-    schema id family flavour accent_name \
-    rosewater flamingo pink mauve red maroon peach yellow green teal sky \
-    sapphire blue lavender text subtext1 subtext0 overlay2 overlay1 overlay0 \
-    surface2 surface1 surface0 base mantle crust background background_alt \
-    background_deep surface surface_hover foreground foreground_muted accent \
-    urgent warning success; do
-    EXPECTED["$key"]=1
+  for key in schema id family flavour accent_name; do
+    KEY_TYPES["$key"]=meta
   done
+  for key in \
+    background_deep background_alt background surface surface_hover \
+    surface_strong foreground foreground_muted foreground_subtle \
+    foreground_disabled border accent accent_fg urgent warning success info \
+    selection_bg selection_fg cursor cursor_fg \
+    ansi_black ansi_red ansi_green ansi_yellow ansi_blue ansi_magenta \
+    ansi_cyan ansi_white ansi_bright_black ansi_bright_red ansi_bright_green \
+    ansi_bright_yellow ansi_bright_blue ansi_bright_magenta ansi_bright_cyan \
+    ansi_bright_white \
+    syntax_keyword syntax_string syntax_number syntax_constant \
+    syntax_function syntax_type syntax_property syntax_tag syntax_operator \
+    syntax_regex syntax_variable syntax_punctuation syntax_comment \
+    hue_red hue_orange hue_yellow hue_green hue_teal hue_cyan hue_blue \
+    hue_indigo hue_purple hue_pink hue_rose hue_maroon; do
+    KEY_TYPES["$key"]=color
+  done
+  for key in font_mono font_text font_display font_inscription; do
+    KEY_TYPES["$key"]=font
+  done
+  KEY_TYPES[cursor_theme]=cursor_theme
+  KEY_TYPES[cursor_size]=cursor_size
+}
+
+# Fails unless the value of key $1 matches the pattern of its type. Metadata
+# is checked by read_palette.
+validate_value() {
+  local key=$1 pattern
+
+  case "${KEY_TYPES[$key]}" in
+    color) pattern='^#[0-9a-fA-F]{6}$' ;;
+    font) pattern='^[A-Za-z0-9][A-Za-z0-9 ]*$' ;;
+    cursor_theme) pattern='^[A-Za-z0-9][A-Za-z0-9._-]*$' ;;
+    cursor_size) pattern='^[0-9]{2,3}$' ;;
+    *) return 0 ;;
+  esac
+  [[ "${VALUES[$key]}" =~ $pattern ]] || fail "valor inválido para $key"
 }
 
 read_palette() {
@@ -110,41 +174,36 @@ read_palette() {
   PALETTE=$(palette_path "$THEME_ID")
   [[ -r "$PALETTE" ]] || fail "tema desconocido: $THEME_ID"
   declare_schema
-  COLORS=()
+  VALUES=()
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -n "$line" && "$line" != \#* ]] || continue
     [[ "$line" == *=* ]] || fail "línea inválida en la paleta: $line"
     key=${line%%=*}
     value=${line#*=}
-    [[ -v "EXPECTED[$key]" ]] || fail "clave desconocida en la paleta: $key"
-    [[ ! -v "COLORS[$key]" ]] || fail "clave duplicada en la paleta: $key"
-    COLORS["$key"]=$value
+    # Checked before the keys so an older palette reports its schema.
+    [[ "$key" != schema || "$value" == 2 ]] || fail 'schema de paleta no soportado'
+    [[ -v "KEY_TYPES[$key]" ]] || fail "clave desconocida en la paleta: $key"
+    [[ ! -v "VALUES[$key]" ]] || fail "clave duplicada en la paleta: $key"
+    VALUES["$key"]=$value
   done < "$PALETTE"
 
-  for key in "${!EXPECTED[@]}"; do
-    [[ -v "COLORS[$key]" ]] || fail "falta la clave de paleta: $key"
+  for key in "${!KEY_TYPES[@]}"; do
+    [[ -v "VALUES[$key]" ]] || fail "falta la clave de paleta: $key"
   done
 
-  [[ "${COLORS[schema]}" == 1 ]] || fail 'schema de paleta no soportado'
-  [[ "${COLORS[id]}" == "$THEME_ID" ]] || fail 'el id no coincide con el tema solicitado'
-  [[ "${COLORS[family]}" =~ ^[a-z0-9-]+$ ]] || fail 'familia inválida'
-  [[ "${COLORS[flavour]}" =~ ^[a-z0-9-]+$ ]] || fail 'flavour inválido'
-  [[ "${COLORS[accent_name]}" =~ ^[a-z0-9-]+$ ]] || fail 'accent_name inválido'
+  [[ "${VALUES[id]}" == "$THEME_ID" ]] || fail 'el id no coincide con el tema solicitado'
+  [[ "${VALUES[family]}" =~ ^[a-z0-9-]+$ ]] || fail 'familia inválida'
+  [[ "${VALUES[flavour]}" =~ ^[a-z0-9-]+$ ]] || fail 'flavour inválido'
+  [[ "${VALUES[accent_name]}" =~ ^[a-z0-9-]+$ ]] || fail 'accent_name inválido'
 
-  for key in "${!COLORS[@]}"; do
-    case "$key" in
-      schema|id|family|flavour|accent_name)
-        ;;
-      *)
-        [[ "${COLORS[$key]}" =~ ^#[0-9a-fA-F]{6}$ ]] || \
-          fail "color inválido para $key"
-        ;;
-    esac
+  for key in "${!VALUES[@]}"; do
+    validate_value "$key"
   done
 }
 
 # Collects the installed WM template directories into WM_DIRS. It runs in the
-# main shell so an unsafe name stops the render instead of a subshell.
+# main shell so an unsafe name stops the render instead of a subshell. A name
+# taken by a shared output (yazi, foot, ...) would overwrite it.
 collect_wm_template_dirs() {
   local dir name
 
@@ -154,7 +213,7 @@ collect_wm_template_dirs() {
     [[ -d "$dir" ]] || continue
     dir=${dir%/}
     name=${dir##*/}
-    [[ "$name" =~ $NAME_PATTERN && "$name" != yazi ]] || \
+    [[ "$name" =~ $NAME_PATTERN && ! -e "$SHARED_TEMPLATES_DIR/$name" ]] || \
       fail "nombre de plantillas de WM inválido: $name"
     WM_DIRS+=("$dir")
   done
@@ -166,15 +225,17 @@ template_files() {
   (cd -- "$1" && find -L . -type f -printf '%P\n' | LC_ALL=C sort)
 }
 
-# Replaces {{key}} with the palette value and {{key.raw}} with the value
-# without its leading '#'. Any other {{...}} marker is an error.
+# Replaces {{key}} with the palette value and, for colors only, {{key.raw}}
+# with the value without its leading '#'. Any other {{...}} marker is an error.
 render_template() {
   local source=$1 destination=$2 content='' key value
 
   IFS= read -r -d '' content < "$source" || true
-  for key in "${!COLORS[@]}"; do
-    value=${COLORS[$key]}
-    content=${content//"{{$key.raw}}"/"${value#\#}"}
+  for key in "${!VALUES[@]}"; do
+    value=${VALUES[$key]}
+    if [[ "${KEY_TYPES[$key]}" == color ]]; then
+      content=${content//"{{$key.raw}}"/"${value#\#}"}
+    fi
     content=${content//"{{$key}}"/"$value"}
   done
   if [[ "$content" =~ \{\{[^}]*\}\} ]]; then
@@ -200,23 +261,28 @@ render_all() {
   for dir in "${WM_DIRS[@]}"; do
     render_tree "$dir" "$destination/${dir##*/}"
   done
-  printf '%s\n' "${COLORS[background]}" > "$destination/background"
-  printf '%s\n' 'schema=1' "id=${COLORS[id]}" "family=${COLORS[family]}" \
-    "flavour=${COLORS[flavour]}" "accent_name=${COLORS[accent_name]}" \
+  printf '%s\n' "${VALUES[background]}" > "$destination/background"
+  printf '%s\n' 'schema=2' "id=${VALUES[id]}" "family=${VALUES[family]}" \
+    "flavour=${VALUES[flavour]}" "accent_name=${VALUES[accent_name]}" \
     > "$destination/metadata"
 }
 
+# Every template, shared or from a WM, must have rendered a non-empty file.
 validate_outputs() {
   local destination=$1 dir relative required
 
-  for required in gtk.css yazi/flavor.toml background metadata; do
+  for required in background metadata; do
     [[ -s "$destination/$required" ]] || fail "output de tema vacío o ausente: $required"
   done
-  grep -Fq "${COLORS[accent]}" "$destination/gtk.css" || \
+  while IFS= read -r relative; do
+    [[ -n "$relative" ]] || continue
+    [[ -s "$destination/$relative" ]] || fail "output de tema vacío o ausente: $relative"
+  done < <(template_files "$SHARED_TEMPLATES_DIR")
+  grep -Fq "${VALUES[accent]}" "$destination/gtk.css" || \
     fail 'GTK no recibió el acento del tema'
-  grep -Fq "${COLORS[accent]}" "$destination/yazi/flavor.toml" || \
+  grep -Fq "${VALUES[accent]}" "$destination/yazi/flavor.toml" || \
     fail 'Yazi no recibió el acento del tema'
-  grep -Fxq "id=${COLORS[id]}" "$destination/metadata" || \
+  grep -Fxq "id=${VALUES[id]}" "$destination/metadata" || \
     fail 'metadata de tema inconsistente'
   for dir in "${WM_DIRS[@]}"; do
     while IFS= read -r relative; do
@@ -253,38 +319,70 @@ theme_digest() {
   printf '%s\n' "${digest:0:12}"
 }
 
-link_yazi_flavor() {
-  local link="$CONFIG_HOME/yazi/flavors/theme.yazi"
+# Links $CONFIG_HOME/$1 to the rendered output $2 under current/, only when
+# the application's config directory (the first component of $1) exists. A
+# real file or directory in its place is never replaced.
+link_output() {
+  local link="$CONFIG_HOME/$1" app_dir="$CONFIG_HOME/${1%%/*}"
 
-  [[ -d "$CONFIG_HOME/yazi" ]] || return 0
+  [[ -d "$app_dir" ]] || return 0
   if [[ -e "$link" && ! -L "$link" ]]; then
     warn "no se reemplaza $link: no es un enlace simbólico"
     return 0
   fi
   mkdir -p -- "${link%/*}"
-  ln -sfn -- "$THEME_ROOT/current/yazi" "$link"
+  ln -sfn -- "$THEME_ROOT/current/$2" "$link"
+}
+
+# Outputs an application only finds inside its own config directory.
+link_outputs() {
+  link_output yazi/flavors/theme.yazi yazi
+  link_output bat/themes/dotfiles.tmTheme bat/dotfiles.tmTheme
+  link_output btop/themes/dotfiles.theme btop/dotfiles.theme
+  link_output micro/colorschemes/default.micro micro/default.micro
 }
 
 promote() {
-  local revision=$1 next_link="$THEME_ROOT/.current.$$"
+  local revision=$1 next_link="$THEME_ROOT/.current.$$" previous=''
 
   if [[ -e "$THEME_ROOT/current" && ! -L "$THEME_ROOT/current" ]]; then
     fail "$THEME_ROOT/current existe y no es un enlace simbólico"
   fi
+  if [[ -L "$THEME_ROOT/current" ]]; then
+    previous=$(readlink -- "$THEME_ROOT/current")
+  fi
+  [[ "$previous" == "$revision" ]] || PROMOTED_NEW=1
   ln -s -- "$revision" "$next_link"
   mv -Tf -- "$next_link" "$THEME_ROOT/current"
-  link_yazi_flavor
+  link_outputs
 }
 
+# Runs every executable in render.d after a revision is promoted, so caches
+# built from rendered files (bat) follow every render path, not only `set`.
+# Their stdout goes to stderr: the engine's stdout is the revision path. A
+# failing hook only warns; the theme is already promoted.
+run_render_hooks() {
+  local hook
+
+  [[ -d "$RENDER_HOOKS_DIR" ]] || return 0
+  for hook in "$RENDER_HOOKS_DIR"/*; do
+    [[ -f "$hook" && -x "$hook" ]] || continue
+    DOTFILES_THEME_DIR="$THEME_ROOT/current" "$hook" >&2 || \
+      warn "el hook de render ${hook##*/} falló"
+  done
+}
+
+# Renders and promotes the palette in VALUES. The render.d hooks run when
+# current moves to another revision, or always with $1 = 1 (`set`).
 render_theme() {
-  local revision
+  local revision force_hooks=${1:-0}
 
   mkdir -p -- "$THEME_ROOT"
   command -v flock >/dev/null 2>&1 || fail 'flock es necesario para renderizar temas'
   exec 9>"$THEME_ROOT/render.guard"
   flock 9
   collect_wm_template_dirs
-  revision="${COLORS[id]}-$(theme_digest)"
+  revision="${VALUES[id]}-$(theme_digest)"
 
   if [[ ! -d "$THEME_ROOT/$revision" ]]; then
     RENDER_TEMP=$(mktemp -d "$THEME_ROOT/.render.XXXXXX")
@@ -298,30 +396,40 @@ render_theme() {
   fi
 
   promote "$revision"
+  if (( PROMOTED_NEW == 1 || force_hooks == 1 )); then
+    run_render_hooks
+  fi
   printf '%s\n' "$THEME_ROOT/$revision"
 }
 
+# Nearest GNOME accent for accent_name: Catppuccin accents, then Sanctuary
+# pigments by the OKLCH hue of their glass color.
 gnome_accent() {
-  case "${COLORS[accent_name]}" in
-    blue|sapphire) printf 'blue\n' ;;
-    teal|sky) printf 'teal\n' ;;
-    green) printf 'green\n' ;;
-    yellow) printf 'yellow\n' ;;
-    peach) printf 'orange\n' ;;
-    red|maroon) printf 'red\n' ;;
-    pink|flamingo) printf 'pink\n' ;;
-    mauve|lavender) printf 'purple\n' ;;
+  case "${VALUES[accent_name]}" in
+    blue|sapphire|cobalt|indigo) printf 'blue\n' ;;
+    teal|sky|azure) printf 'teal\n' ;;
+    green|verdure|viridian) printf 'green\n' ;;
+    yellow|gilt|amber) printf 'yellow\n' ;;
+    peach|ember) printf 'orange\n' ;;
+    red|maroon|ruby) printf 'red\n' ;;
+    pink|flamingo|rose|murrey) printf 'pink\n' ;;
+    mauve|lavender|amethyst) printf 'purple\n' ;;
     *) printf 'slate\n' ;;
   esac
 }
 
-# Live reload after `set`: the GNOME accent, then every WM reload hook. A
-# failing hook only warns; the theme is already promoted.
+# Live reload after `set`: the GNOME accent and cursor (GTK falls back to the
+# default cursor when the theme is not installed), then every WM reload hook.
+# A failing hook only warns; the theme is already promoted.
 reload_live() {
   local hook
 
   if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.desktop.interface accent-color "$(gnome_accent)" \
+      2>/dev/null || true
+    gsettings set org.gnome.desktop.interface cursor-theme "${VALUES[cursor_theme]}" \
+      2>/dev/null || true
+    gsettings set org.gnome.desktop.interface cursor-size "${VALUES[cursor_size]}" \
       2>/dev/null || true
   fi
   [[ -d "$RELOAD_DIR" ]] || return 0
@@ -335,12 +443,12 @@ reload_live() {
 set_theme() {
   theme_exists "$1" || fail "tema desconocido: $1"
   read_palette "$1"
-  render_theme
+  render_theme 1
   printf '%s\n' "$1" > "$THEME_ROOT/selected"
   reload_live
   if command -v notify-send >/dev/null 2>&1; then
     notify-send --urgency=low --app-name=dotfiles "Tema aplicado" \
-      "$1 (${COLORS[accent_name]}: ${COLORS[accent]})" 2>/dev/null || true
+      "$1 (${VALUES[accent_name]}: ${VALUES[accent]})" 2>/dev/null || true
   fi
 }
 
@@ -352,6 +460,276 @@ list_themes() {
     palette=${palette##*/}
     printf '%s\n' "${palette%.conf}"
   done | LC_ALL=C sort
+}
+
+# Writes the swatch icon of the palette in VALUES unless the file already
+# holds it: the background as a rounded square, the accent as a disc with a
+# foreground ring. Stores its path in SWATCH_PATH.
+write_swatch() {
+  local svg current='' temp
+
+  SWATCH_PATH="$SWATCH_DIR/${VALUES[id]}.svg"
+  printf -v svg '%s\n' \
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">' \
+    "  <rect x=\"2\" y=\"2\" width=\"44\" height=\"44\" rx=\"10\" fill=\"${VALUES[background]}\" stroke=\"${VALUES[border]}\" stroke-width=\"2\"/>" \
+    "  <circle cx=\"24\" cy=\"24\" r=\"12\" fill=\"${VALUES[accent]}\" stroke=\"${VALUES[foreground]}\" stroke-width=\"2\"/>" \
+    '</svg>'
+  if [[ -f "$SWATCH_PATH" && ! -L "$SWATCH_PATH" ]]; then
+    IFS= read -r -d '' current < "$SWATCH_PATH" || true
+  fi
+  [[ "$current" != "$svg" ]] || return 0
+  mkdir -p -- "$SWATCH_DIR"
+  temp=$(mktemp "$SWATCH_DIR/.swatch.XXXXXX")
+  printf '%s' "$svg" > "$temp"
+  chmod 0644 -- "$temp"
+  mv -Tf -- "$temp" "$SWATCH_PATH"
+}
+
+# One line per theme, in `list` order: id, family, flavour, accent_name,
+# accent, 1 for the active theme (0 otherwise) and its swatch path.
+list_themes_tsv() {
+  local active id is_active
+
+  active=$(resolve_theme_id)
+  while IFS= read -r id; do
+    read_palette "$id"
+    write_swatch
+    is_active=0
+    [[ "$id" != "$active" ]] || is_active=1
+    printf '%s\t%s\t%s\t%s\t%s\t%d\t%s\n' "$id" "${VALUES[family]}" \
+      "${VALUES[flavour]}" "${VALUES[accent_name]}" "${VALUES[accent]}" \
+      "$is_active" "$SWATCH_PATH"
+  done < <(list_themes)
+}
+
+# Display name of a palette name: "compline" -> "Compline".
+title_name() {
+  local word words=() IFS=-
+
+  for word in $1; do
+    words+=("${word^}")
+  done
+  IFS=' '
+  printf '%s\n' "${words[*]}"
+}
+
+# Menu rows of `menu`, filled by menu_load from `list --tsv`.
+declare -a M_ID=() M_FAMILY=() M_FLAVOUR=() M_ACCENT=() M_ACTIVE=() M_SWATCH=()
+declare -a MENU_COMMAND=() MENU_ENTRIES=()
+MENU_CHOICE=''
+MENU_ACTIVE_MARK='  (actual)'
+
+menu_load() {
+  local id family flavour accent_name active swatch
+
+  while IFS=$'\t' read -r id family flavour accent_name _ active swatch; do
+    M_ID+=("$id")
+    M_FAMILY+=("$family")
+    M_FLAVOUR+=("$flavour")
+    M_ACCENT+=("$accent_name")
+    M_ACTIVE+=("$active")
+    M_SWATCH+=("$swatch")
+  done < <(list_themes_tsv)
+}
+
+# Fills MENU_ENTRIES with one "label<US>icon<TAB>value" entry per distinct
+# value of the rows matching $1 (family) and $2 (flavour, with a family).
+# $3 picks the level: family, flavour or accent. A family or flavour is
+# marked when it holds the active theme and shows that theme's swatch, or
+# else the swatch of its first theme.
+menu_entries() {
+  local family=$1 flavour=$2 level=$3 i value label
+  local -A seen=() icon=() active=()
+  local -a order=()
+
+  MENU_ENTRIES=()
+  for i in "${!M_ID[@]}"; do
+    [[ -z "$family" || "${M_FAMILY[i]}" == "$family" ]] || continue
+    [[ -z "$flavour" || "${M_FLAVOUR[i]}" == "$flavour" ]] || continue
+    case "$level" in
+      family) value=${M_FAMILY[i]} ;;
+      flavour) value=${M_FLAVOUR[i]} ;;
+      *) value=${M_ID[i]} ;;
+    esac
+    if [[ ! -v "seen[$value]" ]]; then
+      seen[$value]=${M_ACCENT[i]}
+      icon[$value]=${M_SWATCH[i]}
+      order+=("$value")
+    fi
+    if [[ "${M_ACTIVE[i]}" == 1 ]]; then
+      active[$value]=1
+      icon[$value]=${M_SWATCH[i]}
+    fi
+  done
+  for value in "${order[@]}"; do
+    case "$level" in
+      accent) label=$(title_name "${seen[$value]}") ;;
+      *) label=$(title_name "$value") ;;
+    esac
+    [[ ! -v "active[$value]" ]] || label+=$MENU_ACTIVE_MARK
+    MENU_ENTRIES+=("$label"$'\x1f'"${icon[$value]}"$'\t'"$value")
+  done
+}
+
+# Shows MENU_ENTRIES with prompt $1 through MENU_COMMAND and stores the
+# chosen value in MENU_CHOICE. Fails when the menu was dismissed or answered
+# something that is not one of its values.
+menu_ask() {
+  local output entry
+
+  output=$(printf '%s\n' "${MENU_ENTRIES[@]}" | "${MENU_COMMAND[@]}" "$1") || return 1
+  for entry in "${MENU_ENTRIES[@]}"; do
+    if [[ "${entry#*$'\t'}" == "$output" ]]; then
+      MENU_CHOICE=$output
+      return 0
+    fi
+  done
+  return 1
+}
+
+# family -> flavour -> accent through the external menu "$@": it gets the
+# prompt as its last argument and one "label<US>icon<TAB>value" entry per
+# line on stdin, prints the chosen value and exits non-zero on Esc. Esc goes
+# back one level and leaves from the first one; a level with a single entry
+# is skipped. The chosen theme is applied with `set`.
+theme_menu() {
+  local level=family family='' flavour='' skipped_family=0 skipped_flavour=0
+
+  MENU_COMMAND=("$@")
+  menu_load
+  while true; do
+    case "$level" in
+      family)
+        menu_entries '' '' family
+        if (( ${#MENU_ENTRIES[@]} == 1 )); then
+          skipped_family=1
+          family=${MENU_ENTRIES[0]#*$'\t'}
+        else
+          menu_ask 'Tema ❯ ' || return 0
+          family=$MENU_CHOICE
+        fi
+        level=flavour
+        ;;
+      flavour)
+        menu_entries "$family" '' flavour
+        skipped_flavour=0
+        if (( ${#MENU_ENTRIES[@]} == 1 )); then
+          skipped_flavour=1
+          flavour=${MENU_ENTRIES[0]#*$'\t'}
+          level=accent
+        elif menu_ask "$(title_name "$family") ❯ "; then
+          flavour=$MENU_CHOICE
+          level=accent
+        else
+          (( skipped_family == 0 )) || return 0
+          level=family
+        fi
+        ;;
+      accent)
+        menu_entries "$family" "$flavour" accent
+        if menu_ask "$(title_name "$family") · $(title_name "$flavour") ❯ "; then
+          set_theme "$MENU_CHOICE"
+          return 0
+        elif (( skipped_flavour == 0 )); then
+          level=flavour
+        elif (( skipped_family == 0 )); then
+          level=family
+        else
+          return 0
+        fi
+        ;;
+    esac
+  done
+}
+
+# Prints "r;g;b" for the color #rrggbb in $1.
+rgb_of() {
+  local hex=${1#\#}
+
+  printf '%d;%d;%d' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+}
+
+# A truecolor block of the palette color $1, $2 cells wide.
+color_block() {
+  local width=${2:-6} cells
+
+  printf -v cells '%*s' "$width" ''
+  printf '\e[48;2;%sm%s\e[0m' "$(rgb_of "${VALUES[$1]}")" "$cells"
+}
+
+# Lines "block  key  #hex" for the keys in $@.
+preview_roles() {
+  local key
+
+  for key in "$@"; do
+    printf '  %s  %-20s %s\n' "$(color_block "$key")" "$key" "${VALUES[$key]}"
+  done
+}
+
+# Truecolor swatches of every color group and the font roles of theme $1,
+# for the `pick` preview pane.
+preview_theme() {
+  local key color
+
+  theme_exists "$1" || fail "tema desconocido: $1"
+  read_palette "$1"
+  printf '%s · %s · %s  (%s)\n\n' "$(title_name "${VALUES[family]}")" \
+    "$(title_name "${VALUES[flavour]}")" "$(title_name "${VALUES[accent_name]}")" "$1"
+  printf 'Superficies\n'
+  preview_roles background_deep background_alt background surface \
+    surface_hover surface_strong border
+  printf '\nTexto\n'
+  preview_roles foreground foreground_muted foreground_subtle foreground_disabled
+  printf '\nAcento\n'
+  preview_roles accent accent_fg selection_bg cursor
+  printf '  \e[48;2;%sm\e[38;2;%sm  Aa acento  \e[0m \e[48;2;%sm\e[38;2;%sm  Aa texto  \e[0m\n' \
+    "$(rgb_of "${VALUES[accent]}")" "$(rgb_of "${VALUES[accent_fg]}")" \
+    "$(rgb_of "${VALUES[background]}")" "$(rgb_of "${VALUES[foreground]}")"
+  printf '\nEstados\n'
+  preview_roles urgent warning success info
+  printf '\nANSI\n  '
+  for color in black red green yellow blue magenta cyan white; do
+    color_block "ansi_$color" 4
+  done
+  printf '\n  '
+  for color in black red green yellow blue magenta cyan white; do
+    color_block "ansi_bright_$color" 4
+  done
+  printf '\n\nTonos\n  '
+  for key in red orange yellow green teal cyan blue indigo purple pink rose maroon; do
+    color_block "hue_$key" 3
+  done
+  printf '\n\nFuentes\n'
+  for key in font_mono font_text font_display font_inscription; do
+    printf '  %-17s %s\n' "${key#font_}" "${VALUES[$key]}"
+  done
+  printf '  %-17s %s %s\n' cursor "${VALUES[cursor_theme]}" "${VALUES[cursor_size]}"
+}
+
+# fzf over every theme: "id<TAB>label" lines (only the label is shown, after
+# an accent dot), the preview pane runs `preview`, Enter applies with `set`
+# and Esc leaves without changes.
+pick_theme() {
+  local id t_family t_flavour t_accent_name t_accent t_active label engine selection
+
+  command -v fzf >/dev/null 2>&1 || \
+    fail "fzf no está instalado; instálalo o usa '$PROGRAM_NAME set <id>'"
+  [[ -t 1 ]] || \
+    fail "pick necesita una terminal; usa '$PROGRAM_NAME set <id>' o el menú del WM"
+  printf -v engine '%q' "$SCRIPT_PATH"
+  selection=$(
+    list_themes_tsv | while IFS=$'\t' read -r id t_family t_flavour t_accent_name t_accent t_active _; do
+      label="$(title_name "$t_family") · $(title_name "$t_flavour") · $(title_name "$t_accent_name")"
+      [[ "$t_active" != 1 ]] || label+=$MENU_ACTIVE_MARK
+      printf '%s\t\e[38;2;%sm●\e[0m %s\n' "$id" "$(rgb_of "$t_accent")" "$label"
+    done | fzf --ansi --delimiter=$'\t' --with-nth=2 --prompt='Tema ❯ ' \
+      --header='Enter aplica · Esc sale' --preview="$engine preview {1}" \
+      --preview-window=right,60%
+  ) || return 0
+  id=${selection%%$'\t'*}
+  [[ -n "$id" ]] || return 0
+  theme_exists "$id" || fail "tema desconocido: $id"
+  set_theme "$id"
 }
 
 main() {
@@ -370,11 +748,28 @@ main() {
       set_theme "$1"
       ;;
     list)
-      list_themes
+      # Other arguments are ignored, as before --tsv existed.
+      if [[ "${1-}" == --tsv ]]; then
+        list_themes_tsv
+      else
+        list_themes
+      fi
+      ;;
+    menu)
+      (( $# >= 1 )) || { usage >&2; exit 2; }
+      theme_menu "$@"
+      ;;
+    pick)
+      (( $# == 0 )) || { usage >&2; exit 2; }
+      pick_theme
+      ;;
+    preview)
+      (( $# == 1 )) || { usage >&2; exit 2; }
+      preview_theme "$1"
       ;;
     current)
       read_palette "$(resolve_theme_id)"
-      printf '%s (acento: %s, %s)\n' "$THEME_ID" "${COLORS[accent_name]}" "${COLORS[accent]}"
+      printf '%s (acento: %s, %s)\n' "$THEME_ID" "${VALUES[accent_name]}" "${VALUES[accent]}"
       ;;
     validate)
       (( $# <= 1 )) || { usage >&2; exit 2; }

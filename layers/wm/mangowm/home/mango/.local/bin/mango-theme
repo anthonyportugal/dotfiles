@@ -1,49 +1,35 @@
 #!/usr/bin/env bash
 # MangoWM front end for the shared theme engine (dotfiles-theme, desktop
-# layer). `menu` opens the fuzzel picker; every other command is forwarded.
+# layer). `menu` opens the fuzzel picker (family -> flavour -> accent, driven
+# by `dotfiles-theme menu`); every other command is forwarded.
 
 set -Eeuo pipefail
 
+SELF=$(realpath -- "${BASH_SOURCE[0]}")
 # Both scripts are stowed side by side in ~/.local/bin; prefer that engine.
 ENGINE="${BASH_SOURCE[0]%/*}/dotfiles-theme"
 [[ -x "$ENGINE" ]] || ENGINE="$HOME/.local/bin/dotfiles-theme"
 [[ -x "$ENGINE" ]] || ENGINE=dotfiles-theme
 
-theme_menu() {
-  local theme_dir choice
-  local options=(
-    "🌸  Pink      (catppuccin-mocha-pink)      #f5c2e7"
-    "🟣  Mauve     (catppuccin-mocha-mauve)     #cba6f7"
-    "🪻  Lavender  (catppuccin-mocha-lavender)  #b4befe"
-    "🔵  Blue      (catppuccin-mocha-blue)      #89b4fa"
-    "🔷  Sapphire  (catppuccin-mocha-sapphire)  #74c7ec"
-    "🩵  Sky       (catppuccin-mocha-sky)       #89dceb"
-    "🌊  Teal      (catppuccin-mocha-teal)      #94e2d5"
-    "🟢  Green     (catppuccin-mocha-green)     #a6e3a1"
-    "🟡  Yellow    (catppuccin-mocha-yellow)    #f9e2af"
-    "🍑  Peach     (catppuccin-mocha-peach)     #fab387"
-    "🌺  Maroon    (catppuccin-mocha-maroon)    #eba0ac"
-    "🔴  Red       (catppuccin-mocha-red)       #f38ba8"
-    "🦩  Flamingo  (catppuccin-mocha-flamingo)  #f2cdcd"
-    "🌹  Rosewater (catppuccin-mocha-rosewater) #f5e0dc"
-  )
-  local fuzzel_args=(--dmenu --prompt="Selector de Tema ❯ " --lines=14 --width=48)
+# One level of the engine's picker: entries on stdin, the prompt in $1.
+menu_level() {
+  local entries count
 
-  theme_dir=$("$ENGINE" path)
-  if [[ -f "$theme_dir/mangowm/fuzzel.ini" ]]; then
-    fuzzel_args+=(--config="$theme_dir/mangowm/fuzzel.ini")
-  fi
-
-  choice=$(printf '%s\n' "${options[@]}" | fuzzel "${fuzzel_args[@]}" || true)
-  [[ -n "$choice" ]] || return 0
-  if [[ "$choice" =~ \((catppuccin-mocha-[a-z]+)\) ]]; then
-    exec "$ENGINE" set "${BASH_REMATCH[1]}"
-  fi
+  # shellcheck source-path=SCRIPTDIR source=../lib/mangowm/common
+  source "$HOME/.local/lib/mangowm/common"
+  entries=$(cat)
+  count=$(grep -c '' <<< "$entries")
+  (( count <= 15 )) || count=15
+  mangowm_menu "$1" --lines="$count" <<< "$entries"
 }
 
 case "${1:-render}" in
   menu)
-    theme_menu
+    exec "$ENGINE" menu "$SELF" menu-level
+    ;;
+  menu-level)
+    (( $# == 2 )) || exit 2
+    menu_level "$2"
     ;;
   *)
     (( $# > 0 )) || set -- render

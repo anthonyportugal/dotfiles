@@ -144,6 +144,10 @@ case "$command_name" in
   polybar-msg)
     record "$@"
     ;;
+  xrdb)
+    # Resources arrive on stdin; record them on one line.
+    record "$@" "$(tr '\n' ';')"
+    ;;
   *)
     record "$@"
     ;;

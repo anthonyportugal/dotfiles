@@ -24,8 +24,8 @@ disable-notifications = false
 palette = [
     "{{accent}}ff",
     "{{urgent}}ff",
-    "{{yellow}}ff",
-    "{{green}}ff",
-    "{{blue}}ff",
-    "{{text}}ff",
+    "{{hue_yellow}}ff",
+    "{{hue_green}}ff",
+    "{{hue_blue}}ff",
+    "{{foreground}}ff",
 ]

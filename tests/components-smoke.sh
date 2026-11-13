@@ -8,6 +8,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
+# shellcheck source=SCRIPTDIR/lib/checkout-copy.sh
+source "$SCRIPT_DIR/lib/checkout-copy.sh"
 DOTFILES="$REPO_ROOT/bin/dotfiles"
 export DOTFILES_LANG=es
 TEST_ROOT=""
@@ -331,7 +333,7 @@ output=$(printf 'server\n\nwalls\napply\n' | HOME="$W" "$DOTFILES" setup --stow-
 UPSTREAM="$TEST_ROOT/upstream"
 PUBLIC="$TEST_ROOT/public"
 UH="$TEST_ROOT/update-home"
-cp -a "$REPO_ROOT/." "$UPSTREAM"
+copy_checkout "$REPO_ROOT" "$UPSTREAM"
 # CI checks out a detached HEAD, and update can only pull on a branch.
 git -C "$UPSTREAM" switch -qC upstream
 {

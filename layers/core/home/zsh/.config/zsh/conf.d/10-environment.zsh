@@ -6,9 +6,34 @@ path=("$HOME/.local/bin" $path)
 export EDITOR="${EDITOR:-micro}"
 export VISUAL="${VISUAL:-$EDITOR}"
 export BROWSER="${BROWSER:-brave}"
-export BAT_THEME="${BAT_THEME:-Catppuccin-mocha}"
 export STARSHIP_CONFIG="${STARSHIP_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml}"
-export FZF_DEFAULT_OPTS="--color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8 --color=selected-bg:#45475a --multi --height=50% --layout=reverse --border"
+export FZF_DEFAULT_OPTS="--multi --height=50% --layout=reverse --border"
+
+# Colors rendered by dotfiles-theme. Each tool keeps its own defaults while
+# no theme has been rendered yet.
+() {
+  local theme_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme/current"
+  local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local bat_theme="${BAT_CONFIG_DIR:-$config_home/bat}/themes/dotfiles.tmTheme"
+  local bat_cache="${BAT_CACHE_PATH:-${XDG_CACHE_HOME:-$HOME/.cache}/bat}/themes.bin"
+
+  # bat only knows the rendered theme once its cache was rebuilt after the
+  # render (the render.d hook on every promoted revision, or the cli post-link).
+  if [[ -z "${BAT_THEME-}" ]]; then
+    if [[ -e "$bat_theme" && -e "$bat_cache" && ! "$bat_theme" -nt "$bat_cache" ]]; then
+      export BAT_THEME=dotfiles
+    else
+      export BAT_THEME=Catppuccin-mocha
+    fi
+  fi
+  if [[ -z "${LG_CONFIG_FILE-}" && -r "$config_home/lazygit/config.yml" && \
+        -r "$theme_dir/lazygit/theme.yml" ]]; then
+    export LG_CONFIG_FILE="$config_home/lazygit/config.yml,$theme_dir/lazygit/theme.yml"
+  fi
+  if [[ -z "${FZF_DEFAULT_OPTS_FILE-}" && -r "$theme_dir/fzf/options" ]]; then
+    export FZF_DEFAULT_OPTS_FILE="$theme_dir/fzf/options"
+  fi
+}
 
 if (( $+commands[fd] )); then
   export FZF_DEFAULT_COMMAND="fd --type f --strip-cwd-prefix --hidden --follow --exclude .git"

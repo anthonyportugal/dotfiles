@@ -6,3 +6,4 @@ xorg-xauth
 xorg-xrandr
 xorg-setxkbmap
 xorg-xsetroot
+xorg-xrdb

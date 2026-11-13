@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Test double for the menu programs (fuzzel, rofi, fzf), linked under their
+# names. Each call appends its name and arguments to $PICKER_LOG, keeps its
+# stdin in $PICKER_DIR/<call>.in and answers with the next word of
+# $PICKER_DIR/script: a 1-based row, or "esc" to dismiss the menu. It prints
+# the zero-based index when asked to (fuzzel --index, rofi -format i) and the
+# row text otherwise, without the "\0icon\x1f..." part.
+
+set -Eeuo pipefail
+
+: "${PICKER_LOG:?}" "${PICKER_DIR:?}"
+name=${0##*/}
+count=$(( $(cat "$PICKER_DIR/count" 2>/dev/null || printf 0) + 1 ))
+printf '%s\n' "$count" > "$PICKER_DIR/count"
+{
+  printf '=== %s %s\n' "$name" "$count"
+  printf '%s\n' "$@"
+} >> "$PICKER_LOG"
+cat > "$PICKER_DIR/$count.in"
+
+read -r -a picks < "$PICKER_DIR/script" || true
+pick=${picks[count - 1]:-esc}
+if [[ "$pick" == esc ]]; then
+  [[ "$name" == fzf ]] && exit 130
+  exit 1
+fi
+
+index_output=0
+previous=''
+for argument in "$@"; do
+  [[ "$argument" == --index ]] && index_output=1
+  [[ "$previous" == -format && "$argument" == i ]] && index_output=1
+  previous=$argument
+done
+if (( index_output == 1 )); then
+  printf '%s\n' "$(( pick - 1 ))"
+else
+  sed -n "${pick}p" "$PICKER_DIR/$count.in" | tr -d '\000' | sed 's/icon\x1f.*$//'
+fi

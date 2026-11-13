@@ -207,8 +207,6 @@ menu() {
     stop_recording
   fi
   mangowm_require fuzzel
-  local theme_dir
-  theme_dir="$(mangowm_theme_dir)"
   local choice
   choice=$(printf '%s\n' \
     "⏺️   Pantalla completa (Mudo)" \
@@ -219,8 +217,7 @@ menu() {
     "🎙️   Región de pantalla + Micrófono" \
     "🔊   Región de pantalla + Audio PC" \
     "🎙️🔊 Región de pantalla + Micrófono y Audio PC" | \
-    fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-      --prompt="Grabador de Pantalla ❯ " --lines=8 --width=46 || true)
+    mangowm_menu "Grabador de Pantalla ❯ " --lines=8 || true)
 
   case "$choice" in
     *"Pantalla completa + Micrófono y Audio PC"*)

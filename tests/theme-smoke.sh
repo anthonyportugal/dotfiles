@@ -49,12 +49,21 @@ STATE="$H/.local/state/dotfiles/theme"
 TEMPLATES="$H/.local/share/dotfiles/theme/templates"
 mkdir -p "$H/.config/yazi"
 
-# list: one entry per palette in themes/palettes.
+# list: one entry per palette in themes/palettes, sorted (14 Catppuccin Mocha
+# and 36 Sanctuary; tests/sanctuary-smoke.sh checks the Sanctuary ids).
 mapfile -t themes < <(theme_in "$H" list)
-(( ${#themes[@]} == 14 )) || fail "list devolvió ${#themes[@]} temas en lugar de 14"
+(( ${#themes[@]} == 50 )) || fail "list devolvió ${#themes[@]} temas en lugar de 50"
+catppuccin=0
 for theme in "${themes[@]}"; do
-  [[ "$theme" == catppuccin-mocha-* ]] || fail "tema inesperado en list: $theme"
+  case "$theme" in
+    catppuccin-mocha-*) ((catppuccin++)) || true ;;
+    sanctuary-*) ;;
+    *) fail "tema inesperado en list: $theme" ;;
+  esac
 done
+(( catppuccin == 14 )) || fail "list devolvió $catppuccin temas Catppuccin en lugar de 14"
+[[ "$(printf '%s\n' "${themes[@]}")" == "$(printf '%s\n' "${themes[@]}" | LC_ALL=C sort)" ]] || \
+  fail "list no devolvió los temas ordenados"
 
 # render without a selection uses the pink default and the shared outputs.
 theme_in "$H" render >/dev/null || fail "render falló en un home vacío"
@@ -105,6 +114,18 @@ fi
 [[ "$output" == *'nombre de plantillas de WM inválido: Bad_WM'* ]] || fail "render falló por otra causa: $output"
 [[ "$(readlink -- "$STATE/current")" == "$before" ]] || fail "un nombre inválido cambió theme/current"
 rm -rf -- "$TEMPLATES/Bad_WM"
+
+# A WM template directory named like a shared output would overwrite it.
+for shared in yazi foot; do
+  mkdir -p "$TEMPLATES/$shared"
+  printf 'x={{accent}}\n' > "$TEMPLATES/$shared/x.conf"
+  if output=$(theme_in "$H" render 2>&1); then
+    fail "render aceptó plantillas de WM llamadas $shared"
+  fi
+  [[ "$output" == *"nombre de plantillas de WM inválido: $shared"* ]] || fail "render falló por otra causa: $output"
+  rm -rf -- "${TEMPLATES:?}/$shared"
+done
+[[ "$(readlink -- "$STATE/current")" == "$before" ]] || fail "un nombre reservado cambió theme/current"
 
 # set renders, persists the selection, syncs the GNOME accent and runs every
 # WM reload hook; a failing hook only warns.
@@ -168,6 +189,47 @@ ENGINE_UNDER_TEST="$FAKE_REPO/bin/dotfiles-theme"
 H4="$TEST_ROOT/home-upper"
 theme_in "$H4" render >/dev/null || fail "render rechazó un color hexadecimal en mayúsculas"
 grep -Fq '#F5C2E7' "$H4/.local/state/dotfiles/theme/current/gtk.css" || fail "el color en mayúsculas no llegó a GTK"
+# Schema 2: {{key}} works for every key, {{key.raw}} only for colors, and the
+# rendered metadata records the schema.
+ENGINE_UNDER_TEST=$ENGINE
+H5="$TEST_ROOT/home-schema"
+ROLES="$H5/.local/share/dotfiles/theme/templates/fakewm"
+mkdir -p "$ROLES"
+printf 'mono={{font_mono}}\ncursor={{cursor_theme}}:{{cursor_size}}\nmagenta={{ansi_magenta.raw}}\n' \
+  > "$ROLES/roles.conf"
+theme_in "$H5" render >/dev/null || fail "render rechazó la paleta schema 2 por defecto"
+grep -Fxq 'schema=2' "$H5/.local/state/dotfiles/theme/current/metadata" || fail "metadata sin schema=2"
+grep -Fxq 'mono=JetBrainsMono Nerd Font' "$H5/.local/state/dotfiles/theme/current/fakewm/roles.conf" || \
+  fail "{{font_mono}} no renderizó la familia de la fuente"
+grep -Fxq 'cursor=Bibata-Modern-Classic:24' "$H5/.local/state/dotfiles/theme/current/fakewm/roles.conf" || \
+  fail "los roles de cursor no se renderizaron"
+grep -Fxq 'magenta=f5c2e7' "$H5/.local/state/dotfiles/theme/current/fakewm/roles.conf" || \
+  fail "{{ansi_magenta.raw}} no renderizó el color sin #"
+printf 'x={{font_mono.raw}}\n' > "$ROLES/raw.conf"
+if output=$(theme_in "$H5" render 2>&1); then
+  fail "render aceptó {{font_mono.raw}}"
+fi
+[[ "$output" == *'marcador desconocido {{font_mono.raw}}'* ]] || fail "render falló por otra causa: $output"
+rm -f -- "$ROLES/raw.conf"
+
+# Typed values and schema 1 are rejected by validate.
+ENGINE_UNDER_TEST="$FAKE_REPO/bin/dotfiles-theme"
+FAKE_PALETTE="$FAKE_REPO/themes/palettes/catppuccin-mocha-pink.conf"
+for case in 'font_mono=Mono;rm' 'font_text= Sans' 'cursor_theme=../cursors' 'cursor_size=8' \
+            'cursor_size=1000' 'foreground=cdd6f4'; do
+  key=${case%%=*}
+  sed "s|^$key=.*|$case|" "$REPO_ROOT/themes/palettes/catppuccin-mocha-pink.conf" > "$FAKE_PALETTE"
+  grep -Fxq -- "$case" "$FAKE_PALETTE" || fail "no se preparó la paleta con $case"
+  if output=$(theme_in "$H4" validate 2>&1); then
+    fail "validate aceptó $case"
+  fi
+  [[ "$output" == *"inválido para $key"* ]] || fail "validate falló por otra causa con $case: $output"
+done
+printf 'schema=1\nid=catppuccin-mocha-pink\nrosewater=#f5e0dc\n' > "$FAKE_PALETTE"
+if output=$(theme_in "$H4" validate 2>&1); then
+  fail "validate aceptó una paleta schema 1"
+fi
+[[ "$output" == *'schema de paleta no soportado'* ]] || fail "schema 1 falló por otra causa: $output"
 ENGINE_UNDER_TEST=$ENGINE
 
 # The desktop post-link renders the theme into the target after linking.

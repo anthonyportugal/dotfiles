@@ -27,13 +27,42 @@ Distinct package sources are maintained separately:
 
 - `cachyos/`: Packages native to the CachyOS repository (e.g., `brave-bin`);
 - `aur/`: Explicit fallback source, never mixed with binary repository packages;
-- `external/`: Sources outside pacman/AUR; none are currently declared in base.
+- `external/`: Pinned downloads outside pacman/AUR (fonts, cursor themes),
+  installed per user without root. See [External downloads](#external-downloads).
 
 For the Brave browser, CachyOS utilizes `layers/desktop/packages/cachyos/desktop.txt` (native optimized
 binary). On generic Arch Linux, the resolver checks `core`, `extra`, and
 `multilib` first, falling back to `layers/desktop/packages/aur/desktop-fallback.txt` only when absent.
 Both entries represent alternative sources for the same package, not duplicate
 installations.
+
+## External downloads
+
+A layer lists recipe names in `packages/external/<tier|feature>.txt`; each name
+has a data-only recipe next to it, `packages/external/<name>.conf`:
+
+```ini
+version=2.0.7
+dest=share/icons/Bibata-Modern-Classic
+archive=<sha256> https://example.org/Bibata-Modern-Classic.tar.xz
+# or one line per plain file:
+# file=<name> <sha256> https://example.org/<name>
+refresh=fonts   # optional: rebuilds the font cache of dest
+```
+
+- Only `https` URLs are accepted, and every download must match its `sha256`
+  before anything changes. Nothing downloaded is executed (no `curl | sh`).
+  A failed or interrupted install leaves the previous version and its receipt
+  in place, and does not stop the other recipes of the run.
+- `dest` is `share/<directory>/<name>` under `~/.local` and belongs to the
+  recipe: an install replaces it whole. A `dest` that dotfiles did not install
+  is never replaced; the install stops and asks you to move it. Nor does an
+  install go through a symlinked directory below `~/.local`.
+- An archive must hold one top-level directory, which becomes `dest`.
+- The receipt `~/.local/state/dotfiles/external-<name>.receipt` records the
+  recipe's hash, so editing a recipe (a new version) reinstalls it.
+- They install with the other packages (`--with-packages`, `bootstrap`
+  without `--stow-only`), after the repository step, and `doctor` reports them.
 
 ## Profiles
 
@@ -53,15 +82,21 @@ Profiles are cumulative:
   (`zsh-autosuggestions`, `zsh-completions`, `zsh-syntax-highlighting`, and
   `zsh-history-substring-search`). Its Stow packages are `git` and `zsh`.
 - **`cli`**: Enriches the interactive terminal experience. Adds the Starship prompt,
-  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad, and
-  Nerd Fonts symbol glyphs. Its Stow packages deploy Catppuccin Mocha configurations
-  for these utilities.
+  Fzf, Micro, Bat, Btop, Fastfetch, Lazygit, Yazi, Git-Delta, Glow, Sad, Eza,
+  Zoxide, Tealdeer (`tldr`, cache updated on demand with `tldr --update`), Dust,
+  Duf, and Nerd Fonts symbol glyphs. Its Stow packages deploy Catppuccin Mocha
+  configurations for these utilities. With Eza installed, the Zsh aliases `ls`,
+  `l`, `la`, `ll`, `ld` and `lt` (tree) list with icons and directories first
+  (`command ls` keeps the real `ls`); Zoxide adds `z`/`zi` without replacing `cd`.
 - **`desktop`**: Delivers session-independent graphical utilities. Includes
-  Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV,
-  Zathura with MuPDF backend), multimedia player (MPV with MPRIS integration), media
+  Alacritty and Foot terminal emulators, lightweight document/image viewers (IMV, which
+  opens an image with the rest of its folder through `imv-folder`, and Zathura with
+  MuPDF backend), multimedia player (MPV with MPRIS integration), media
   controller (Playerctl), Thunar file manager with Tumbler thumbnailing, Catppuccin
-  themes (Adw-gtk3-dark and Papirus-Dark), and the JetBrains Mono typeface. Its Stow
-  packages link Alacritty, Foot, and `xdg-defaults`.
+  themes (Adw-gtk3-dark and Papirus-Dark), and the fonts: JetBrains Mono Nerd, the
+  Nerd Font symbols, and Noto for text, CJK, and color emoji. Its Stow packages
+  link Alacritty, Foot, and `xdg-defaults`, whose fontconfig fallbacks draw icons
+  and emoji after the role font.
 - **`yazi-extras`**: Enables rich file previews, high-performance search, and
   archive support in the Yazi file manager (including `7zip`, `chafa`, `fd`,
   `ffmpeg`, `imagemagick`, `jq`, `poppler`, `resvg`, and `ripgrep`).

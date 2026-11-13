@@ -43,6 +43,7 @@ fake_commands=(
   brave
   bspc
   ffmpeg
+  gammastep
   gsettings
   i3lock
   notify-send
@@ -62,6 +63,7 @@ fake_commands=(
   xclip
   xcolor
   xdotool
+  xrdb
   xsetroot
 )
 for command_name in "${fake_commands[@]}"; do
@@ -85,6 +87,9 @@ export BSPWM_RESTORE_WALLPAPER=0
 
 "$CONFIG_ROOT/bspwmrc"
 
+# Without a rendered theme the session keeps the default cursor.
+! grep -q '^xrdb' "$TEST_LOG" || fail "bspwmrc fijó un cursor sin tema renderizado"
+grep -qxF 'xsetroot -cursor_name left_ptr' "$TEST_LOG" || fail "bspwmrc no fijó el cursor raíz"
 if [[ $(grep -c '^bspc monitor ' "$TEST_LOG") -ne 2 ]]; then
   fail "los workspaces no se distribuyeron entre dos monitores"
 fi
@@ -126,6 +131,27 @@ media_output=$("$CONFIG_ROOT/scripts/polybar-media")
 
 bluetooth_output=$("$CONFIG_ROOT/scripts/polybar-bluetooth")
 [[ "$bluetooth_output" == *Headphones* ]] || fail "el módulo Bluetooth no mostró el dispositivo conectado"
+
+# Night light: gammastep replaces redshift with the same temperature.
+grep -qxF gammastep "$REPO_ROOT/packages/repo/desktop.txt" || fail "la capa bspwm no declara gammastep"
+! grep -rqxF redshift "$REPO_ROOT/packages" || fail "la capa bspwm aún declara redshift"
+# Only the cleanup of a redshift left by the old script may name it.
+if grep -rni redshift "$CONFIG_ROOT" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(#|pkill -x redshift 2>/dev/null \|\| true$)'; then
+  fail "la configuración de bspwm aún usa redshift"
+fi
+grep -q 'pkill -x redshift' "$CONFIG_ROOT/scripts/bspwm-nightlight" || \
+  fail 'apagar la luz nocturna no detiene un redshift anterior'
+
+"$CONFIG_ROOT/scripts/bspwm-nightlight" on
+for _ in {1..50}; do
+  grep -qxF 'gammastep -m randr -P -O 3500' "$TEST_LOG" && break
+  sleep 0.02
+done
+grep -qxF 'gammastep -m randr -P -O 3500' "$TEST_LOG" || fail "bspwm-nightlight on no aplicó 3500K con gammastep"
+[[ "$("$CONFIG_ROOT/scripts/bspwm-nightlight" status)" == *'3500K'* ]] || fail "polybar no muestra la luz nocturna activa"
+"$CONFIG_ROOT/scripts/bspwm-nightlight" off
+grep -qxF 'gammastep -m randr -x' "$TEST_LOG" || fail "bspwm-nightlight off no restableció la gamma con gammastep"
+[[ "$("$CONFIG_ROOT/scripts/bspwm-nightlight" status)" == *'off'* ]] || fail "polybar no muestra la luz nocturna apagada"
 
 color_output=$("$CONFIG_ROOT/scripts/bspwm-color-picker")
 [[ "$color_output" == "#cba6f7" ]] || fail "bspwm-color-picker no retornó el color esperado"
@@ -356,11 +382,26 @@ grep -q '^bspc config focused_border_color #cba6f7$' "$TEST_LOG" || \
   fail "el hook de recarga no aplicó el borde Mauve en vivo"
 grep -q '^gsettings set org.gnome.desktop.interface accent-color purple$' "$TEST_LOG" || \
   fail "set no sincronizó el acento de GNOME a través del doble"
+# The cursor roles reach GTK and Xcursor, and the root cursor reloads.
+grep -qxF 'gsettings set org.gnome.desktop.interface cursor-theme Bibata-Modern-Classic' "$TEST_LOG" || \
+  fail "set no aplicó el cursor de la paleta a GTK"
+grep -qxF 'gsettings set org.gnome.desktop.interface cursor-size 24' "$TEST_LOG" || \
+  fail "set no aplicó el tamaño del cursor a GTK"
+grep -qxF 'xrdb -merge Xcursor.theme: Bibata-Modern-Classic;Xcursor.size: 24;' "$TEST_LOG" || \
+  fail "el hook de recarga no fijó Xcursor.theme/size: $(grep '^xrdb' "$TEST_LOG" || true)"
+[[ $(grep -cxF 'xsetroot -cursor_name left_ptr' "$TEST_LOG") -ge 2 ]] || \
+  fail "el hook de recarga no recargó el cursor raíz"
 
 bspwm_theme set catppuccin-mocha-pink >/dev/null || fail "bspwm-theme set pink falló"
 [[ $(bspwm_theme current) == *"catppuccin-mocha-pink"* ]] || \
   fail "bspwm-theme no restauró catppuccin-mocha-pink"
 grep -Fq "BSPWM_FOCUSED_BORDER='#f5c2e7'" "$mauve_theme_dir/bspwm.env" || \
   fail "bspwm.env no volvió al acento Pink"
+
+# A session started with a rendered theme sets its cursor from the start.
+: > "$TEST_LOG"
+XDG_STATE_HOME="$THEME_HOME/.local/state" "$CONFIG_ROOT/bspwmrc"
+grep -qxF 'xrdb -merge Xcursor.theme: Bibata-Modern-Classic;Xcursor.size: 24;' "$TEST_LOG" || \
+  fail "bspwmrc no fijó el cursor del tema renderizado"
 
 printf 'OK: sesión dinámica y helpers principales validados\n'

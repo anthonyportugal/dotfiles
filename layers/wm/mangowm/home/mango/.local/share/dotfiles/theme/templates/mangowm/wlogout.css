@@ -6,7 +6,7 @@
 window { background-color: alpha({{background_deep}}, 0.75); }
 button {
   color: #ffffff;
-  background-color: alpha({{surface0}}, 0.88);
+  background-color: alpha({{surface}}, 0.88);
   border: none;
   border-radius: 0;
   margin: 0;

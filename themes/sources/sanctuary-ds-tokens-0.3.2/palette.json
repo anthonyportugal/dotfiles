@@ -1,0 +1,5210 @@
+{
+  "defaultFlavor": "compline",
+  "defaultGlazing": "pot-metal",
+  "defaultWindow": "mono",
+  "flavors": {
+    "lauds": {
+      "name": "Lauds",
+      "hour": "Dawn",
+      "scheme": "light",
+      "blurb": "First light on pale limestone. Ink on stone, color pooling on the floor.",
+      "accent": "cobalt",
+      "colors": {
+        "surface-sunken": {
+          "hex": "#eae6dc",
+          "oklch": [
+            0.925,
+            0.014,
+            85
+          ]
+        },
+        "surface": {
+          "hex": "#f5f0e6",
+          "oklch": [
+            0.957,
+            0.014,
+            85
+          ]
+        },
+        "surface-raised-1": {
+          "hex": "#fbf6ec",
+          "oklch": [
+            0.975,
+            0.014,
+            85
+          ]
+        },
+        "surface-raised-2": {
+          "hex": "#fffaf0",
+          "oklch": [
+            0.986,
+            0.0139,
+            85
+          ]
+        },
+        "surface-raised-3": {
+          "hex": "#fffcf8",
+          "oklch": [
+            0.993,
+            0.007,
+            85
+          ]
+        },
+        "surface-raised-4": {
+          "hex": "#ffffff",
+          "oklch": [
+            1,
+            0.0001,
+            85
+          ]
+        },
+        "surface-inverse": {
+          "hex": "#1d1d2f",
+          "oklch": [
+            0.24,
+            0.035,
+            285
+          ]
+        },
+        "text": {
+          "hex": "#1d1d2f",
+          "oklch": [
+            0.24,
+            0.035,
+            285
+          ]
+        },
+        "text-muted": {
+          "hex": "#45455a",
+          "oklch": [
+            0.4,
+            0.035,
+            285
+          ]
+        },
+        "text-subtle": {
+          "hex": "#616177",
+          "oklch": [
+            0.5,
+            0.035,
+            285
+          ]
+        },
+        "text-disabled": {
+          "hex": "#9596ae",
+          "oklch": [
+            0.68,
+            0.035,
+            285
+          ]
+        },
+        "text-inverse": {
+          "hex": "#f5f0e6",
+          "oklch": [
+            0.957,
+            0.014,
+            85
+          ]
+        },
+        "lead-soft": {
+          "hex": "#dbd5c9",
+          "oklch": [
+            0.875,
+            0.0182,
+            85
+          ]
+        },
+        "lead": {
+          "hex": "#b9b4a7",
+          "oklch": [
+            0.77,
+            0.0182,
+            85
+          ]
+        },
+        "lead-strong": {
+          "hex": "#686358",
+          "oklch": [
+            0.5,
+            0.0182,
+            85
+          ]
+        },
+        "lead-came": {
+          "hex": "#231f15",
+          "oklch": [
+            0.24,
+            0.0182,
+            85
+          ]
+        },
+        "umbra-key": {
+          "hex": "#25211a",
+          "oklch": [
+            0.25,
+            0.014,
+            85
+          ],
+          "alpha": 0.18
+        },
+        "umbra-ambient": {
+          "hex": "#25211a",
+          "oklch": [
+            0.25,
+            0.014,
+            85
+          ],
+          "alpha": 0.1
+        },
+        "scrim": {
+          "hex": "#000000",
+          "oklch": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.4
+        },
+        "glass-ruby": {
+          "hex": "#c11929",
+          "oklch": [
+            0.52,
+            0.1982,
+            24
+          ]
+        },
+        "glass-ruby-lume": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "glass-ruby-ink": {
+          "hex": "#95101d",
+          "oklch": [
+            0.43,
+            0.1642,
+            24
+          ]
+        },
+        "glass-ruby-pane": {
+          "hex": "#fee4e2",
+          "oklch": [
+            0.94,
+            0.0283,
+            24
+          ]
+        },
+        "glass-ruby-on": {
+          "hex": "#fef3f2",
+          "oklch": [
+            0.972,
+            0.0129,
+            24
+          ]
+        },
+        "glass-ruby-on-pane": {
+          "hex": "#6c0812",
+          "oklch": [
+            0.34,
+            0.1304,
+            24
+          ]
+        },
+        "glass-ember": {
+          "hex": "#a54b11",
+          "oklch": [
+            0.52,
+            0.1358,
+            47
+          ]
+        },
+        "glass-ember-lume": {
+          "hex": "#fa782a",
+          "oklch": [
+            0.715,
+            0.1803,
+            47
+          ]
+        },
+        "glass-ember-ink": {
+          "hex": "#7f380a",
+          "oklch": [
+            0.43,
+            0.1126,
+            47
+          ]
+        },
+        "glass-ember-pane": {
+          "hex": "#fee5da",
+          "oklch": [
+            0.94,
+            0.0311,
+            47
+          ]
+        },
+        "glass-ember-on": {
+          "hex": "#fff3ee",
+          "oklch": [
+            0.972,
+            0.0142,
+            47
+          ]
+        },
+        "glass-ember-on-pane": {
+          "hex": "#5c2604",
+          "oklch": [
+            0.34,
+            0.0897,
+            47
+          ]
+        },
+        "glass-amber": {
+          "hex": "#915b11",
+          "oklch": [
+            0.52,
+            0.1077,
+            68.05
+          ]
+        },
+        "glass-amber-lume": {
+          "hex": "#dc9021",
+          "oklch": [
+            0.715,
+            0.1458,
+            70
+          ]
+        },
+        "glass-amber-ink": {
+          "hex": "#70440a",
+          "oklch": [
+            0.43,
+            0.0904,
+            66.37
+          ]
+        },
+        "glass-amber-pane": {
+          "hex": "#fee7ce",
+          "oklch": [
+            0.94,
+            0.0416,
+            70
+          ]
+        },
+        "glass-amber-on": {
+          "hex": "#fef4e8",
+          "oklch": [
+            0.972,
+            0.0191,
+            70
+          ]
+        },
+        "glass-amber-on-pane": {
+          "hex": "#512f04",
+          "oklch": [
+            0.34,
+            0.0729,
+            64.7
+          ]
+        },
+        "glass-gilt": {
+          "hex": "#806511",
+          "oklch": [
+            0.52,
+            0.1003,
+            89.09
+          ]
+        },
+        "glass-gilt-lume": {
+          "hex": "#c1a021",
+          "oklch": [
+            0.715,
+            0.1378,
+            93
+          ]
+        },
+        "glass-gilt-ink": {
+          "hex": "#644c0a",
+          "oklch": [
+            0.43,
+            0.0834,
+            85.74
+          ]
+        },
+        "glass-gilt-pane": {
+          "hex": "#f6ebc8",
+          "oklch": [
+            0.94,
+            0.048,
+            93
+          ]
+        },
+        "glass-gilt-on": {
+          "hex": "#fcf6e3",
+          "oklch": [
+            0.972,
+            0.0256,
+            93
+          ]
+        },
+        "glass-gilt-on-pane": {
+          "hex": "#493404",
+          "oklch": [
+            0.34,
+            0.0668,
+            82.4
+          ]
+        },
+        "glass-verdure": {
+          "hex": "#1b7f12",
+          "oklch": [
+            0.52,
+            0.1651,
+            142
+          ]
+        },
+        "glass-verdure-lume": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "glass-verdure-ink": {
+          "hex": "#12610b",
+          "oklch": [
+            0.43,
+            0.1369,
+            142
+          ]
+        },
+        "glass-verdure-pane": {
+          "hex": "#d9f4d5",
+          "oklch": [
+            0.94,
+            0.051,
+            142
+          ]
+        },
+        "glass-verdure-on": {
+          "hex": "#ecfbea",
+          "oklch": [
+            0.972,
+            0.0272,
+            142
+          ]
+        },
+        "glass-verdure-on-pane": {
+          "hex": "#094505",
+          "oklch": [
+            0.34,
+            0.109,
+            142
+          ]
+        },
+        "glass-viridian": {
+          "hex": "#157a63",
+          "oklch": [
+            0.52,
+            0.0951,
+            172
+          ]
+        },
+        "glass-viridian-lume": {
+          "hex": "#37bc9a",
+          "oklch": [
+            0.715,
+            0.1235,
+            172
+          ]
+        },
+        "glass-viridian-ink": {
+          "hex": "#0d5e4b",
+          "oklch": [
+            0.43,
+            0.0788,
+            172
+          ]
+        },
+        "glass-viridian-pane": {
+          "hex": "#d2f4e8",
+          "oklch": [
+            0.94,
+            0.039,
+            172
+          ]
+        },
+        "glass-viridian-on": {
+          "hex": "#e9fbf4",
+          "oklch": [
+            0.972,
+            0.0208,
+            172
+          ]
+        },
+        "glass-viridian-on-pane": {
+          "hex": "#064234",
+          "oklch": [
+            0.34,
+            0.0626,
+            172
+          ]
+        },
+        "glass-azure": {
+          "hex": "#157394",
+          "oklch": [
+            0.52,
+            0.0956,
+            228
+          ]
+        },
+        "glass-azure-lume": {
+          "hex": "#26b2e3",
+          "oklch": [
+            0.715,
+            0.1312,
+            228
+          ]
+        },
+        "glass-azure-ink": {
+          "hex": "#0d5872",
+          "oklch": [
+            0.43,
+            0.0793,
+            228
+          ]
+        },
+        "glass-azure-pane": {
+          "hex": "#d4f0fe",
+          "oklch": [
+            0.94,
+            0.0348,
+            228
+          ]
+        },
+        "glass-azure-on": {
+          "hex": "#ebf8fe",
+          "oklch": [
+            0.972,
+            0.0161,
+            228
+          ]
+        },
+        "glass-azure-on-pane": {
+          "hex": "#063e51",
+          "oklch": [
+            0.34,
+            0.063,
+            228
+          ]
+        },
+        "glass-cobalt": {
+          "hex": "#1062d3",
+          "oklch": [
+            0.52,
+            0.1903,
+            259
+          ]
+        },
+        "glass-cobalt-lume": {
+          "hex": "#6ca3fa",
+          "oklch": [
+            0.715,
+            0.1402,
+            259
+          ]
+        },
+        "glass-cobalt-ink": {
+          "hex": "#094aa4",
+          "oklch": [
+            0.43,
+            0.1579,
+            259
+          ]
+        },
+        "glass-cobalt-pane": {
+          "hex": "#e1ecfe",
+          "oklch": [
+            0.94,
+            0.0271,
+            259
+          ]
+        },
+        "glass-cobalt-on": {
+          "hex": "#f1f6fe",
+          "oklch": [
+            0.972,
+            0.0125,
+            259
+          ]
+        },
+        "glass-cobalt-on-pane": {
+          "hex": "#043377",
+          "oklch": [
+            0.34,
+            0.1259,
+            259
+          ]
+        },
+        "glass-indigo": {
+          "hex": "#5b50d4",
+          "oklch": [
+            0.52,
+            0.196,
+            281
+          ]
+        },
+        "glass-indigo-lume": {
+          "hex": "#9497fa",
+          "oklch": [
+            0.715,
+            0.1428,
+            281
+          ]
+        },
+        "glass-indigo-ink": {
+          "hex": "#4539a9",
+          "oklch": [
+            0.43,
+            0.172,
+            281
+          ]
+        },
+        "glass-indigo-pane": {
+          "hex": "#e7eafe",
+          "oklch": [
+            0.94,
+            0.0275,
+            281
+          ]
+        },
+        "glass-indigo-on": {
+          "hex": "#f4f5fe",
+          "oklch": [
+            0.972,
+            0.0127,
+            281
+          ]
+        },
+        "glass-indigo-on-pane": {
+          "hex": "#30267d",
+          "oklch": [
+            0.34,
+            0.14,
+            281
+          ]
+        },
+        "glass-amethyst": {
+          "hex": "#863ec0",
+          "oklch": [
+            0.52,
+            0.196,
+            306
+          ]
+        },
+        "glass-amethyst-lume": {
+          "hex": "#bf81fa",
+          "oklch": [
+            0.715,
+            0.178,
+            306
+          ]
+        },
+        "glass-amethyst-ink": {
+          "hex": "#682a98",
+          "oklch": [
+            0.43,
+            0.172,
+            306
+          ]
+        },
+        "glass-amethyst-pane": {
+          "hex": "#f1e6fe",
+          "oklch": [
+            0.94,
+            0.0341,
+            306
+          ]
+        },
+        "glass-amethyst-on": {
+          "hex": "#f8f3fe",
+          "oklch": [
+            0.972,
+            0.0157,
+            306
+          ]
+        },
+        "glass-amethyst-on-pane": {
+          "hex": "#4a1a6f",
+          "oklch": [
+            0.34,
+            0.14,
+            306
+          ]
+        },
+        "glass-murrey": {
+          "hex": "#ab2c86",
+          "oklch": [
+            0.52,
+            0.1862,
+            342
+          ]
+        },
+        "glass-murrey-lume": {
+          "hex": "#ec6fc2",
+          "oklch": [
+            0.715,
+            0.1805,
+            342
+          ]
+        },
+        "glass-murrey-ink": {
+          "hex": "#861a68",
+          "oklch": [
+            0.43,
+            0.1634,
+            342
+          ]
+        },
+        "glass-murrey-pane": {
+          "hex": "#fee2f2",
+          "oklch": [
+            0.94,
+            0.0372,
+            342
+          ]
+        },
+        "glass-murrey-on": {
+          "hex": "#fef2f9",
+          "oklch": [
+            0.972,
+            0.0169,
+            342
+          ]
+        },
+        "glass-murrey-on-pane": {
+          "hex": "#610d4b",
+          "oklch": [
+            0.34,
+            0.133,
+            342
+          ]
+        },
+        "glass-rose": {
+          "hex": "#ad3760",
+          "oklch": [
+            0.52,
+            0.1568,
+            3
+          ]
+        },
+        "glass-rose-lume": {
+          "hex": "#ef769a",
+          "oklch": [
+            0.715,
+            0.152,
+            3
+          ]
+        },
+        "glass-rose-ink": {
+          "hex": "#882448",
+          "oklch": [
+            0.43,
+            0.1376,
+            3
+          ]
+        },
+        "glass-rose-pane": {
+          "hex": "#fee3e9",
+          "oklch": [
+            0.94,
+            0.03,
+            3
+          ]
+        },
+        "glass-rose-on": {
+          "hex": "#fff2f5",
+          "oklch": [
+            0.972,
+            0.0137,
+            3
+          ]
+        },
+        "glass-rose-on-pane": {
+          "hex": "#631632",
+          "oklch": [
+            0.34,
+            0.112,
+            3
+          ]
+        },
+        "accent": {
+          "hex": "#1062d3",
+          "oklch": [
+            0.52,
+            0.1903,
+            259
+          ]
+        },
+        "accent-lume": {
+          "hex": "#6ca3fa",
+          "oklch": [
+            0.715,
+            0.1402,
+            259
+          ]
+        },
+        "accent-ink": {
+          "hex": "#094aa4",
+          "oklch": [
+            0.43,
+            0.1579,
+            259
+          ]
+        },
+        "accent-pane": {
+          "hex": "#e1ecfe",
+          "oklch": [
+            0.94,
+            0.0271,
+            259
+          ]
+        },
+        "accent-on": {
+          "hex": "#f1f6fe",
+          "oklch": [
+            0.972,
+            0.0125,
+            259
+          ]
+        },
+        "accent-on-pane": {
+          "hex": "#043377",
+          "oklch": [
+            0.34,
+            0.1259,
+            259
+          ]
+        },
+        "ansi-red": {
+          "hex": "#c11929",
+          "oklch": [
+            0.52,
+            0.1982,
+            24
+          ]
+        },
+        "ansi-bright-red": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "ansi-green": {
+          "hex": "#1b7f12",
+          "oklch": [
+            0.52,
+            0.1651,
+            142
+          ]
+        },
+        "ansi-bright-green": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "ansi-yellow": {
+          "hex": "#806511",
+          "oklch": [
+            0.52,
+            0.1003,
+            89.09
+          ]
+        },
+        "ansi-bright-yellow": {
+          "hex": "#c1a021",
+          "oklch": [
+            0.715,
+            0.1378,
+            93
+          ]
+        },
+        "ansi-blue": {
+          "hex": "#1062d3",
+          "oklch": [
+            0.52,
+            0.1903,
+            259
+          ]
+        },
+        "ansi-bright-blue": {
+          "hex": "#6ca3fa",
+          "oklch": [
+            0.715,
+            0.1402,
+            259
+          ]
+        },
+        "ansi-magenta": {
+          "hex": "#863ec0",
+          "oklch": [
+            0.52,
+            0.196,
+            306
+          ]
+        },
+        "ansi-bright-magenta": {
+          "hex": "#bf81fa",
+          "oklch": [
+            0.715,
+            0.178,
+            306
+          ]
+        },
+        "ansi-cyan": {
+          "hex": "#157a63",
+          "oklch": [
+            0.52,
+            0.0951,
+            172
+          ]
+        },
+        "ansi-bright-cyan": {
+          "hex": "#37bc9a",
+          "oklch": [
+            0.715,
+            0.1235,
+            172
+          ]
+        },
+        "ansi-black": {
+          "hex": "#45455a",
+          "oklch": [
+            0.4,
+            0.035,
+            285
+          ]
+        },
+        "ansi-white": {
+          "hex": "#b9b4a7",
+          "oklch": [
+            0.77,
+            0.0182,
+            85
+          ]
+        },
+        "ansi-bright-black": {
+          "hex": "#616177",
+          "oklch": [
+            0.5,
+            0.035,
+            285
+          ]
+        },
+        "ansi-bright-white": {
+          "hex": "#dbd5c9",
+          "oklch": [
+            0.875,
+            0.0182,
+            85
+          ]
+        },
+        "danger": {
+          "hex": "#c11929",
+          "oklch": [
+            0.52,
+            0.1982,
+            24
+          ]
+        },
+        "danger-lume": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "danger-ink": {
+          "hex": "#95101d",
+          "oklch": [
+            0.43,
+            0.1642,
+            24
+          ]
+        },
+        "danger-pane": {
+          "hex": "#fee4e2",
+          "oklch": [
+            0.94,
+            0.0283,
+            24
+          ]
+        },
+        "danger-on": {
+          "hex": "#fef3f2",
+          "oklch": [
+            0.972,
+            0.0129,
+            24
+          ]
+        },
+        "danger-on-pane": {
+          "hex": "#6c0812",
+          "oklch": [
+            0.34,
+            0.1304,
+            24
+          ]
+        },
+        "warning": {
+          "hex": "#915b11",
+          "oklch": [
+            0.52,
+            0.1077,
+            68.05
+          ]
+        },
+        "warning-lume": {
+          "hex": "#dc9021",
+          "oklch": [
+            0.715,
+            0.1458,
+            70
+          ]
+        },
+        "warning-ink": {
+          "hex": "#70440a",
+          "oklch": [
+            0.43,
+            0.0904,
+            66.37
+          ]
+        },
+        "warning-pane": {
+          "hex": "#fee7ce",
+          "oklch": [
+            0.94,
+            0.0416,
+            70
+          ]
+        },
+        "warning-on": {
+          "hex": "#fef4e8",
+          "oklch": [
+            0.972,
+            0.0191,
+            70
+          ]
+        },
+        "warning-on-pane": {
+          "hex": "#512f04",
+          "oklch": [
+            0.34,
+            0.0729,
+            64.7
+          ]
+        },
+        "success": {
+          "hex": "#1b7f12",
+          "oklch": [
+            0.52,
+            0.1651,
+            142
+          ]
+        },
+        "success-lume": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "success-ink": {
+          "hex": "#12610b",
+          "oklch": [
+            0.43,
+            0.1369,
+            142
+          ]
+        },
+        "success-pane": {
+          "hex": "#d9f4d5",
+          "oklch": [
+            0.94,
+            0.051,
+            142
+          ]
+        },
+        "success-on": {
+          "hex": "#ecfbea",
+          "oklch": [
+            0.972,
+            0.0272,
+            142
+          ]
+        },
+        "success-on-pane": {
+          "hex": "#094505",
+          "oklch": [
+            0.34,
+            0.109,
+            142
+          ]
+        },
+        "info": {
+          "hex": "#157394",
+          "oklch": [
+            0.52,
+            0.0956,
+            228
+          ]
+        },
+        "info-lume": {
+          "hex": "#26b2e3",
+          "oklch": [
+            0.715,
+            0.1312,
+            228
+          ]
+        },
+        "info-ink": {
+          "hex": "#0d5872",
+          "oklch": [
+            0.43,
+            0.0793,
+            228
+          ]
+        },
+        "info-pane": {
+          "hex": "#d4f0fe",
+          "oklch": [
+            0.94,
+            0.0348,
+            228
+          ]
+        },
+        "info-on": {
+          "hex": "#ebf8fe",
+          "oklch": [
+            0.972,
+            0.0161,
+            228
+          ]
+        },
+        "info-on-pane": {
+          "hex": "#063e51",
+          "oklch": [
+            0.34,
+            0.063,
+            228
+          ]
+        },
+        "syntax-keyword": {
+          "hex": "#863ec0",
+          "oklch": [
+            0.52,
+            0.196,
+            306
+          ]
+        },
+        "syntax-string": {
+          "hex": "#1b7f12",
+          "oklch": [
+            0.52,
+            0.1651,
+            142
+          ]
+        },
+        "syntax-number": {
+          "hex": "#a54b11",
+          "oklch": [
+            0.52,
+            0.1358,
+            47
+          ]
+        },
+        "syntax-constant": {
+          "hex": "#915b11",
+          "oklch": [
+            0.52,
+            0.1077,
+            68.05
+          ]
+        },
+        "syntax-function": {
+          "hex": "#157394",
+          "oklch": [
+            0.52,
+            0.0956,
+            228
+          ]
+        },
+        "syntax-type": {
+          "hex": "#806511",
+          "oklch": [
+            0.52,
+            0.1003,
+            89.09
+          ]
+        },
+        "syntax-property": {
+          "hex": "#1062d3",
+          "oklch": [
+            0.52,
+            0.1903,
+            259
+          ]
+        },
+        "syntax-tag": {
+          "hex": "#c11929",
+          "oklch": [
+            0.52,
+            0.1982,
+            24
+          ]
+        },
+        "syntax-operator": {
+          "hex": "#157a63",
+          "oklch": [
+            0.52,
+            0.0951,
+            172
+          ]
+        },
+        "syntax-regex": {
+          "hex": "#ad3760",
+          "oklch": [
+            0.52,
+            0.1568,
+            3
+          ]
+        },
+        "syntax-variable": {
+          "hex": "#1d1d2f",
+          "oklch": [
+            0.24,
+            0.035,
+            285
+          ]
+        },
+        "syntax-punctuation": {
+          "hex": "#45455a",
+          "oklch": [
+            0.4,
+            0.035,
+            285
+          ]
+        },
+        "syntax-comment": {
+          "hex": "#616177",
+          "oklch": [
+            0.5,
+            0.035,
+            285
+          ]
+        }
+      }
+    },
+    "vespers": {
+      "name": "Vespers",
+      "hour": "Dusk",
+      "scheme": "dark",
+      "blurb": "Candles lit against plum shadow. The warmest of the dark hours.",
+      "accent": "ember",
+      "colors": {
+        "surface-sunken": {
+          "hex": "#140e12",
+          "oklch": [
+            0.175,
+            0.012,
+            345
+          ]
+        },
+        "surface": {
+          "hex": "#1b1518",
+          "oklch": [
+            0.205,
+            0.012,
+            345
+          ]
+        },
+        "surface-raised-1": {
+          "hex": "#231c20",
+          "oklch": [
+            0.237,
+            0.012,
+            345
+          ]
+        },
+        "surface-raised-2": {
+          "hex": "#2a2427",
+          "oklch": [
+            0.268,
+            0.012,
+            345
+          ]
+        },
+        "surface-raised-3": {
+          "hex": "#322b2f",
+          "oklch": [
+            0.3,
+            0.012,
+            345
+          ]
+        },
+        "surface-raised-4": {
+          "hex": "#3b3438",
+          "oklch": [
+            0.335,
+            0.012,
+            345
+          ]
+        },
+        "surface-inverse": {
+          "hex": "#f4e6d2",
+          "oklch": [
+            0.93,
+            0.03,
+            75
+          ]
+        },
+        "text": {
+          "hex": "#f4e6d2",
+          "oklch": [
+            0.93,
+            0.03,
+            75
+          ]
+        },
+        "text-muted": {
+          "hex": "#c6b8a6",
+          "oklch": [
+            0.79,
+            0.03,
+            75
+          ]
+        },
+        "text-subtle": {
+          "hex": "#aa9c8a",
+          "oklch": [
+            0.7,
+            0.03,
+            75
+          ]
+        },
+        "text-disabled": {
+          "hex": "#685b4b",
+          "oklch": [
+            0.48,
+            0.03,
+            75
+          ]
+        },
+        "text-inverse": {
+          "hex": "#1b1518",
+          "oklch": [
+            0.205,
+            0.012,
+            345
+          ]
+        },
+        "lead-soft": {
+          "hex": "#362d32",
+          "oklch": [
+            0.31,
+            0.0156,
+            345
+          ]
+        },
+        "lead": {
+          "hex": "#4a4046",
+          "oklch": [
+            0.385,
+            0.0156,
+            345
+          ]
+        },
+        "lead-strong": {
+          "hex": "#70656b",
+          "oklch": [
+            0.52,
+            0.0156,
+            345
+          ]
+        },
+        "lead-came": {
+          "hex": "#060204",
+          "oklch": [
+            0.1,
+            0.0156,
+            345
+          ]
+        },
+        "umbra-key": {
+          "hex": "#010001",
+          "oklch": [
+            0.05,
+            0.012,
+            345
+          ],
+          "alpha": 0.55
+        },
+        "umbra-ambient": {
+          "hex": "#010001",
+          "oklch": [
+            0.05,
+            0.012,
+            345
+          ],
+          "alpha": 0.35
+        },
+        "scrim": {
+          "hex": "#000000",
+          "oklch": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.6
+        },
+        "glass-ruby": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "glass-ruby-lume": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "glass-ruby-ink": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "glass-ruby-pane": {
+          "hex": "#6c0812",
+          "oklch": [
+            0.34,
+            0.1304,
+            24
+          ]
+        },
+        "glass-ruby-on": {
+          "hex": "#300003",
+          "oklch": [
+            0.195,
+            0.0775,
+            24
+          ]
+        },
+        "glass-ruby-on-pane": {
+          "hex": "#fee4e2",
+          "oklch": [
+            0.94,
+            0.0283,
+            24
+          ]
+        },
+        "glass-ember": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "glass-ember-lume": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "glass-ember-ink": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "glass-ember-pane": {
+          "hex": "#5c2604",
+          "oklch": [
+            0.34,
+            0.0897,
+            47
+          ]
+        },
+        "glass-ember-on": {
+          "hex": "#280b00",
+          "oklch": [
+            0.195,
+            0.0549,
+            47
+          ]
+        },
+        "glass-ember-on-pane": {
+          "hex": "#fee5da",
+          "oklch": [
+            0.94,
+            0.0311,
+            47
+          ]
+        },
+        "glass-amber": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "glass-amber-lume": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "glass-amber-ink": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "glass-amber-pane": {
+          "hex": "#512f04",
+          "oklch": [
+            0.34,
+            0.0729,
+            64.7
+          ]
+        },
+        "glass-amber-on": {
+          "hex": "#230f00",
+          "oklch": [
+            0.195,
+            0.0456,
+            62
+          ]
+        },
+        "glass-amber-on-pane": {
+          "hex": "#fee7ce",
+          "oklch": [
+            0.94,
+            0.0416,
+            70
+          ]
+        },
+        "glass-gilt": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "glass-gilt-lume": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "glass-gilt-ink": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "glass-gilt-pane": {
+          "hex": "#493404",
+          "oklch": [
+            0.34,
+            0.0668,
+            82.4
+          ]
+        },
+        "glass-gilt-on": {
+          "hex": "#1f1200",
+          "oklch": [
+            0.195,
+            0.0414,
+            77
+          ]
+        },
+        "glass-gilt-on-pane": {
+          "hex": "#f6ebc8",
+          "oklch": [
+            0.94,
+            0.048,
+            93
+          ]
+        },
+        "glass-verdure": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "glass-verdure-lume": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "glass-verdure-ink": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "glass-verdure-pane": {
+          "hex": "#094505",
+          "oklch": [
+            0.34,
+            0.109,
+            142
+          ]
+        },
+        "glass-verdure-on": {
+          "hex": "#001c00",
+          "oklch": [
+            0.195,
+            0.0662,
+            142
+          ]
+        },
+        "glass-verdure-on-pane": {
+          "hex": "#d9f4d5",
+          "oklch": [
+            0.94,
+            0.051,
+            142
+          ]
+        },
+        "glass-viridian": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "glass-viridian-lume": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "glass-viridian-ink": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "glass-viridian-pane": {
+          "hex": "#064234",
+          "oklch": [
+            0.34,
+            0.0626,
+            172
+          ]
+        },
+        "glass-viridian-on": {
+          "hex": "#001a13",
+          "oklch": [
+            0.195,
+            0.0376,
+            172
+          ]
+        },
+        "glass-viridian-on-pane": {
+          "hex": "#d2f4e8",
+          "oklch": [
+            0.94,
+            0.039,
+            172
+          ]
+        },
+        "glass-azure": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "glass-azure-lume": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "glass-azure-ink": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "glass-azure-pane": {
+          "hex": "#063e51",
+          "oklch": [
+            0.34,
+            0.063,
+            228
+          ]
+        },
+        "glass-azure-on": {
+          "hex": "#001822",
+          "oklch": [
+            0.195,
+            0.0379,
+            228
+          ]
+        },
+        "glass-azure-on-pane": {
+          "hex": "#d4f0fe",
+          "oklch": [
+            0.94,
+            0.0348,
+            228
+          ]
+        },
+        "glass-cobalt": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "glass-cobalt-lume": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "glass-cobalt-ink": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "glass-cobalt-pane": {
+          "hex": "#043377",
+          "oklch": [
+            0.34,
+            0.1259,
+            259
+          ]
+        },
+        "glass-cobalt-on": {
+          "hex": "#001237",
+          "oklch": [
+            0.195,
+            0.0774,
+            259
+          ]
+        },
+        "glass-cobalt-on-pane": {
+          "hex": "#e1ecfe",
+          "oklch": [
+            0.94,
+            0.0271,
+            259
+          ]
+        },
+        "glass-indigo": {
+          "hex": "#b4b9fb",
+          "oklch": [
+            0.805,
+            0.0942,
+            281
+          ]
+        },
+        "glass-indigo-lume": {
+          "hex": "#d2d6fd",
+          "oklch": [
+            0.885,
+            0.0538,
+            281
+          ]
+        },
+        "glass-indigo-ink": {
+          "hex": "#d2d6fd",
+          "oklch": [
+            0.885,
+            0.0538,
+            281
+          ]
+        },
+        "glass-indigo-pane": {
+          "hex": "#30267d",
+          "oklch": [
+            0.34,
+            0.14,
+            281
+          ]
+        },
+        "glass-indigo-on": {
+          "hex": "#110b39",
+          "oklch": [
+            0.195,
+            0.084,
+            281
+          ]
+        },
+        "glass-indigo-on-pane": {
+          "hex": "#e7eafe",
+          "oklch": [
+            0.94,
+            0.0275,
+            281
+          ]
+        },
+        "glass-amethyst": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "glass-amethyst-lume": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "glass-amethyst-ink": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "glass-amethyst-pane": {
+          "hex": "#4a1a6f",
+          "oklch": [
+            0.34,
+            0.14,
+            306
+          ]
+        },
+        "glass-amethyst-on": {
+          "hex": "#1f0532",
+          "oklch": [
+            0.195,
+            0.084,
+            306
+          ]
+        },
+        "glass-amethyst-on-pane": {
+          "hex": "#f1e6fe",
+          "oklch": [
+            0.94,
+            0.0341,
+            306
+          ]
+        },
+        "glass-murrey": {
+          "hex": "#fc9ad8",
+          "oklch": [
+            0.805,
+            0.138,
+            342
+          ]
+        },
+        "glass-murrey-lume": {
+          "hex": "#fdc6e7",
+          "oklch": [
+            0.885,
+            0.0749,
+            342
+          ]
+        },
+        "glass-murrey-ink": {
+          "hex": "#fdc6e7",
+          "oklch": [
+            0.885,
+            0.0749,
+            342
+          ]
+        },
+        "glass-murrey-pane": {
+          "hex": "#610d4b",
+          "oklch": [
+            0.34,
+            0.133,
+            342
+          ]
+        },
+        "glass-murrey-on": {
+          "hex": "#2a011f",
+          "oklch": [
+            0.195,
+            0.0798,
+            342
+          ]
+        },
+        "glass-murrey-on-pane": {
+          "hex": "#fee2f2",
+          "oklch": [
+            0.94,
+            0.0372,
+            342
+          ]
+        },
+        "glass-rose": {
+          "hex": "#fca1b8",
+          "oklch": [
+            0.805,
+            0.1113,
+            3
+          ]
+        },
+        "glass-rose-lume": {
+          "hex": "#fdc9d5",
+          "oklch": [
+            0.885,
+            0.0605,
+            3
+          ]
+        },
+        "glass-rose-ink": {
+          "hex": "#fdc9d5",
+          "oklch": [
+            0.885,
+            0.0605,
+            3
+          ]
+        },
+        "glass-rose-pane": {
+          "hex": "#631632",
+          "oklch": [
+            0.34,
+            0.112,
+            3
+          ]
+        },
+        "glass-rose-on": {
+          "hex": "#2b0412",
+          "oklch": [
+            0.195,
+            0.0672,
+            3
+          ]
+        },
+        "glass-rose-on-pane": {
+          "hex": "#fee3e9",
+          "oklch": [
+            0.94,
+            0.03,
+            3
+          ]
+        },
+        "accent": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "accent-lume": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "accent-ink": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "accent-pane": {
+          "hex": "#5c2604",
+          "oklch": [
+            0.34,
+            0.0897,
+            47
+          ]
+        },
+        "accent-on": {
+          "hex": "#280b00",
+          "oklch": [
+            0.195,
+            0.0549,
+            47
+          ]
+        },
+        "accent-on-pane": {
+          "hex": "#fee5da",
+          "oklch": [
+            0.94,
+            0.0311,
+            47
+          ]
+        },
+        "ansi-red": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "ansi-bright-red": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "ansi-green": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "ansi-bright-green": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "ansi-yellow": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "ansi-bright-yellow": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "ansi-blue": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "ansi-bright-blue": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "ansi-magenta": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "ansi-bright-magenta": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "ansi-cyan": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "ansi-bright-cyan": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "ansi-black": {
+          "hex": "#322b2f",
+          "oklch": [
+            0.3,
+            0.012,
+            345
+          ]
+        },
+        "ansi-white": {
+          "hex": "#c6b8a6",
+          "oklch": [
+            0.79,
+            0.03,
+            75
+          ]
+        },
+        "ansi-bright-black": {
+          "hex": "#70656b",
+          "oklch": [
+            0.52,
+            0.0156,
+            345
+          ]
+        },
+        "ansi-bright-white": {
+          "hex": "#f4e6d2",
+          "oklch": [
+            0.93,
+            0.03,
+            75
+          ]
+        },
+        "danger": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "danger-lume": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "danger-ink": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "danger-pane": {
+          "hex": "#6c0812",
+          "oklch": [
+            0.34,
+            0.1304,
+            24
+          ]
+        },
+        "danger-on": {
+          "hex": "#300003",
+          "oklch": [
+            0.195,
+            0.0775,
+            24
+          ]
+        },
+        "danger-on-pane": {
+          "hex": "#fee4e2",
+          "oklch": [
+            0.94,
+            0.0283,
+            24
+          ]
+        },
+        "warning": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "warning-lume": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "warning-ink": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "warning-pane": {
+          "hex": "#512f04",
+          "oklch": [
+            0.34,
+            0.0729,
+            64.7
+          ]
+        },
+        "warning-on": {
+          "hex": "#230f00",
+          "oklch": [
+            0.195,
+            0.0456,
+            62
+          ]
+        },
+        "warning-on-pane": {
+          "hex": "#fee7ce",
+          "oklch": [
+            0.94,
+            0.0416,
+            70
+          ]
+        },
+        "success": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "success-lume": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "success-ink": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "success-pane": {
+          "hex": "#094505",
+          "oklch": [
+            0.34,
+            0.109,
+            142
+          ]
+        },
+        "success-on": {
+          "hex": "#001c00",
+          "oklch": [
+            0.195,
+            0.0662,
+            142
+          ]
+        },
+        "success-on-pane": {
+          "hex": "#d9f4d5",
+          "oklch": [
+            0.94,
+            0.051,
+            142
+          ]
+        },
+        "info": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "info-lume": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "info-ink": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "info-pane": {
+          "hex": "#063e51",
+          "oklch": [
+            0.34,
+            0.063,
+            228
+          ]
+        },
+        "info-on": {
+          "hex": "#001822",
+          "oklch": [
+            0.195,
+            0.0379,
+            228
+          ]
+        },
+        "info-on-pane": {
+          "hex": "#d4f0fe",
+          "oklch": [
+            0.94,
+            0.0348,
+            228
+          ]
+        },
+        "syntax-keyword": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "syntax-string": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "syntax-number": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "syntax-constant": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "syntax-function": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "syntax-type": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "syntax-property": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "syntax-tag": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "syntax-operator": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "syntax-regex": {
+          "hex": "#fca1b8",
+          "oklch": [
+            0.805,
+            0.1113,
+            3
+          ]
+        },
+        "syntax-variable": {
+          "hex": "#f4e6d2",
+          "oklch": [
+            0.93,
+            0.03,
+            75
+          ]
+        },
+        "syntax-punctuation": {
+          "hex": "#c6b8a6",
+          "oklch": [
+            0.79,
+            0.03,
+            75
+          ]
+        },
+        "syntax-comment": {
+          "hex": "#aa9c8a",
+          "oklch": [
+            0.7,
+            0.03,
+            75
+          ]
+        }
+      }
+    },
+    "compline": {
+      "name": "Compline",
+      "hour": "Night",
+      "scheme": "dark",
+      "blurb": "Slate stone after the doors close. The default flavor.",
+      "accent": "cobalt",
+      "colors": {
+        "surface-sunken": {
+          "hex": "#090b10",
+          "oklch": [
+            0.15,
+            0.012,
+            265
+          ]
+        },
+        "surface": {
+          "hex": "#0f1217",
+          "oklch": [
+            0.18,
+            0.012,
+            265
+          ]
+        },
+        "surface-raised-1": {
+          "hex": "#16191e",
+          "oklch": [
+            0.212,
+            0.012,
+            265
+          ]
+        },
+        "surface-raised-2": {
+          "hex": "#1d2026",
+          "oklch": [
+            0.243,
+            0.012,
+            265
+          ]
+        },
+        "surface-raised-3": {
+          "hex": "#25282e",
+          "oklch": [
+            0.275,
+            0.012,
+            265
+          ]
+        },
+        "surface-raised-4": {
+          "hex": "#2d3037",
+          "oklch": [
+            0.31,
+            0.012,
+            265
+          ]
+        },
+        "surface-inverse": {
+          "hex": "#eee7d9",
+          "oklch": [
+            0.93,
+            0.02,
+            85
+          ]
+        },
+        "text": {
+          "hex": "#eee7d9",
+          "oklch": [
+            0.93,
+            0.02,
+            85
+          ]
+        },
+        "text-muted": {
+          "hex": "#bdb7a9",
+          "oklch": [
+            0.78,
+            0.02,
+            85
+          ]
+        },
+        "text-subtle": {
+          "hex": "#9e988b",
+          "oklch": [
+            0.68,
+            0.02,
+            85
+          ]
+        },
+        "text-disabled": {
+          "hex": "#605a4e",
+          "oklch": [
+            0.47,
+            0.02,
+            85
+          ]
+        },
+        "text-inverse": {
+          "hex": "#0f1217",
+          "oklch": [
+            0.18,
+            0.012,
+            265
+          ]
+        },
+        "lead-soft": {
+          "hex": "#262a32",
+          "oklch": [
+            0.285,
+            0.0156,
+            265
+          ]
+        },
+        "lead": {
+          "hex": "#393d46",
+          "oklch": [
+            0.36,
+            0.0156,
+            265
+          ]
+        },
+        "lead-strong": {
+          "hex": "#5f636c",
+          "oklch": [
+            0.5,
+            0.0156,
+            265
+          ]
+        },
+        "lead-came": {
+          "hex": "#010204",
+          "oklch": [
+            0.08,
+            0.0156,
+            265
+          ]
+        },
+        "umbra-key": {
+          "hex": "#000001",
+          "oklch": [
+            0.04,
+            0.012,
+            265
+          ],
+          "alpha": 0.6
+        },
+        "umbra-ambient": {
+          "hex": "#000001",
+          "oklch": [
+            0.04,
+            0.012,
+            265
+          ],
+          "alpha": 0.4
+        },
+        "scrim": {
+          "hex": "#000000",
+          "oklch": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.6
+        },
+        "glass-ruby": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "glass-ruby-lume": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "glass-ruby-ink": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "glass-ruby-pane": {
+          "hex": "#6c0812",
+          "oklch": [
+            0.34,
+            0.1304,
+            24
+          ]
+        },
+        "glass-ruby-on": {
+          "hex": "#300003",
+          "oklch": [
+            0.195,
+            0.0775,
+            24
+          ]
+        },
+        "glass-ruby-on-pane": {
+          "hex": "#fee4e2",
+          "oklch": [
+            0.94,
+            0.0283,
+            24
+          ]
+        },
+        "glass-ember": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "glass-ember-lume": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "glass-ember-ink": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "glass-ember-pane": {
+          "hex": "#5c2604",
+          "oklch": [
+            0.34,
+            0.0897,
+            47
+          ]
+        },
+        "glass-ember-on": {
+          "hex": "#280b00",
+          "oklch": [
+            0.195,
+            0.0549,
+            47
+          ]
+        },
+        "glass-ember-on-pane": {
+          "hex": "#fee5da",
+          "oklch": [
+            0.94,
+            0.0311,
+            47
+          ]
+        },
+        "glass-amber": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "glass-amber-lume": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "glass-amber-ink": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "glass-amber-pane": {
+          "hex": "#512f04",
+          "oklch": [
+            0.34,
+            0.0729,
+            64.7
+          ]
+        },
+        "glass-amber-on": {
+          "hex": "#230f00",
+          "oklch": [
+            0.195,
+            0.0456,
+            62
+          ]
+        },
+        "glass-amber-on-pane": {
+          "hex": "#fee7ce",
+          "oklch": [
+            0.94,
+            0.0416,
+            70
+          ]
+        },
+        "glass-gilt": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "glass-gilt-lume": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "glass-gilt-ink": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "glass-gilt-pane": {
+          "hex": "#493404",
+          "oklch": [
+            0.34,
+            0.0668,
+            82.4
+          ]
+        },
+        "glass-gilt-on": {
+          "hex": "#1f1200",
+          "oklch": [
+            0.195,
+            0.0414,
+            77
+          ]
+        },
+        "glass-gilt-on-pane": {
+          "hex": "#f6ebc8",
+          "oklch": [
+            0.94,
+            0.048,
+            93
+          ]
+        },
+        "glass-verdure": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "glass-verdure-lume": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "glass-verdure-ink": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "glass-verdure-pane": {
+          "hex": "#094505",
+          "oklch": [
+            0.34,
+            0.109,
+            142
+          ]
+        },
+        "glass-verdure-on": {
+          "hex": "#001c00",
+          "oklch": [
+            0.195,
+            0.0662,
+            142
+          ]
+        },
+        "glass-verdure-on-pane": {
+          "hex": "#d9f4d5",
+          "oklch": [
+            0.94,
+            0.051,
+            142
+          ]
+        },
+        "glass-viridian": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "glass-viridian-lume": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "glass-viridian-ink": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "glass-viridian-pane": {
+          "hex": "#064234",
+          "oklch": [
+            0.34,
+            0.0626,
+            172
+          ]
+        },
+        "glass-viridian-on": {
+          "hex": "#001a13",
+          "oklch": [
+            0.195,
+            0.0376,
+            172
+          ]
+        },
+        "glass-viridian-on-pane": {
+          "hex": "#d2f4e8",
+          "oklch": [
+            0.94,
+            0.039,
+            172
+          ]
+        },
+        "glass-azure": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "glass-azure-lume": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "glass-azure-ink": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "glass-azure-pane": {
+          "hex": "#063e51",
+          "oklch": [
+            0.34,
+            0.063,
+            228
+          ]
+        },
+        "glass-azure-on": {
+          "hex": "#001822",
+          "oklch": [
+            0.195,
+            0.0379,
+            228
+          ]
+        },
+        "glass-azure-on-pane": {
+          "hex": "#d4f0fe",
+          "oklch": [
+            0.94,
+            0.0348,
+            228
+          ]
+        },
+        "glass-cobalt": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "glass-cobalt-lume": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "glass-cobalt-ink": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "glass-cobalt-pane": {
+          "hex": "#043377",
+          "oklch": [
+            0.34,
+            0.1259,
+            259
+          ]
+        },
+        "glass-cobalt-on": {
+          "hex": "#001237",
+          "oklch": [
+            0.195,
+            0.0774,
+            259
+          ]
+        },
+        "glass-cobalt-on-pane": {
+          "hex": "#e1ecfe",
+          "oklch": [
+            0.94,
+            0.0271,
+            259
+          ]
+        },
+        "glass-indigo": {
+          "hex": "#b4b9fb",
+          "oklch": [
+            0.805,
+            0.0942,
+            281
+          ]
+        },
+        "glass-indigo-lume": {
+          "hex": "#d2d6fd",
+          "oklch": [
+            0.885,
+            0.0538,
+            281
+          ]
+        },
+        "glass-indigo-ink": {
+          "hex": "#d2d6fd",
+          "oklch": [
+            0.885,
+            0.0538,
+            281
+          ]
+        },
+        "glass-indigo-pane": {
+          "hex": "#30267d",
+          "oklch": [
+            0.34,
+            0.14,
+            281
+          ]
+        },
+        "glass-indigo-on": {
+          "hex": "#110b39",
+          "oklch": [
+            0.195,
+            0.084,
+            281
+          ]
+        },
+        "glass-indigo-on-pane": {
+          "hex": "#e7eafe",
+          "oklch": [
+            0.94,
+            0.0275,
+            281
+          ]
+        },
+        "glass-amethyst": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "glass-amethyst-lume": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "glass-amethyst-ink": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "glass-amethyst-pane": {
+          "hex": "#4a1a6f",
+          "oklch": [
+            0.34,
+            0.14,
+            306
+          ]
+        },
+        "glass-amethyst-on": {
+          "hex": "#1f0532",
+          "oklch": [
+            0.195,
+            0.084,
+            306
+          ]
+        },
+        "glass-amethyst-on-pane": {
+          "hex": "#f1e6fe",
+          "oklch": [
+            0.94,
+            0.0341,
+            306
+          ]
+        },
+        "glass-murrey": {
+          "hex": "#fc9ad8",
+          "oklch": [
+            0.805,
+            0.138,
+            342
+          ]
+        },
+        "glass-murrey-lume": {
+          "hex": "#fdc6e7",
+          "oklch": [
+            0.885,
+            0.0749,
+            342
+          ]
+        },
+        "glass-murrey-ink": {
+          "hex": "#fdc6e7",
+          "oklch": [
+            0.885,
+            0.0749,
+            342
+          ]
+        },
+        "glass-murrey-pane": {
+          "hex": "#610d4b",
+          "oklch": [
+            0.34,
+            0.133,
+            342
+          ]
+        },
+        "glass-murrey-on": {
+          "hex": "#2a011f",
+          "oklch": [
+            0.195,
+            0.0798,
+            342
+          ]
+        },
+        "glass-murrey-on-pane": {
+          "hex": "#fee2f2",
+          "oklch": [
+            0.94,
+            0.0372,
+            342
+          ]
+        },
+        "glass-rose": {
+          "hex": "#fca1b8",
+          "oklch": [
+            0.805,
+            0.1113,
+            3
+          ]
+        },
+        "glass-rose-lume": {
+          "hex": "#fdc9d5",
+          "oklch": [
+            0.885,
+            0.0605,
+            3
+          ]
+        },
+        "glass-rose-ink": {
+          "hex": "#fdc9d5",
+          "oklch": [
+            0.885,
+            0.0605,
+            3
+          ]
+        },
+        "glass-rose-pane": {
+          "hex": "#631632",
+          "oklch": [
+            0.34,
+            0.112,
+            3
+          ]
+        },
+        "glass-rose-on": {
+          "hex": "#2b0412",
+          "oklch": [
+            0.195,
+            0.0672,
+            3
+          ]
+        },
+        "glass-rose-on-pane": {
+          "hex": "#fee3e9",
+          "oklch": [
+            0.94,
+            0.03,
+            3
+          ]
+        },
+        "accent": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "accent-lume": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "accent-ink": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "accent-pane": {
+          "hex": "#043377",
+          "oklch": [
+            0.34,
+            0.1259,
+            259
+          ]
+        },
+        "accent-on": {
+          "hex": "#001237",
+          "oklch": [
+            0.195,
+            0.0774,
+            259
+          ]
+        },
+        "accent-on-pane": {
+          "hex": "#e1ecfe",
+          "oklch": [
+            0.94,
+            0.0271,
+            259
+          ]
+        },
+        "ansi-red": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "ansi-bright-red": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "ansi-green": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "ansi-bright-green": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "ansi-yellow": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "ansi-bright-yellow": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "ansi-blue": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "ansi-bright-blue": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "ansi-magenta": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "ansi-bright-magenta": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "ansi-cyan": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "ansi-bright-cyan": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "ansi-black": {
+          "hex": "#25282e",
+          "oklch": [
+            0.275,
+            0.012,
+            265
+          ]
+        },
+        "ansi-white": {
+          "hex": "#bdb7a9",
+          "oklch": [
+            0.78,
+            0.02,
+            85
+          ]
+        },
+        "ansi-bright-black": {
+          "hex": "#5f636c",
+          "oklch": [
+            0.5,
+            0.0156,
+            265
+          ]
+        },
+        "ansi-bright-white": {
+          "hex": "#eee7d9",
+          "oklch": [
+            0.93,
+            0.02,
+            85
+          ]
+        },
+        "danger": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "danger-lume": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "danger-ink": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "danger-pane": {
+          "hex": "#6c0812",
+          "oklch": [
+            0.34,
+            0.1304,
+            24
+          ]
+        },
+        "danger-on": {
+          "hex": "#300003",
+          "oklch": [
+            0.195,
+            0.0775,
+            24
+          ]
+        },
+        "danger-on-pane": {
+          "hex": "#fee4e2",
+          "oklch": [
+            0.94,
+            0.0283,
+            24
+          ]
+        },
+        "warning": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "warning-lume": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "warning-ink": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "warning-pane": {
+          "hex": "#512f04",
+          "oklch": [
+            0.34,
+            0.0729,
+            64.7
+          ]
+        },
+        "warning-on": {
+          "hex": "#230f00",
+          "oklch": [
+            0.195,
+            0.0456,
+            62
+          ]
+        },
+        "warning-on-pane": {
+          "hex": "#fee7ce",
+          "oklch": [
+            0.94,
+            0.0416,
+            70
+          ]
+        },
+        "success": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "success-lume": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "success-ink": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "success-pane": {
+          "hex": "#094505",
+          "oklch": [
+            0.34,
+            0.109,
+            142
+          ]
+        },
+        "success-on": {
+          "hex": "#001c00",
+          "oklch": [
+            0.195,
+            0.0662,
+            142
+          ]
+        },
+        "success-on-pane": {
+          "hex": "#d9f4d5",
+          "oklch": [
+            0.94,
+            0.051,
+            142
+          ]
+        },
+        "info": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "info-lume": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "info-ink": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "info-pane": {
+          "hex": "#063e51",
+          "oklch": [
+            0.34,
+            0.063,
+            228
+          ]
+        },
+        "info-on": {
+          "hex": "#001822",
+          "oklch": [
+            0.195,
+            0.0379,
+            228
+          ]
+        },
+        "info-on-pane": {
+          "hex": "#d4f0fe",
+          "oklch": [
+            0.94,
+            0.0348,
+            228
+          ]
+        },
+        "syntax-keyword": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "syntax-string": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "syntax-number": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "syntax-constant": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "syntax-function": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "syntax-type": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "syntax-property": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "syntax-tag": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "syntax-operator": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "syntax-regex": {
+          "hex": "#fca1b8",
+          "oklch": [
+            0.805,
+            0.1113,
+            3
+          ]
+        },
+        "syntax-variable": {
+          "hex": "#eee7d9",
+          "oklch": [
+            0.93,
+            0.02,
+            85
+          ]
+        },
+        "syntax-punctuation": {
+          "hex": "#bdb7a9",
+          "oklch": [
+            0.78,
+            0.02,
+            85
+          ]
+        },
+        "syntax-comment": {
+          "hex": "#9e988b",
+          "oklch": [
+            0.68,
+            0.02,
+            85
+          ]
+        }
+      }
+    },
+    "matins": {
+      "name": "Matins",
+      "hour": "Deep night",
+      "scheme": "dark",
+      "blurb": "The crypt before any light. Near-black stone, jewel-deep glass.",
+      "accent": "viridian",
+      "colors": {
+        "surface-sunken": {
+          "hex": "#010103",
+          "oklch": [
+            0.07,
+            0.012,
+            285
+          ]
+        },
+        "surface": {
+          "hex": "#040408",
+          "oklch": [
+            0.11,
+            0.012,
+            285
+          ]
+        },
+        "surface-raised-1": {
+          "hex": "#09090f",
+          "oklch": [
+            0.145,
+            0.012,
+            285
+          ]
+        },
+        "surface-raised-2": {
+          "hex": "#101016",
+          "oklch": [
+            0.178,
+            0.012,
+            285
+          ]
+        },
+        "surface-raised-3": {
+          "hex": "#18181e",
+          "oklch": [
+            0.21,
+            0.012,
+            285
+          ]
+        },
+        "surface-raised-4": {
+          "hex": "#202026",
+          "oklch": [
+            0.245,
+            0.012,
+            285
+          ]
+        },
+        "surface-inverse": {
+          "hex": "#e2ded3",
+          "oklch": [
+            0.9,
+            0.015,
+            90
+          ]
+        },
+        "text": {
+          "hex": "#e2ded3",
+          "oklch": [
+            0.9,
+            0.015,
+            90
+          ]
+        },
+        "text-muted": {
+          "hex": "#b1aea3",
+          "oklch": [
+            0.75,
+            0.015,
+            90
+          ]
+        },
+        "text-subtle": {
+          "hex": "#8d897f",
+          "oklch": [
+            0.63,
+            0.015,
+            90
+          ]
+        },
+        "text-disabled": {
+          "hex": "#535047",
+          "oklch": [
+            0.43,
+            0.015,
+            90
+          ]
+        },
+        "text-inverse": {
+          "hex": "#040408",
+          "oklch": [
+            0.11,
+            0.012,
+            285
+          ]
+        },
+        "lead-soft": {
+          "hex": "#1a1a22",
+          "oklch": [
+            0.22,
+            0.0156,
+            285
+          ]
+        },
+        "lead": {
+          "hex": "#2d2d36",
+          "oklch": [
+            0.3,
+            0.0156,
+            285
+          ]
+        },
+        "lead-strong": {
+          "hex": "#54545e",
+          "oklch": [
+            0.45,
+            0.0156,
+            285
+          ]
+        },
+        "lead-came": {
+          "hex": "#000001",
+          "oklch": [
+            0.04,
+            0.0156,
+            285
+          ]
+        },
+        "umbra-key": {
+          "hex": "#000000",
+          "oklch": [
+            0,
+            0.012,
+            285
+          ],
+          "alpha": 0.7
+        },
+        "umbra-ambient": {
+          "hex": "#000000",
+          "oklch": [
+            0,
+            0.012,
+            285
+          ],
+          "alpha": 0.5
+        },
+        "scrim": {
+          "hex": "#000000",
+          "oklch": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.7
+        },
+        "glass-ruby": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "glass-ruby-lume": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "glass-ruby-ink": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "glass-ruby-pane": {
+          "hex": "#4c0309",
+          "oklch": [
+            0.265,
+            0.1026,
+            24
+          ]
+        },
+        "glass-ruby-on": {
+          "hex": "#300003",
+          "oklch": [
+            0.195,
+            0.0775,
+            24
+          ]
+        },
+        "glass-ruby-on-pane": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "glass-ember": {
+          "hex": "#fa782a",
+          "oklch": [
+            0.715,
+            0.1803,
+            47
+          ]
+        },
+        "glass-ember-lume": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "glass-ember-ink": {
+          "hex": "#fca87f",
+          "oklch": [
+            0.805,
+            0.1131,
+            47
+          ]
+        },
+        "glass-ember-pane": {
+          "hex": "#401801",
+          "oklch": [
+            0.265,
+            0.0711,
+            47
+          ]
+        },
+        "glass-ember-on": {
+          "hex": "#280b00",
+          "oklch": [
+            0.195,
+            0.0549,
+            47
+          ]
+        },
+        "glass-ember-on-pane": {
+          "hex": "#fdcdb7",
+          "oklch": [
+            0.885,
+            0.0622,
+            47
+          ]
+        },
+        "glass-amber": {
+          "hex": "#dc9021",
+          "oklch": [
+            0.715,
+            0.1458,
+            70
+          ]
+        },
+        "glass-amber-lume": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "glass-amber-ink": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "glass-amber-pane": {
+          "hex": "#391e01",
+          "oklch": [
+            0.265,
+            0.0585,
+            63.3
+          ]
+        },
+        "glass-amber-on": {
+          "hex": "#230f00",
+          "oklch": [
+            0.195,
+            0.0456,
+            62
+          ]
+        },
+        "glass-amber-on-pane": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "glass-gilt": {
+          "hex": "#c1a021",
+          "oklch": [
+            0.715,
+            0.1378,
+            93
+          ]
+        },
+        "glass-gilt-lume": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "glass-gilt-ink": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "glass-gilt-pane": {
+          "hex": "#332201",
+          "oklch": [
+            0.265,
+            0.0533,
+            79.6
+          ]
+        },
+        "glass-gilt-on": {
+          "hex": "#1f1200",
+          "oklch": [
+            0.195,
+            0.0414,
+            77
+          ]
+        },
+        "glass-gilt-on-pane": {
+          "hex": "#ecd89a",
+          "oklch": [
+            0.885,
+            0.0832,
+            93
+          ]
+        },
+        "glass-verdure": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "glass-verdure-lume": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "glass-verdure-ink": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "glass-verdure-pane": {
+          "hex": "#032f02",
+          "oklch": [
+            0.265,
+            0.0862,
+            142
+          ]
+        },
+        "glass-verdure-on": {
+          "hex": "#001c00",
+          "oklch": [
+            0.195,
+            0.0662,
+            142
+          ]
+        },
+        "glass-verdure-on-pane": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "glass-viridian": {
+          "hex": "#37bc9a",
+          "oklch": [
+            0.715,
+            0.1235,
+            172
+          ]
+        },
+        "glass-viridian-lume": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "glass-viridian-ink": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "glass-viridian-pane": {
+          "hex": "#022d22",
+          "oklch": [
+            0.265,
+            0.0494,
+            172
+          ]
+        },
+        "glass-viridian-on": {
+          "hex": "#001a13",
+          "oklch": [
+            0.195,
+            0.0376,
+            172
+          ]
+        },
+        "glass-viridian-on-pane": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "glass-azure": {
+          "hex": "#26b2e3",
+          "oklch": [
+            0.715,
+            0.1312,
+            228
+          ]
+        },
+        "glass-azure-lume": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "glass-azure-ink": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "glass-azure-pane": {
+          "hex": "#022a38",
+          "oklch": [
+            0.265,
+            0.0498,
+            228
+          ]
+        },
+        "glass-azure-on": {
+          "hex": "#001822",
+          "oklch": [
+            0.195,
+            0.0379,
+            228
+          ]
+        },
+        "glass-azure-on-pane": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "glass-cobalt": {
+          "hex": "#6ca3fa",
+          "oklch": [
+            0.715,
+            0.1402,
+            259
+          ]
+        },
+        "glass-cobalt-lume": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "glass-cobalt-ink": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "glass-cobalt-pane": {
+          "hex": "#012254",
+          "oklch": [
+            0.265,
+            0.0999,
+            259
+          ]
+        },
+        "glass-cobalt-on": {
+          "hex": "#001237",
+          "oklch": [
+            0.195,
+            0.0774,
+            259
+          ]
+        },
+        "glass-cobalt-on-pane": {
+          "hex": "#c5dbfd",
+          "oklch": [
+            0.885,
+            0.053,
+            259
+          ]
+        },
+        "glass-indigo": {
+          "hex": "#9497fa",
+          "oklch": [
+            0.715,
+            0.1428,
+            281
+          ]
+        },
+        "glass-indigo-lume": {
+          "hex": "#b4b9fb",
+          "oklch": [
+            0.805,
+            0.0942,
+            281
+          ]
+        },
+        "glass-indigo-ink": {
+          "hex": "#b4b9fb",
+          "oklch": [
+            0.805,
+            0.0942,
+            281
+          ]
+        },
+        "glass-indigo-pane": {
+          "hex": "#1f1858",
+          "oklch": [
+            0.265,
+            0.11,
+            281
+          ]
+        },
+        "glass-indigo-on": {
+          "hex": "#110b39",
+          "oklch": [
+            0.195,
+            0.084,
+            281
+          ]
+        },
+        "glass-indigo-on-pane": {
+          "hex": "#d2d6fd",
+          "oklch": [
+            0.885,
+            0.0538,
+            281
+          ]
+        },
+        "glass-amethyst": {
+          "hex": "#bf81fa",
+          "oklch": [
+            0.715,
+            0.178,
+            306
+          ]
+        },
+        "glass-amethyst-lume": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "glass-amethyst-ink": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "glass-amethyst-pane": {
+          "hex": "#330f4e",
+          "oklch": [
+            0.265,
+            0.11,
+            306
+          ]
+        },
+        "glass-amethyst-on": {
+          "hex": "#1f0532",
+          "oklch": [
+            0.195,
+            0.084,
+            306
+          ]
+        },
+        "glass-amethyst-on-pane": {
+          "hex": "#e4cefd",
+          "oklch": [
+            0.885,
+            0.0668,
+            306
+          ]
+        },
+        "glass-murrey": {
+          "hex": "#ec6fc2",
+          "oklch": [
+            0.715,
+            0.1805,
+            342
+          ]
+        },
+        "glass-murrey-lume": {
+          "hex": "#fc9ad8",
+          "oklch": [
+            0.805,
+            0.138,
+            342
+          ]
+        },
+        "glass-murrey-ink": {
+          "hex": "#fc9ad8",
+          "oklch": [
+            0.805,
+            0.138,
+            342
+          ]
+        },
+        "glass-murrey-pane": {
+          "hex": "#440633",
+          "oklch": [
+            0.265,
+            0.1045,
+            342
+          ]
+        },
+        "glass-murrey-on": {
+          "hex": "#2a011f",
+          "oklch": [
+            0.195,
+            0.0798,
+            342
+          ]
+        },
+        "glass-murrey-on-pane": {
+          "hex": "#fdc6e7",
+          "oklch": [
+            0.885,
+            0.0749,
+            342
+          ]
+        },
+        "glass-rose": {
+          "hex": "#ef769a",
+          "oklch": [
+            0.715,
+            0.152,
+            3
+          ]
+        },
+        "glass-rose-lume": {
+          "hex": "#fca1b8",
+          "oklch": [
+            0.805,
+            0.1113,
+            3
+          ]
+        },
+        "glass-rose-ink": {
+          "hex": "#fca1b8",
+          "oklch": [
+            0.805,
+            0.1113,
+            3
+          ]
+        },
+        "glass-rose-pane": {
+          "hex": "#450c21",
+          "oklch": [
+            0.265,
+            0.088,
+            3
+          ]
+        },
+        "glass-rose-on": {
+          "hex": "#2b0412",
+          "oklch": [
+            0.195,
+            0.0672,
+            3
+          ]
+        },
+        "glass-rose-on-pane": {
+          "hex": "#fdc9d5",
+          "oklch": [
+            0.885,
+            0.0605,
+            3
+          ]
+        },
+        "accent": {
+          "hex": "#37bc9a",
+          "oklch": [
+            0.715,
+            0.1235,
+            172
+          ]
+        },
+        "accent-lume": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "accent-ink": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "accent-pane": {
+          "hex": "#022d22",
+          "oklch": [
+            0.265,
+            0.0494,
+            172
+          ]
+        },
+        "accent-on": {
+          "hex": "#001a13",
+          "oklch": [
+            0.195,
+            0.0376,
+            172
+          ]
+        },
+        "accent-on-pane": {
+          "hex": "#ace8d4",
+          "oklch": [
+            0.885,
+            0.0676,
+            172
+          ]
+        },
+        "ansi-red": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "ansi-bright-red": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "ansi-green": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "ansi-bright-green": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "ansi-yellow": {
+          "hex": "#c1a021",
+          "oklch": [
+            0.715,
+            0.1378,
+            93
+          ]
+        },
+        "ansi-bright-yellow": {
+          "hex": "#dbbd58",
+          "oklch": [
+            0.805,
+            0.1248,
+            93
+          ]
+        },
+        "ansi-blue": {
+          "hex": "#6ca3fa",
+          "oklch": [
+            0.715,
+            0.1402,
+            259
+          ]
+        },
+        "ansi-bright-blue": {
+          "hex": "#9bc1fb",
+          "oklch": [
+            0.805,
+            0.0926,
+            259
+          ]
+        },
+        "ansi-magenta": {
+          "hex": "#bf81fa",
+          "oklch": [
+            0.715,
+            0.178,
+            306
+          ]
+        },
+        "ansi-bright-magenta": {
+          "hex": "#d2abfb",
+          "oklch": [
+            0.805,
+            0.1172,
+            306
+          ]
+        },
+        "ansi-cyan": {
+          "hex": "#37bc9a",
+          "oklch": [
+            0.715,
+            0.1235,
+            172
+          ]
+        },
+        "ansi-bright-cyan": {
+          "hex": "#74d5b8",
+          "oklch": [
+            0.805,
+            0.1014,
+            172
+          ]
+        },
+        "ansi-black": {
+          "hex": "#18181e",
+          "oklch": [
+            0.21,
+            0.012,
+            285
+          ]
+        },
+        "ansi-white": {
+          "hex": "#b1aea3",
+          "oklch": [
+            0.75,
+            0.015,
+            90
+          ]
+        },
+        "ansi-bright-black": {
+          "hex": "#54545e",
+          "oklch": [
+            0.45,
+            0.0156,
+            285
+          ]
+        },
+        "ansi-bright-white": {
+          "hex": "#e2ded3",
+          "oklch": [
+            0.9,
+            0.015,
+            90
+          ]
+        },
+        "danger": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "danger-lume": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "danger-ink": {
+          "hex": "#fca59f",
+          "oklch": [
+            0.805,
+            0.1043,
+            24
+          ]
+        },
+        "danger-pane": {
+          "hex": "#4c0309",
+          "oklch": [
+            0.265,
+            0.1026,
+            24
+          ]
+        },
+        "danger-on": {
+          "hex": "#300003",
+          "oklch": [
+            0.195,
+            0.0775,
+            24
+          ]
+        },
+        "danger-on-pane": {
+          "hex": "#fdcbc7",
+          "oklch": [
+            0.885,
+            0.057,
+            24
+          ]
+        },
+        "warning": {
+          "hex": "#dc9021",
+          "oklch": [
+            0.715,
+            0.1458,
+            70
+          ]
+        },
+        "warning-lume": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "warning-ink": {
+          "hex": "#f6af57",
+          "oklch": [
+            0.805,
+            0.1326,
+            70
+          ]
+        },
+        "warning-pane": {
+          "hex": "#391e01",
+          "oklch": [
+            0.265,
+            0.0585,
+            63.3
+          ]
+        },
+        "warning-on": {
+          "hex": "#230f00",
+          "oklch": [
+            0.195,
+            0.0456,
+            62
+          ]
+        },
+        "warning-on-pane": {
+          "hex": "#fdd09e",
+          "oklch": [
+            0.885,
+            0.0826,
+            70
+          ]
+        },
+        "success": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "success-lume": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "success-ink": {
+          "hex": "#8cd584",
+          "oklch": [
+            0.805,
+            0.1326,
+            142
+          ]
+        },
+        "success-pane": {
+          "hex": "#032f02",
+          "oklch": [
+            0.265,
+            0.0862,
+            142
+          ]
+        },
+        "success-on": {
+          "hex": "#001c00",
+          "oklch": [
+            0.195,
+            0.0662,
+            142
+          ]
+        },
+        "success-on-pane": {
+          "hex": "#b8e9b3",
+          "oklch": [
+            0.885,
+            0.0884,
+            142
+          ]
+        },
+        "info": {
+          "hex": "#26b2e3",
+          "oklch": [
+            0.715,
+            0.1312,
+            228
+          ]
+        },
+        "info-lume": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "info-ink": {
+          "hex": "#6bcdf7",
+          "oklch": [
+            0.805,
+            0.1092,
+            228
+          ]
+        },
+        "info-pane": {
+          "hex": "#022a38",
+          "oklch": [
+            0.265,
+            0.0498,
+            228
+          ]
+        },
+        "info-on": {
+          "hex": "#001822",
+          "oklch": [
+            0.195,
+            0.0379,
+            228
+          ]
+        },
+        "info-on-pane": {
+          "hex": "#aae3fd",
+          "oklch": [
+            0.885,
+            0.068,
+            228
+          ]
+        },
+        "syntax-keyword": {
+          "hex": "#bf81fa",
+          "oklch": [
+            0.715,
+            0.178,
+            306
+          ]
+        },
+        "syntax-string": {
+          "hex": "#61bc59",
+          "oklch": [
+            0.715,
+            0.1615,
+            142
+          ]
+        },
+        "syntax-number": {
+          "hex": "#fa782a",
+          "oklch": [
+            0.715,
+            0.1803,
+            47
+          ]
+        },
+        "syntax-constant": {
+          "hex": "#dc9021",
+          "oklch": [
+            0.715,
+            0.1458,
+            70
+          ]
+        },
+        "syntax-function": {
+          "hex": "#26b2e3",
+          "oklch": [
+            0.715,
+            0.1312,
+            228
+          ]
+        },
+        "syntax-type": {
+          "hex": "#c1a021",
+          "oklch": [
+            0.715,
+            0.1378,
+            93
+          ]
+        },
+        "syntax-property": {
+          "hex": "#6ca3fa",
+          "oklch": [
+            0.715,
+            0.1402,
+            259
+          ]
+        },
+        "syntax-tag": {
+          "hex": "#fa726e",
+          "oklch": [
+            0.715,
+            0.1677,
+            24
+          ]
+        },
+        "syntax-operator": {
+          "hex": "#37bc9a",
+          "oklch": [
+            0.715,
+            0.1235,
+            172
+          ]
+        },
+        "syntax-regex": {
+          "hex": "#ef769a",
+          "oklch": [
+            0.715,
+            0.152,
+            3
+          ]
+        },
+        "syntax-variable": {
+          "hex": "#e2ded3",
+          "oklch": [
+            0.9,
+            0.015,
+            90
+          ]
+        },
+        "syntax-punctuation": {
+          "hex": "#b1aea3",
+          "oklch": [
+            0.75,
+            0.015,
+            90
+          ]
+        },
+        "syntax-comment": {
+          "hex": "#8d897f",
+          "oklch": [
+            0.63,
+            0.015,
+            90
+          ]
+        }
+      }
+    }
+  },
+  "pigments": {
+    "ruby": {
+      "hue": 24,
+      "chroma": 0.215,
+      "note": "Copper ruby, the red of the great rose windows.",
+      "tones": {
+        "50": "#fef3f2",
+        "100": "#fee4e2",
+        "200": "#fdcbc7",
+        "300": "#fca59f",
+        "400": "#fa726e",
+        "500": "#ed3a42",
+        "600": "#c11929",
+        "700": "#95101d",
+        "800": "#6c0812",
+        "900": "#4c0309",
+        "950": "#300003"
+      }
+    },
+    "ember": {
+      "hue": 47,
+      "chroma": 0.19,
+      "note": "Red-orange, a coal seen through thick glass.",
+      "tones": {
+        "50": "#fff3ee",
+        "100": "#fee5da",
+        "200": "#fdcdb7",
+        "300": "#fca87f",
+        "400": "#fa782a",
+        "500": "#d36219",
+        "600": "#a54b11",
+        "700": "#7f380a",
+        "800": "#5c2604",
+        "900": "#401801",
+        "950": "#280b00"
+      }
+    },
+    "amber": {
+      "hue": 70,
+      "chroma": 0.17,
+      "drift": -8,
+      "note": "Deep silver stain, fired towards orange.",
+      "tones": {
+        "50": "#fef4e8",
+        "100": "#fee7ce",
+        "200": "#fdd09e",
+        "300": "#f6af57",
+        "400": "#dc9021",
+        "500": "#b87819",
+        "600": "#915b11",
+        "700": "#70440a",
+        "800": "#512f04",
+        "900": "#391e01",
+        "950": "#230f00"
+      }
+    },
+    "gilt": {
+      "hue": 93,
+      "chroma": 0.16,
+      "drift": -16,
+      "note": "Pale silver stain, the yellow of halos.",
+      "tones": {
+        "50": "#fcf6e3",
+        "100": "#f6ebc8",
+        "200": "#ecd89a",
+        "300": "#dbbd58",
+        "400": "#c1a021",
+        "500": "#a1851a",
+        "600": "#806511",
+        "700": "#644c0a",
+        "800": "#493404",
+        "900": "#332201",
+        "950": "#1f1200"
+      }
+    },
+    "verdure": {
+      "hue": 142,
+      "chroma": 0.17,
+      "note": "Leaf green of foliage borders.",
+      "tones": {
+        "50": "#ecfbea",
+        "100": "#d9f4d5",
+        "200": "#b8e9b3",
+        "300": "#8cd584",
+        "400": "#61bc59",
+        "500": "#3ea036",
+        "600": "#1b7f12",
+        "700": "#12610b",
+        "800": "#094505",
+        "900": "#032f02",
+        "950": "#001c00"
+      }
+    },
+    "viridian": {
+      "hue": 172,
+      "chroma": 0.13,
+      "note": "Blue-green, cool and mineral.",
+      "tones": {
+        "50": "#e9fbf4",
+        "100": "#d2f4e8",
+        "200": "#ace8d4",
+        "300": "#74d5b8",
+        "400": "#37bc9a",
+        "500": "#1f9e80",
+        "600": "#157a63",
+        "700": "#0d5e4b",
+        "800": "#064234",
+        "900": "#022d22",
+        "950": "#001a13"
+      }
+    },
+    "azure": {
+      "hue": 228,
+      "chroma": 0.14,
+      "note": "Sky blue of clerestory grounds.",
+      "tones": {
+        "50": "#ebf8fe",
+        "100": "#d4f0fe",
+        "200": "#aae3fd",
+        "300": "#6bcdf7",
+        "400": "#26b2e3",
+        "500": "#1e94be",
+        "600": "#157394",
+        "700": "#0d5872",
+        "800": "#063e51",
+        "900": "#022a38",
+        "950": "#001822"
+      }
+    },
+    "cobalt": {
+      "hue": 259,
+      "chroma": 0.2,
+      "note": "Cobalt blue, the signature of Gothic glazing.",
+      "tones": {
+        "50": "#f1f6fe",
+        "100": "#e1ecfe",
+        "200": "#c5dbfd",
+        "300": "#9bc1fb",
+        "400": "#6ca3fa",
+        "500": "#3683f8",
+        "600": "#1062d3",
+        "700": "#094aa4",
+        "800": "#043377",
+        "900": "#012254",
+        "950": "#001237"
+      }
+    },
+    "indigo": {
+      "hue": 281,
+      "chroma": 0.2,
+      "note": "Blue-violet, glass at the last light.",
+      "tones": {
+        "50": "#f4f5fe",
+        "100": "#e7eafe",
+        "200": "#d2d6fd",
+        "300": "#b4b9fb",
+        "400": "#9497fa",
+        "500": "#7772f8",
+        "600": "#5b50d4",
+        "700": "#4539a9",
+        "800": "#30267d",
+        "900": "#1f1858",
+        "950": "#110b39"
+      }
+    },
+    "amethyst": {
+      "hue": 306,
+      "chroma": 0.2,
+      "note": "Manganese purple.",
+      "tones": {
+        "50": "#f8f3fe",
+        "100": "#f1e6fe",
+        "200": "#e4cefd",
+        "300": "#d2abfb",
+        "400": "#bf81fa",
+        "500": "#a65ee5",
+        "600": "#863ec0",
+        "700": "#682a98",
+        "800": "#4a1a6f",
+        "900": "#330f4e",
+        "950": "#1f0532"
+      }
+    },
+    "murrey": {
+      "hue": 342,
+      "chroma": 0.19,
+      "note": "Murrey, the mulberry red-purple of glaziers.",
+      "tones": {
+        "50": "#fef2f9",
+        "100": "#fee2f2",
+        "200": "#fdc6e7",
+        "300": "#fc9ad8",
+        "400": "#ec6fc2",
+        "500": "#d04ea7",
+        "600": "#ab2c86",
+        "700": "#861a68",
+        "800": "#610d4b",
+        "900": "#440633",
+        "950": "#2a011f"
+      }
+    },
+    "rose": {
+      "hue": 3,
+      "chroma": 0.16,
+      "note": "Soft rose, flesh tones and dawn.",
+      "tones": {
+        "50": "#fff2f5",
+        "100": "#fee3e9",
+        "200": "#fdc9d5",
+        "300": "#fca1b8",
+        "400": "#ef769a",
+        "500": "#d2577e",
+        "600": "#ad3760",
+        "700": "#882448",
+        "800": "#631632",
+        "900": "#450c21",
+        "950": "#2b0412"
+      }
+    }
+  },
+  "windows": {
+    "rosace": {
+      "name": "Rosace",
+      "stops": [
+        "ruby",
+        "murrey",
+        "cobalt"
+      ],
+      "note": "Ruby against cobalt, the rose window."
+    },
+    "jesse": {
+      "name": "Jesse",
+      "stops": [
+        "verdure",
+        "gilt",
+        "ruby"
+      ],
+      "note": "Vine, gold and blood: the Jesse tree."
+    },
+    "lancet": {
+      "name": "Lancet",
+      "stops": [
+        "viridian",
+        "azure",
+        "indigo"
+      ],
+      "note": "A tall cool window, all blues."
+    },
+    "aureole": {
+      "name": "Aureole",
+      "stops": [
+        "gilt",
+        "amber",
+        "ember"
+      ],
+      "note": "Halo light, gold falling to coal."
+    },
+    "vesperal": {
+      "name": "Vesperal",
+      "stops": [
+        "indigo",
+        "amethyst",
+        "rose"
+      ],
+      "note": "The west window at sunset."
+    }
+  },
+  "windowModes": {
+    "mono": {
+      "name": "Mono",
+      "source": "one pigment",
+      "note": "Pane, glass and lume of the current accent. The default."
+    },
+    "harmonic": {
+      "name": "Harmonic",
+      "source": "accent and neighbours",
+      "note": "The accent leaded with the pigments on either side of it."
+    }
+  },
+  "glazings": {
+    "pot-metal": {
+      "name": "Pot-metal",
+      "note": "Glass colored through its whole body. Solid, opaque accent."
+    },
+    "flashed": {
+      "name": "Flashed",
+      "note": "A thin skin of color over clear glass. Translucent, glowing accent."
+    },
+    "grisaille": {
+      "name": "Grisaille",
+      "note": "Monochrome glass with a colored border. Accent as a line only."
+    }
+  },
+  "fonts": {
+    "display": {
+      "family": "Cormorant Garamond",
+      "fallbacks": [
+        "Cormorant",
+        "EB Garamond",
+        "Georgia"
+      ],
+      "generic": "serif",
+      "weights": [
+        500,
+        600
+      ],
+      "styles": [
+        "normal"
+      ]
+    },
+    "text": {
+      "family": "Hanken Grotesk",
+      "fallbacks": [
+        "Inter",
+        "system-ui"
+      ],
+      "generic": "sans-serif",
+      "weights": [
+        400,
+        500,
+        600
+      ],
+      "styles": [
+        "normal"
+      ]
+    },
+    "mono": {
+      "family": "JetBrains Mono",
+      "fallbacks": [
+        "Cascadia Code",
+        "ui-monospace"
+      ],
+      "generic": "monospace",
+      "weights": [
+        400
+      ],
+      "styles": [
+        "normal"
+      ]
+    },
+    "inscription": {
+      "family": "Cinzel",
+      "fallbacks": [
+        "Cormorant Garamond",
+        "Georgia"
+      ],
+      "generic": "serif",
+      "weights": [
+        600
+      ],
+      "styles": [
+        "normal"
+      ]
+    }
+  }
+}

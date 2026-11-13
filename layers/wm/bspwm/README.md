@@ -30,7 +30,7 @@ Autonomous, modular, and minimal X11 desktop session optimized for **Arch Linux*
 - 🖥️ **Multi-Monitor Aware:** Dynamic workspace balancing across outputs, focused-monitor screen recording, and ergonomic monitor navigation hotkeys.
 - 📊 **Dynamic Polybar:** Real-time auto-detection of active network interfaces (Wi-Fi/Ethernet), battery status, and MPRIS playback.
 - 🎛️ **Ergonomic Hotkeys:** Intuitive keybinding architecture driven by `sxhkd` with integrated interactive help menu (`Super + ?`).
-- 🔋 **Power & Night Light:** Built-in Redshift warm display control and interactive power profile selector (`power-profiles-daemon`).
+- 🔋 **Power & Night Light:** Built-in Gammastep warm display control and interactive power profile selector (`power-profiles-daemon`).
 - 🔒 **GNU Stow & Zero Bloat:** Cumulative profiles (`core`, `desktop`) with built-in dry-run safety and health diagnostics (`doctor`).
 
 ---
@@ -81,7 +81,7 @@ The BSPWM configuration is organized into cumulative profiles managed with [GNU 
 | **Terminal** | `alacritty` | GPU-accelerated terminal emulator themed with Catppuccin |
 | **Notifications** | `dunst` | Customizable, lightweight notification daemon |
 | **Wallpaper** | `feh` | Wallpaper setter with interactive selector |
-| **Night Light** | `redshift` | Screen color temperature adjustment |
+| **Night Light** | `gammastep` | Screen color temperature adjustment |
 | **Audio / Media** | PipeWire & Playerctl | Modern audio stack with MPRIS media control |
 | **Screenshots** | `satty` & `maim` | Fullscreen and region capture with interactive annotation editor |
 
@@ -119,17 +119,20 @@ stays installed without passing `--wm` again.
 
 The desktop is styled with **Catppuccin Mocha**, supporting all **14 official accent palettes** (*Rosewater, Flamingo, Pink, Mauve, Red, Maroon, Peach, Yellow, Green, Teal, Sky, Sapphire, Blue, Lavender*) with **Pink (`#f5c2e7`)** configured as the initial default.
 
-- **Interactive Theme Selector:** Press `Super + Shift + T` to switch color palettes in real-time via Rofi.
+- **Interactive Theme Selector:** Press `Super + Shift + T` to pick a theme in real time via Rofi, in three levels: family (Catppuccin, Sanctuary) → flavour (Compline, Matins, Vespers; skipped for a family with one flavour, such as Catppuccin Mocha) → accent. Every entry shows a color swatch, the active theme is marked `(actual)`, and `Esc` goes back one level (it closes the menu from the first). The levels come from `dotfiles-theme menu`, shared with the MangoWM Fuzzel picker.
 - **Dynamic Theming CLI (`bspwm-theme`):**
   ```bash
   # Open interactive theme menu
   bspwm-theme menu
 
-  # Set a specific accent directly (e.g., mauve, blue, teal, peach)
+  # Set a specific theme directly (e.g., mauve, blue, teal, peach)
   bspwm-theme set catppuccin-mocha-mauve
 
-  # List all available Catppuccin Mocha flavors
+  # List every theme id (Catppuccin Mocha and Sanctuary)
   bspwm-theme list
+
+  # Pick a theme in the terminal (fzf) with a palette preview
+  bspwm-theme pick
 
   # Display current active theme
   bspwm-theme current
@@ -168,11 +171,11 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 
 | Shortcut | Action |
 | :--- | :--- |
-| `Super + Shift + T` | Open Catppuccin Mocha accent theme switcher (Rofi) |
+| `Super + Shift + T` | Open the interactive theme picker (Rofi: family → flavour → accent) |
 | `Super + L` | Lock screen immediately (slock / i3lock) |
 | `Super + X` | Open session power menu (Rofi) |
 | `Super + Shift + P` | Open interactive Power Profiles selector (Rofi) |
-| `Super + N` | Toggle warm night light (Redshift) |
+| `Super + N` | Toggle warm night light (Gammastep) |
 | `Super + W` | Select wallpaper from gallery via Rofi (Feh) |
 | `Super + Shift + W` | Open interactive Wi-Fi network menu (Rofi) |
 | `Alt + Space` | Toggle keyboard layout between US and Latin America |

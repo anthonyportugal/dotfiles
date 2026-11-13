@@ -22,7 +22,7 @@
     separator_color = frame
     highlight = "{{accent}}"
     gap_size = 6
-    font = JetBrains Mono 9
+    font = JetBrainsMono Nerd Font 9
     line_height = 2
     markup = full
     format = "<b>%s</b>\n%b"
@@ -41,17 +41,17 @@
     mouse_right_click = close_all
 
 [urgency_low]
-    background = "{{base}}"
-    foreground = "{{subtext0}}"
+    background = "{{background}}"
+    foreground = "{{foreground_muted}}"
     timeout = 5
 
 [urgency_normal]
-    background = "{{base}}"
-    foreground = "{{text}}"
+    background = "{{background}}"
+    foreground = "{{foreground}}"
     timeout = 8
 
 [urgency_critical]
-    background = "{{base}}"
+    background = "{{background}}"
     foreground = "{{urgent}}"
     frame_color = "{{urgent}}"
     timeout = 0

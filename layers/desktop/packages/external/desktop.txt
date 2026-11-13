@@ -1,1 +1,6 @@
-# No external packages are selected for the desktop profile.
+# Pinned downloads installed per user under ~/.local (lib/external.sh); each
+# name has its recipe in external/<name>.conf. Not in the Arch repositories.
+bibata-modern-classic
+bibata-modern-ice
+hanken-grotesk
+cinzel

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Opens bluetui in the floating terminal. bluetui exits at once on a blocked
+# radio, so a soft block is lifted first (the rfkill group allows it without
+# root) and a hard block (a switch or the firmware) is only reported.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+mangowm_require bluetui || exit 127
+
+if command -v rfkill >/dev/null 2>&1; then
+  radio=$(rfkill list bluetooth 2>/dev/null || true)
+  if [[ "$radio" == *'Hard blocked: yes'* ]]; then
+    mangowm_notify critical 'Bluetooth' 'El adaptador está bloqueado por hardware (interruptor o firmware)'
+    exit 1
+  fi
+  if [[ "$radio" == *'Soft blocked: yes'* ]] && ! rfkill unblock bluetooth; then
+    mangowm_notify critical 'Bluetooth' 'No se pudo desbloquear; ejecute: sudo rfkill unblock bluetooth'
+    exit 1
+  fi
+fi
+
+exec "$HOME/.local/lib/mangowm/terminal" --app-id=floating-terminal bluetui

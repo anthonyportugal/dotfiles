@@ -5,7 +5,6 @@ set -Eeuo pipefail
 source "$HOME/.local/lib/mangowm/common"
 
 mangowm_require fuzzel
-theme_dir=$(mangowm_theme_dir)
 
 keybindings=(
   "   Super + Enter                 Terminal Foot (Tiling)"
@@ -18,6 +17,7 @@ keybindings=(
   "🖼️   Super + W                     Selector de Wallpapers"
   "🎨  Super + Alt + T               Selector de Tema / Acento de Color"
   "📶  Super + Shift + W             Menú de Redes Wi-Fi"
+  "󰂯   Super + Shift + B             Gestor Bluetooth (bluetui)"
   "📸  Super + S / Print             Captura de Pantalla Completa"
   "📸  Super + Shift + S             Captura de Pantalla con Anotación (Satty)"
   "🎯  Super + P                     Selector de Color de Pantalla"
@@ -46,5 +46,4 @@ keybindings=(
 )
 
 printf '%s\n' "${keybindings[@]}" | \
-  fuzzel --dmenu --config="$theme_dir/fuzzel.ini" \
-    --prompt="Atajos de Teclado ❯ " --lines=15 --width=58 || true
+  mangowm_menu "Atajos de Teclado ❯ " --lines=15 || true

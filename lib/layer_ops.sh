@@ -6,7 +6,7 @@
 # plan and errexit always applies. Reads the caller's TARGET_DIR,
 # PLATFORM_REQUEST, BACKEND_REQUEST, SYSTEM_ENABLED, STOW_ENABLED, FEATURES,
 # PACKAGE_BACKENDS_FILE and REPO_ROOT. Requires lib/colors.sh, lib/core.sh,
-# lib/packages.sh, lib/links.sh, lib/receipts.sh and lib/layers.sh.
+# lib/receipts.sh, lib/external.sh, lib/packages.sh, lib/links.sh and lib/layers.sh.
 #
 # shellcheck shell=bash
 
@@ -72,6 +72,8 @@ _layer_setup() {
   INSTALLED_AUR_PACKAGES=()
   MISSING_REPO_PACKAGES=()
   MISSING_AUR_PACKAGES=()
+  INSTALLED_EXTERNAL_PACKAGES=()
+  MISSING_EXTERNAL_PACKAGES=()
 
   # The receipt only matters when no backend was requested explicitly.
   if [[ "$BACKEND_REQUEST" == auto ]] && read_receipt "$LAYER_RECEIPT" layer_receipt; then
@@ -188,6 +190,7 @@ layer_print_plan() {
     print_array "Paquetes externos" EXTERNAL_PACKAGES
     print_array "Repo faltantes" MISSING_REPO_PACKAGES
     print_array "AUR faltantes" MISSING_AUR_PACKAGES
+    print_array "Externos faltantes" MISSING_EXTERNAL_PACKAGES
   fi
   if (( STOW_ENABLED == 1 )); then
     printf '  %-24s %s\n' 'Target:' "$TARGET_DIR"
@@ -267,11 +270,11 @@ layer_doctor() {
   layer_print_plan
 
   if (( SYSTEM_ENABLED == 1 )); then
-    if (( ${#MISSING_REPO_PACKAGES[@]} > 0 || ${#MISSING_AUR_PACKAGES[@]} > 0 )); then
+    if (( ${#MISSING_REPO_PACKAGES[@]} > 0 || ${#MISSING_AUR_PACKAGES[@]} > 0 || ${#MISSING_EXTERNAL_PACKAGES[@]} > 0 )); then
       error "faltan paquetes de la capa $LAYER_NAME"
       result=1
     else
-      info "Paquetes validados: ${#REPO_PACKAGES[@]} de repo y ${#AUR_PACKAGES[@]} de AUR"
+      info "Paquetes validados: ${#REPO_PACKAGES[@]} de repo, ${#AUR_PACKAGES[@]} de AUR y ${#EXTERNAL_PACKAGES[@]} externos"
     fi
     validate_package_plan || result=1
   fi

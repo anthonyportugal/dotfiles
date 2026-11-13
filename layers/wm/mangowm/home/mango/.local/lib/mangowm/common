@@ -60,6 +60,96 @@ mangowm_require() {
   }
 }
 
+# Fuzzel menus size themselves to their entries: the widest entry sets the
+# width, between a floor and a cap. An entry longer than the cap is shortened
+# in the middle, keeping its end (a file name, the last path components), and
+# $HOME is shown as ~. The menu always returns the original entry. Lengths
+# count characters under the session's UTF-8 locale.
+MANGOWM_MENU_MIN_WIDTH=30
+MANGOWM_MENU_MAX_WIDTH=90
+# Room for icons drawn wider than one character and the selection margin.
+MANGOWM_MENU_PADDING=4
+
+# mangowm_menu_label <variable> <text> <max>: stores the displayed text.
+mangowm_menu_label() {
+  local -n _mangowm_label=$1
+  local text=$2 max=$3 head tail
+
+  [[ -n "${HOME-}" ]] && text=${text//"$HOME/"/"~/"}
+  if (( ${#text} > max )); then
+    head=$(( (max - 1) / 3 ))
+    tail=$(( max - 1 - head ))
+    text="${text:0:head}…${text:${#text}-tail}"
+  fi
+  _mangowm_label=$text
+}
+
+# Prints the rows of mangowm_menu from its labels and icons arrays; with no
+# entries, one empty row as before icons existed.
+mangowm_menu_rows() {
+  local i
+
+  (( ${#labels[@]} > 0 )) || { printf '\n'; return 0; }
+  for i in "${!labels[@]}"; do
+    if [[ -n "${icons[i]}" ]]; then
+      printf '%s\0icon\x1f%s\n' "${labels[i]}" "${icons[i]}"
+    else
+      printf '%s\n' "${labels[i]}"
+    fi
+  done
+}
+
+# mangowm_menu <prompt> [fuzzel arguments...] < entries
+# One entry per line; "label<TAB>value" shows the label and returns the value,
+# which may itself hold tabs. A label may end in "<US>icon" (the 0x1f unit
+# separator, then an icon name or absolute path), drawn by fuzzel next to the
+# entry. Prints nothing when the menu is dismissed.
+mangowm_menu() {
+  local prompt=$1
+  shift
+  local theme_dir entry label max_label width widest index icon
+  local labels=() values=() icons=()
+
+  theme_dir=$(mangowm_theme_dir) || {
+    mangowm_notify critical 'Menú no disponible' \
+      'No se pudo cargar el tema activo; ejecute dotfiles-theme render'
+    return 1
+  }
+  max_label=$(( MANGOWM_MENU_MAX_WIDTH - MANGOWM_MENU_PADDING ))
+  mangowm_menu_label prompt "$prompt" "$max_label"
+  widest=0
+
+  while IFS= read -r entry || [[ -n "$entry" ]]; do
+    label=$entry
+    [[ "$entry" == *$'\t'* ]] && label=${entry%%$'\t'*}
+    icon=''
+    if [[ "$label" == *$'\x1f'* ]]; then
+      icon=${label#*$'\x1f'}
+      label=${label%%$'\x1f'*}
+    fi
+    if [[ "$entry" == *$'\t'* ]]; then
+      values+=("${entry#*$'\t'}")
+    else
+      values+=("$label")
+    fi
+    icons+=("$icon")
+    mangowm_menu_label label "$label" "$max_label"
+    (( ${#label} > widest )) && widest=${#label}
+    labels+=("$label")
+  done
+
+  width=$(( widest + MANGOWM_MENU_PADDING ))
+  (( width < MANGOWM_MENU_MIN_WIDTH )) && width=$MANGOWM_MENU_MIN_WIDTH
+  (( width > MANGOWM_MENU_MAX_WIDTH )) && width=$MANGOWM_MENU_MAX_WIDTH
+
+  # fuzzel prints the index of the chosen label, so labels need no encoding
+  # and duplicated labels still return their own value.
+  index=$(mangowm_menu_rows | fuzzel --dmenu --index \
+    --config="$theme_dir/fuzzel.ini" --prompt="$prompt" --width="$width" "$@") || return $?
+  [[ "$index" =~ ^[0-9]+$ ]] && (( index < ${#values[@]} )) || return 0
+  printf '%s\n' "${values[index]}"
+}
+
 mangowm_is_media_active() {
   if command -v playerctl >/dev/null 2>&1 && [[ "$(playerctl status 2>/dev/null || true)" == "Playing" ]]; then
     return 0

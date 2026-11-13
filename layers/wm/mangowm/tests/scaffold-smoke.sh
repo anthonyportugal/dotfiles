@@ -88,6 +88,11 @@ assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" xdg-user-dirs
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" brightnessctl
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" wf-recorder
+# bluetui (TUI) replaces blueman; Waybar keeps its native bluetooth module.
+assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" bluetui
+if found=$(grep -rn blueman "$MONOREPO_ROOT/layers" --exclude-dir=tests --exclude='*.md'); then
+  fail "blueman sigue referenciado:"$'\n'"$found"
+fi
 assert_manifest_line "$REPO_ROOT/packages/stow/core.txt" mango
 
 if grep -ERq '^(mangowc-git|mangowm-git|hyprlock|hypridle|rofi|wofi|cliphist|wl-clip-persist|python-pywal|pulsemixer|xdg-desktop-portal-gnome)$' \
@@ -127,63 +132,50 @@ if grep -Fq 'render_waybar' "$REPO_ROOT/home/mango/.local/bin/mango-theme"; then
   fail "mango-theme sigue renderizando en lugar de delegar en dotfiles-theme"
 fi
 
-declare -A expected_keys=()
+# Catppuccin Mocha accent colors; schema 2 has no per-name keys, so the
+# semantic accent is checked against this table.
+declare -A mocha_accents=(
+  [rosewater]='#f5e0dc' [flamingo]='#f2cdcd' [pink]='#f5c2e7' [mauve]='#cba6f7'
+  [red]='#f38ba8' [maroon]='#eba0ac' [peach]='#fab387' [yellow]='#f9e2af'
+  [green]='#a6e3a1' [teal]='#94e2d5' [sky]='#89dceb' [sapphire]='#74c7ec'
+  [blue]='#89b4fa' [lavender]='#b4befe'
+)
+ENGINE="$MONOREPO_ROOT/layers/desktop/home/theme/.local/bin/dotfiles-theme"
+[[ -x "$ENGINE" ]] || fail "falta el motor de temas: $ENGINE"
+VALIDATE_HOME=$(mktemp -d "${TMPDIR:-/tmp}/mangowm-scaffold-smoke.XXXXXX")
+trap 'rm -rf -- "$VALIDATE_HOME"' EXIT
 
-for key in \
-  schema id family flavour accent_name \
-  rosewater flamingo pink mauve red maroon peach yellow green teal sky \
-  sapphire blue lavender text subtext1 subtext0 overlay2 overlay1 overlay0 \
-  surface2 surface1 surface0 base mantle crust \
-  background background_alt background_deep surface surface_hover foreground \
-  foreground_muted accent urgent warning success; do
-  expected_keys[$key]=1
-done
+# Value of key $2 in palette $1.
+palette_value() {
+  sed -n "s/^$2=//p" "$1"
+}
 
+# The engine owns the schema: it validates every key, its type and the id;
+# this layer only checks that a Catppuccin palette is a Mocha accent.
+# Sanctuary palettes are generated and checked by tests/sanctuary-smoke.sh.
 check_palette() {
-  local palette=$1
-  local expected_id
+  local palette=$1 expected_id expected_accent output
+
   expected_id=$(basename -- "$palette" .conf)
-  local expected_accent="${expected_id#catppuccin-mocha-}"
-
-  declare -A seen_keys=()
-  declare -A palette_values=()
-
-  while IFS='=' read -r key value; do
-    [[ -n "$key" && -n "$value" ]] || fail "línea inválida en $palette"
-    [[ -v "expected_keys[$key]" ]] || fail "clave de paleta desconocida: $key en $palette"
-    [[ ! -v "seen_keys[$key]" ]] || fail "clave de paleta duplicada: $key en $palette"
-    seen_keys[$key]=1
-    palette_values[$key]="$value"
-
-    case "$key" in
-      schema)
-        [[ "$value" == 1 ]] || fail "schema de paleta no soportado en $palette"
-        ;;
-      id)
-        [[ "$value" == "$expected_id" ]] || fail "id de paleta inesperado en $palette"
-        ;;
-      family)
-        [[ "$value" == catppuccin ]] || fail "familia de paleta inesperada en $palette"
-        ;;
-      flavour)
-        [[ "$value" == mocha ]] || fail "flavour de paleta inesperado en $palette"
-        ;;
-      accent_name)
-        [[ "$value" == "$expected_accent" ]] || fail "acento de paleta inesperado en $palette"
-        ;;
-      *)
-        [[ "$value" =~ ^#[0-9a-f]{6}$ ]] || \
-          fail "color inválido para $key en $palette"
-        ;;
-    esac
-  done < "$palette"
-
-  for key in "${!expected_keys[@]}"; do
-    [[ -v "seen_keys[$key]" ]] || fail "falta la clave de paleta $key en $palette"
-  done
-
-  local expected_color="${palette_values[$expected_accent]}"
-  [[ "${palette_values[accent]}" == "$expected_color" ]] || \
+  output=$(env -u DOTFILES_THEME HOME="$VALIDATE_HOME" XDG_STATE_HOME="$VALIDATE_HOME/state" \
+    XDG_DATA_HOME="$VALIDATE_HOME/share" XDG_CONFIG_HOME="$VALIDATE_HOME/config" \
+    "$ENGINE" validate "$expected_id" 2>&1) || fail "dotfiles-theme rechazó $palette: $output"
+  case "$expected_id" in
+    catppuccin-mocha-*) ;;
+    sanctuary-*)
+      [[ "$(palette_value "$palette" family)" == sanctuary ]] || fail "familia de paleta inesperada en $palette"
+      return 0
+      ;;
+    *) fail "paleta de familia desconocida: $palette" ;;
+  esac
+  expected_accent="${expected_id#catppuccin-mocha-}"
+  [[ "$(palette_value "$palette" family)" == catppuccin ]] || fail "familia de paleta inesperada en $palette"
+  [[ "$(palette_value "$palette" flavour)" == mocha ]] || fail "flavour de paleta inesperado en $palette"
+  [[ "$(palette_value "$palette" accent_name)" == "$expected_accent" ]] || \
+    fail "acento de paleta inesperado en $palette"
+  [[ -v "mocha_accents[$expected_accent]" ]] || \
+    fail "acento desconocido de Catppuccin Mocha: $expected_accent"
+  [[ "$(palette_value "$palette" accent)" == "${mocha_accents[$expected_accent]}" ]] || \
     fail "el acento semántico en $palette no coincide con el color de $expected_accent"
 }
 
@@ -191,11 +183,11 @@ found_palettes=0
 for palette_file in "$MONOREPO_ROOT"/themes/palettes/*.conf; do
   [[ -f "$palette_file" ]] || continue
   check_palette "$palette_file"
-  ((found_palettes++)) || true
+  [[ "$palette_file" != */catppuccin-mocha-*.conf ]] || ((found_palettes++)) || true
 done
 [[ "$found_palettes" -ge 14 ]] || fail "se esperaban al menos 14 paletas Catppuccin Mocha, encontradas: $found_palettes"
 
-grep -Fxq 'pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
+grep -Fxq 'hue_pink=#f5c2e7' "$PALETTE" || fail "Pink no coincide con Catppuccin Mocha"
 grep -Fxq 'accent=#f5c2e7' "$PALETTE" || fail "Pink no es el acento semántico"
 grep -Fqx "bind=SUPER+ALT,T,spawn,\$HOME/.local/bin/mango-theme menu" \
   "$REPO_ROOT/home/mango/.config/mango/conf.d/50-desktop.conf" || \
@@ -205,5 +197,18 @@ grep -Fq 'MangoWM' "$REPO_ROOT/README.md" || \
   fail "README.md no describe MangoWM"
 grep -Fq 'MangoWM' "$REPO_ROOT/README.es.md" || \
   fail "README.es.md no describe MangoWM"
+
+
+# Every right-side Waybar module shares the padded rule, so no icon sits
+# flush against its neighbour (custom/keyboard once had no rule at all).
+waybar_config="$REPO_ROOT/home/mango/.config/waybar/config.json"
+waybar_css="$REPO_ROOT/home/mango/.local/share/dotfiles/theme/templates/mangowm/waybar.css"
+padded_rule=$(awk '/#bluetooth,/ && /#wireplumber/ { print; exit }' "$waybar_css")
+[[ -n "$padded_rule" ]] || fail 'no se encontró la regla con padding de los módulos de Waybar'
+while IFS= read -r module; do
+  selector="#${module//\//-}"
+  [[ "$padded_rule" == *"$selector,"* || "$padded_rule" == *"$selector {"* ]] || \
+    fail "el módulo $module de Waybar no tiene padding"
+done < <(jq -r '."modules-right"[]' "$waybar_config")
 
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'

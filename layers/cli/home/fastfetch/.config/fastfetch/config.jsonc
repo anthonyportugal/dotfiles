@@ -4,8 +4,8 @@
     "source": "~/.config/fastfetch/logo.txt",
     "type": "file",
     "color": {
-      "1": "#cba6f7",
-      "2": "#89dceb"
+      "1": "magenta",
+      "2": "cyan"
     },
     "padding": {
       "top": 1,

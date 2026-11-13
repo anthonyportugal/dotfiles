@@ -8,10 +8,15 @@ gvfs
 imv
 mpv
 mpv-mpris
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
 papirus-icon-theme
 playerctl
 thunar
-ttf-jetbrains-mono
+ttf-cormorant
+ttf-jetbrains-mono-nerd
+ttf-nerd-fonts-symbols
 tumbler
 xdg-utils
 zathura

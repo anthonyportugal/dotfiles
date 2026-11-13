@@ -1,5 +1,8 @@
 bat
 btop
+duf
+dust
+eza
 fastfetch
 fzf
 git-delta
@@ -8,5 +11,7 @@ lazygit
 micro
 sad
 starship
+tealdeer
 ttf-nerd-fonts-symbols-mono
 yazi
+zoxide

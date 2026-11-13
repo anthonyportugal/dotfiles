@@ -7,6 +7,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
+# shellcheck source=SCRIPTDIR/lib/checkout-copy.sh
+source "$SCRIPT_DIR/lib/checkout-copy.sh"
 DOTFILES="$REPO_ROOT/bin/dotfiles"
 export DOTFILES_LANG=es
 TEST_ROOT=""
@@ -161,7 +163,7 @@ commit_all() {
   git -C "$1" add -A
   git -C "$1" -c user.name=t -c user.email=t@t commit -qm "$2" --allow-empty --no-verify
 }
-cp -a "$REPO_ROOT/." "$UPSTREAM"
+copy_checkout "$REPO_ROOT" "$UPSTREAM"
 # CI checks out a detached HEAD, and update can only pull on a branch.
 git -C "$UPSTREAM" switch -qC upstream
 commit_all "$UPSTREAM" wip

@@ -29,7 +29,7 @@ Configuración pública, modular y portable para **Arch Linux**, en un solo repo
 - 🎛️ **Orquestación Multi-WM:** MangoWM (Wayland) y BSPWM (X11) son capas que comparten un motor de temas; instala una o ambas.
 - 🔄 **CLI de Ciclo de Vida Seguro:** Comandos integrados `sync`, `update` (con protección para evitar sobreescribir árboles de trabajo con cambios locales) y diagnósticos `doctor`.
 - 🚀 **Despliegue en un Solo Comando:** Asistente interactivo ejecutable directamente con `curl` en instalaciones limpias.
-- 🎨 **Estética Visual Unificada:** Tema Catppuccin Mocha consistente en Starship, Bat, Micro, Yazi, Foot y Alacritty.
+- 🎨 **Estética Visual Unificada:** Un motor de temas (`dotfiles-theme`, ver `themes/README.md`) renderiza la paleta activa (Catppuccin Mocha por defecto, además de los temas Sanctuary compline, vespers y matins) para GTK, las terminales, Yazi y las herramientas CLI.
 
 ---
 
@@ -42,7 +42,7 @@ dotfiles (este repositorio)
 ├── bin/dotfiles, lib/    un único CLI y su motor
 ├── layers/
 │   ├── core              Zsh y Git fail-closed
-│   ├── cli               requiere core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch
+│   ├── cli               requiere core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch, Eza, Zoxide
 │   ├── desktop           requiere cli: Alacritty, Foot, motor de temas, preferencias GTK
 │   ├── wm/mangowm        requiere desktop: sesión Wayland (Waybar, Fuzzel, Swaylock, wlogout)
 │   ├── wm/bspwm          requiere desktop: sesión X11 (Polybar, Rofi, Picom, Dunst)
@@ -64,12 +64,12 @@ Las configuraciones están divididas en pequeños paquetes gestionados con [GNU 
 | :--- | :--- | :--- |
 | **`git`** | Plantilla de configuración Git fail-closed (requiere configuración explícita de identidad) | `core`, `desktop` |
 | **`zsh`** | Configuración limpia de Zsh con autosugerencias, resaltado de sintaxis y alias | `core`, `desktop` |
-| **`bat`** | Temas Catppuccin para `bat` (`cat` con resaltado de sintaxis) | `cli`, `desktop` |
-| **`micro`** | Editor de texto en terminal con tema Catppuccin Mocha | `cli`, `desktop` |
+| **`bat`** | `bat` (`cat` con resaltado de sintaxis) con los colores del motor de temas | `cli`, `desktop` |
+| **`micro`** | Editor de texto en terminal con los colores del motor de temas | `cli`, `desktop` |
 | **`starship`** | Tema moderno y ligero para el prompt de la shell | `cli`, `desktop` |
-| **`yazi`** | Explorador de archivos ultrarrápido en terminal con tema Catppuccin Mocha | `cli`, `desktop` |
-| **`foot`** | Emulador de terminal Wayland ligero con tema Catppuccin Mocha | `desktop` |
-| **`alacritty`** | Emulador de terminal multiplataforma con tema Catppuccin Mocha | `desktop` |
+| **`yazi`** | Explorador de archivos ultrarrápido en terminal con los colores del motor de temas | `cli`, `desktop` |
+| **`foot`** | Emulador de terminal Wayland ligero con los colores del motor de temas | `desktop` |
+| **`alacritty`** | Emulador de terminal multiplataforma con los colores del motor de temas | `desktop` |
 | **`xdg-defaults`** | Ajustes GTK 3/4 `prefer-dark` y hooks de sesión | `desktop` |
 | **`theme`** | `dotfiles-theme`, el único motor de temas que comparten todos los gestores de ventanas (ver [`themes/README.md`](themes/README.md)) | `desktop` |
 

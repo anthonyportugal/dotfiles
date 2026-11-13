@@ -7,10 +7,21 @@ alias ....='cd ../../..'
 alias -- -='cd -'
 
 # --- Files & Editor ---
-alias l='ls --color=auto -lh'
-alias la='ls --color=auto -A'
-alias ll='ls --color=auto -lah'
-alias ld='ls --color=auto -l --group-directories-first'
+# eza (cli layer) lists with icons and directories first; `command ls` keeps
+# the real ls. Without eza the long listings fall back to ls.
+if (( $+commands[eza] )); then
+  alias ls='eza --icons=auto --group-directories-first'
+  alias l='eza --icons=auto --group-directories-first -l'
+  alias la='eza --icons=auto --group-directories-first -a'
+  alias ll='eza --icons=auto --group-directories-first -la'
+  alias ld='eza --icons=auto --group-directories-first -l'
+  alias lt='eza --icons=auto --group-directories-first --tree --level=2'
+else
+  alias l='ls --color=auto -lh'
+  alias la='ls --color=auto -A'
+  alias ll='ls --color=auto -lah'
+  alias ld='ls --color=auto -l --group-directories-first'
+fi
 alias lg='lazygit'
 alias ldo='lazydocker'
 alias e='$EDITOR'

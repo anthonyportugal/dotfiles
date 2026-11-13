@@ -134,10 +134,10 @@ shellcheck -x "${shell_files[@]}"
 # Todos los procesos y herramientas externas se reemplazan por dobles. La
 # prueba inspecciona composición sin necesitar Wayland ni tocar el host.
 for command_name in \
-  brightnessctl dbus-update-activation-environment fuzzel gammastep grim magick mako \
+  blueman-manager bluetui brightnessctl dbus-update-activation-environment foot fuzzel gammastep grim magick mako \
   mango mmsg notify-send pgrep pkill playerctl powerprofilesctl satty slurp \
   swaybg swayidle systemctl systemd-run waybar wf-recorder wl-copy wlogout \
-  wpctl xdg-open xdg-user-dir; do
+  overskride rfkill wpctl xdg-open xdg-user-dir; do
   case "$command_name" in
     systemctl|systemd-run|dbus-update-activation-environment)
       ln -s "$REPO_ROOT/tests/fakes/session-control" "$FAKE_BIN/$command_name"
@@ -173,6 +173,8 @@ for unit_name in mangowm-mako mangowm-swayidle mangowm-swaybg mangowm-waybar; do
 done
 grep -q 'WAYLAND_DISPLAY.*XDG_CURRENT_DESKTOP' "$LOG" || \
   fail 'session-start no importó el entorno Wayland'
+grep -q '^dbus-update-activation-environment .*XCURSOR_THEME XCURSOR_SIZE' "$LOG" || \
+  fail 'session-start no importó el cursor del tema (XCURSOR_THEME/XCURSOR_SIZE)'
 
 grep -q '^session-preferences apply ' "$LOG" || \
   fail 'session-start no consumió el contrato de preferencias de la capa desktop'
@@ -212,6 +214,45 @@ grep -q '^pkill .*gammastep' "$LOG" || \
   fail 'night-light no invocó pkill para gammastep'
 grep -q '^pkill .*waybar' "$LOG" || \
   fail 'night-light no refrescó waybar mediante señal'
+# The Waybar bluetooth icon stays native; a click opens bluetui in the
+# floating terminal through the terminal helper.
+waybar_config="$TARGET/.config/waybar/config.json"
+[[ $(jq -r '.bluetooth.format' "$waybar_config") == '󰂯' ]] || fail 'waybar perdió el icono de bluetooth'
+bluetooth_click=$(jq -r '.bluetooth["on-click"]' "$waybar_config")
+sh -c "$bluetooth_click"
+grep -q '^foot --config=[^ ]*/mangowm/foot\.ini --app-id=floating-terminal bluetui $' "$LOG" || \
+  fail "el clic de bluetooth no abrió bluetui en el terminal: $bluetooth_click"
+# Without bluetui (manifest not applied yet) the click explains what is
+# missing instead of opening a terminal that closes at once.
+mv -- "$FAKE_BIN/bluetui" "$FAKE_BIN/bluetui.off"
+log_lines=$(wc -l < "$LOG")
+# The host's /usr/bin minus bluetui, so a bluetui installed there is not found.
+no_bluetui_bin="$TEST_ROOT/no-bluetui-bin"
+mkdir -p "$no_bluetui_bin"
+for host_command in /usr/bin/*; do
+  [[ "${host_command##*/}" == bluetui ]] || ln -s "$host_command" "$no_bluetui_bin/"
+done
+PATH="$FAKE_BIN:$no_bluetui_bin" sh -c "$bluetooth_click" || true
+click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
+grep -q '^notify-send .*bluetui' <<< "$click_log" || fail "el clic sin bluetui no avisó: $click_log"
+if grep -q '^foot .*bluetui' <<< "$click_log"; then
+  fail 'el clic sin bluetui abrió el terminal igualmente'
+fi
+mv -- "$FAKE_BIN/bluetui.off" "$FAKE_BIN/bluetui"
+# A soft-blocked radio is unblocked first (bluetui exits at once on it); a
+# hard-blocked one only explains itself.
+log_lines=$(wc -l < "$LOG")
+MANGOWM_TEST_RFKILL=soft sh -c "$bluetooth_click"
+click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
+grep -q '^rfkill unblock bluetooth' <<< "$click_log" || fail "no se desbloqueó el bluetooth: $click_log"
+grep -q '^foot .*bluetui' <<< "$click_log" || fail "tras desbloquear no se abrió bluetui: $click_log"
+log_lines=$(wc -l < "$LOG")
+MANGOWM_TEST_RFKILL=hard sh -c "$bluetooth_click" || true
+click_log=$(tail -n +"$((log_lines + 1))" "$LOG")
+grep -q '^notify-send .*hardware' <<< "$click_log" || fail "el bloqueo por hardware no avisó: $click_log"
+if grep -qE '^(foot|rfkill unblock)' <<< "$click_log"; then
+  fail "con bloqueo por hardware se intentó abrir o desbloquear: $click_log"
+fi
 "$TARGET/.local/lib/mangowm/brightness" up
 "$TARGET/.local/lib/mangowm/media" play-pause
 "$TARGET/.local/lib/mangowm/volume" mute
@@ -247,6 +288,11 @@ touch "$TARGET/Pictures/Wallpapers/sample.png"
 grep -Fqx "bind=SUPER,W,spawn,\$HOME/.local/lib/mangowm/wallpaper select" \
   "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
   fail 'falta el atajo Super+W para seleccionar wallpaper'
+grep -Fqx "bind=SUPER+SHIFT,B,spawn,\$HOME/.local/lib/mangowm/bluetooth" \
+  "$TARGET/.config/mango/conf.d/50-desktop.conf" || \
+  fail 'falta el atajo Super+Shift+B para abrir bluetui'
+grep -Fq 'Super + Shift + B ' "$TARGET/.local/lib/mangowm/keybinds" || \
+  fail 'la ayuda de atajos no muestra Super+Shift+B'
 
 HOME="$ORIGINAL_HOME" PATH="$ORIGINAL_PATH" "$DOTFILES" doctor --profile core --wm mangowm \
   --wm-profile desktop --stow-only --target "$TARGET" >/dev/null 2>&1 || fail 'doctor falló tras la sesión'

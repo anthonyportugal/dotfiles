@@ -29,7 +29,7 @@ Public, modular, and portable configuration for **Arch Linux**, in one repositor
 - 🎛️ **Multi-WM Orchestration:** MangoWM (Wayland) and BSPWM (X11) are layers that share one theme engine; install one or both.
 - 🔄 **Safe Lifecycle CLI:** Built-in `sync`, `update` (with working-tree protection against overwriting dirty state), and system `doctor` diagnostics.
 - 🚀 **One-Command Bootstrap:** Interactive onboarding wizard deployable directly via `curl` on fresh machine installations.
-- 🎨 **Unified Aesthetic:** Seamless Catppuccin Mocha theming across Starship, Bat, Micro, Yazi, Foot, and Alacritty.
+- 🎨 **Unified Aesthetic:** One theme engine (`dotfiles-theme`, see `themes/README.md`) renders the active palette (Catppuccin Mocha by default, plus the Sanctuary compline, vespers and matins themes) for GTK, the terminals, Yazi and the CLI tools.
 
 ---
 
@@ -42,7 +42,7 @@ dotfiles (this repository)
 ├── bin/dotfiles, lib/    one CLI and its engine
 ├── layers/
 │   ├── core              Zsh and fail-closed Git
-│   ├── cli               requires core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch
+│   ├── cli               requires core: Bat, Micro, Starship, Yazi, Lazygit, Btop, Fastfetch, Eza, Zoxide
 │   ├── desktop           requires cli: Alacritty, Foot, theme engine, GTK preferences
 │   ├── wm/mangowm        requires desktop: Wayland session (Waybar, Fuzzel, Swaylock, wlogout)
 │   ├── wm/bspwm          requires desktop: X11 session (Polybar, Rofi, Picom, Dunst)
@@ -64,12 +64,12 @@ Configurations are structured into small packages managed with [GNU Stow](https:
 | :--- | :--- | :--- |
 | **`git`** | Fail-closed Git configuration template (requires explicit identity setup) | `core`, `desktop` |
 | **`zsh`** | Clean Zsh configuration with auto-suggestions, syntax-highlighting, and aliases | `core`, `desktop` |
-| **`bat`** | Catppuccin themes for `bat` (syntax-highlighting `cat`) | `cli`, `desktop` |
-| **`micro`** | Terminal text editor with Catppuccin Mocha theme | `cli`, `desktop` |
+| **`bat`** | `bat` (syntax-highlighting `cat`) with the theme engine's colors | `cli`, `desktop` |
+| **`micro`** | Terminal text editor with the theme engine's colors | `cli`, `desktop` |
 | **`starship`** | Cross-shell modern prompt theme | `cli`, `desktop` |
-| **`yazi`** | Blazing fast terminal file manager with Catppuccin Mocha theme | `cli`, `desktop` |
-| **`foot`** | Lightweight Wayland terminal emulator with Catppuccin Mocha theme | `desktop` |
-| **`alacritty`** | Cross-platform terminal emulator with Catppuccin Mocha theme | `desktop` |
+| **`yazi`** | Blazing fast terminal file manager with the theme engine's colors | `cli`, `desktop` |
+| **`foot`** | Lightweight Wayland terminal emulator with the theme engine's colors | `desktop` |
+| **`alacritty`** | Cross-platform terminal emulator with the theme engine's colors | `desktop` |
 | **`xdg-defaults`** | GTK 3/4 `prefer-dark` settings and session hooks | `desktop` |
 | **`theme`** | `dotfiles-theme`, the single theme engine shared by every window manager (see [`themes/README.md`](themes/README.md)) | `desktop` |
 

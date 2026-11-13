@@ -17,12 +17,14 @@ RUN_LAYER_LIB=$(cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)
 source "$RUN_LAYER_LIB/colors.sh"
 # shellcheck source=core.sh
 source "$RUN_LAYER_LIB/core.sh"
+# shellcheck source=receipts.sh
+source "$RUN_LAYER_LIB/receipts.sh"
+# shellcheck source=external.sh
+source "$RUN_LAYER_LIB/external.sh"
 # shellcheck source=packages.sh
 source "$RUN_LAYER_LIB/packages.sh"
 # shellcheck source=links.sh
 source "$RUN_LAYER_LIB/links.sh"
-# shellcheck source=receipts.sh
-source "$RUN_LAYER_LIB/receipts.sh"
 # shellcheck source=layers.sh
 source "$RUN_LAYER_LIB/layers.sh"
 # shellcheck source=layer_ops.sh

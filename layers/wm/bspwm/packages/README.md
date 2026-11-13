@@ -13,8 +13,8 @@ Profiles are cumulative:
 
 | Profile | Content | Stow Package |
 | --- | --- | --- |
-| `core` | Xorg server, Xauth authorization, bspwm, sxhkd, GNU Stow, display/keyboard utilities (`xorg-xrandr`, `xorg-setxkbmap`, `xorg-xsetroot`), and session locking helpers (`util-linux` / `flock`). | `bspwm` |
-| `desktop` | `core` plus Polybar, Picom compositor, Rofi launcher, Dunst notifications, `xcape` key remapping, Catppuccin lockscreen (`i3lock-color` from AUR), Feh wallpaper daemon, screen capture/recording (Maim, Slop, Satty, FFmpeg), full PipeWire audio (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), Playerctl media control, power management (`power-profiles-daemon`), Bluetooth (`bluez-utils`), Redshift night light, `xclip` clipboard, Brave browser, Micro editor, Alacritty terminal, and fonts. | `bspwm` |
+| `core` | Xorg server, Xauth authorization, bspwm, sxhkd, GNU Stow, display/keyboard utilities (`xorg-xrandr`, `xorg-setxkbmap`, `xorg-xsetroot`, `xorg-xrdb`), and session locking helpers (`util-linux` / `flock`). | `bspwm` |
+| `desktop` | `core` plus Polybar, Picom compositor, Rofi launcher, Dunst notifications, `xcape` key remapping, Catppuccin lockscreen (`i3lock-color` from AUR), Feh wallpaper daemon, screen capture/recording (Maim, Slop, Satty, FFmpeg), full PipeWire audio (`pipewire`, `pipewire-alsa`, `pipewire-pulse`, `wireplumber`), Playerctl media control, power management (`power-profiles-daemon`), Bluetooth (`bluez-utils`), Gammastep night light, `xclip` clipboard, Brave browser, Micro editor, Alacritty terminal, and fonts. | `bspwm` |
 
 Both profiles select the single Stow package `bspwm`. The default profile is `desktop`.
 
@@ -33,6 +33,9 @@ Resolution respects the ecosystem's standard priority:
 - **`xorg-setxkbmap` and `xorg-xsetroot`:** Apply portable session keyboard layouts
   (group toggle via Alt+Space) and set the initial cursor without altering global
   system-level policies.
+- **`xorg-xrdb`:** Merges the theme's `Xcursor.theme`/`Xcursor.size` resources at
+  session start and on `dotfiles-theme set`, so the palette's cursor (Bibata by
+  default) reaches X11 clients; a missing cursor theme falls back to the default.
 - **`util-linux`:** Provides `flock`, used in startup scripts to prevent concurrent
   or duplicate instances of Polybar and background daemons.
 - **`xcape` in `desktop`:** Allows opening Rofi upon tapping Super alone, without
