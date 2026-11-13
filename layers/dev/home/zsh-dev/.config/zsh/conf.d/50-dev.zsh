@@ -11,3 +11,8 @@ typeset -gU PATH path
     path=("$PNPM_HOME" "$PNPM_HOME/bin" $path)
   fi
 }
+
+# direnv loads and unloads each project's .envrc when entering its directory.
+if (( $+commands[direnv] )); then
+  eval "$(direnv hook zsh)"
+fi

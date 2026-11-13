@@ -34,6 +34,8 @@ FAKE_BIN="$TEST_ROOT/fake-bin"
 mkdir -p "$FAKE_BIN"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$FAKE_BIN/pacman"
 chmod +x "$FAKE_BIN/pacman"
+# A fake AUR helper, so plans that need AUR do not depend on the host having one.
+ln -s /usr/bin/true "$FAKE_BIN/shelly"
 
 H="$TEST_ROOT/home"
 RECEIPT="$H/.local/state/dotfiles/dotfiles.receipt"
@@ -56,6 +58,21 @@ plan_packages() {
   run bootstrap --packages-only --backend pacman --platform arch --target "$H" "$@" 2>&1
 }
 
+# Whether the repo packages of a plan section $1 include the exact name $2
+# (a substring test would let `go` pass on golangci-lint or "Features: dev-go").
+plans_repo_package() {
+  local packages
+  packages=$(awk '/Paquetes repo:/ { sub(/.*Paquetes repo: */, ""); print; exit }' <<< "$1")
+  [[ " $packages " == *" $2 "* ]]
+}
+
+# Same as plans_repo_package, for the AUR packages of a plan section.
+plans_aur_package() {
+  local packages
+  packages=$(awk '/Paquetes AUR:/ { sub(/.*Paquetes AUR: */, ""); print; exit }' <<< "$1")
+  [[ " $packages " == *" $2 "* ]]
+}
+
 # The help documents the selector.
 output=$(run help)
 [[ "$output" == *'--layer'* ]] || fail "la ayuda no documenta --layer"
@@ -73,6 +90,12 @@ output=$(plan_packages --profile core --layer dev) || fail "el plan con --layer 
 dev_plan=$(layer_section "$output" dev)
 [[ -n "$dev_plan" ]] || fail "--layer dev no planificó la capa dev: $output"
 [[ "$dev_plan" == *shellcheck* ]] || fail "la capa dev no planificó sus herramientas base: $dev_plan"
+plans_repo_package "$dev_plan" direnv || fail "la capa dev no planificó direnv: $dev_plan"
+plans_repo_package "$dev_plan" xh || fail "la capa dev no planificó xh: $dev_plan"
+for package in hyperfine oha; do
+  plans_repo_package "$dev_plan" "$package" || fail "la capa dev no planificó $package: $dev_plan"
+done
+! plans_aur_package "$dev_plan" herdr-bin || fail "la capa dev base planificó herdr-bin de AUR: $dev_plan"
 [[ "$dev_plan" != *docker* && "$dev_plan" != *pnpm* ]] || fail "la capa dev planificó features no pedidas: $dev_plan"
 
 # A feature of an opt-in layer pulls the layer in and adds its packages.
@@ -81,6 +104,22 @@ dev_plan=$(layer_section "$output" dev)
 [[ "$dev_plan" == *docker* ]] || fail "dev-containers no añadió docker a la capa dev: $output"
 output=$(plan_packages --profile core --feature dev-js) || fail "el plan con dev-js falló: $output"
 [[ "$(layer_section "$output" dev)" == *pnpm* ]] || fail "dev-js no añadió pnpm a la capa dev: $output"
+output=$(plan_packages --profile core --feature dev-go) || fail "el plan con dev-go falló: $output"
+dev_plan=$(layer_section "$output" dev)
+for package in go golangci-lint delve; do
+  plans_repo_package "$dev_plan" "$package" || fail "dev-go no añadió $package a la capa dev: $output"
+done
+output=$(plan_packages --profile core --feature dev-tauri) || fail "el plan con dev-tauri falló: $output"
+dev_plan=$(layer_section "$output" dev)
+for package in rustup webkit2gtk-4.1 base-devel libayatana-appindicator librsvg xdotool; do
+  plans_repo_package "$dev_plan" "$package" || fail "dev-tauri no añadió $package a la capa dev: $output"
+done
+! plans_repo_package "$dev_plan" golangci-lint || fail "dev-tauri planificó paquetes de dev-go: $dev_plan"
+# dev-herdr adds an AUR package, so it plans with an AUR backend.
+output=$(plan_packages --profile core --feature dev-herdr --backend shelly) || \
+  fail "el plan con dev-herdr falló: $output"
+dev_plan=$(layer_section "$output" dev)
+plans_aur_package "$dev_plan" herdr-bin || fail "dev-herdr no añadió herdr-bin desde AUR: $output"
 
 # --feature dev-containers alone raises the profile to cli too.
 output=$(plan_packages --profile core --feature dev-containers) || fail "el plan con dev-containers falló: $output"
@@ -131,6 +170,21 @@ output=$(dev_env "$PNPM_PACKAGED/home" "$PNPM_PACKAGED/bin")
 packaged_home="$PNPM_PACKAGED/home/.local/share/pnpm"
 [[ "$output" == "$packaged_home $packaged_home:$packaged_home/bin:$PNPM_PACKAGED/bin" ]] || \
   fail "con un pnpm empaquetado la capa dev no preparó el PATH: $output"
+
+# With direnv installed the layer's zsh file loads its shell hook; without it,
+# it does nothing.
+direnv_hooked() {
+  # shellcheck disable=SC2016  # expanded by the zsh it runs
+  env HOME="$H" PATH="$1" "$ZSH_BIN" -dfc \
+    'source "$1"; print -r -- "${DIRENV_HOOKED:-no}"' _ "$dev_link"
+}
+DIRENV_BIN="$TEST_ROOT/direnv-bin"
+mkdir -p "$DIRENV_BIN"
+# shellcheck disable=SC2016  # expanded by the fake direnv
+printf '#!/bin/sh\n[ "$1 $2" = "hook zsh" ] && echo DIRENV_HOOKED=yes\n' > "$DIRENV_BIN/direnv"
+chmod +x "$DIRENV_BIN/direnv"
+[[ $(direnv_hooked "$DIRENV_BIN") == yes ]] || fail 'con direnv la capa dev no cargó su hook de zsh'
+[[ $(direnv_hooked "$PNPM_NONE") == no ]] || fail 'sin direnv la capa dev intentó cargar su hook'
 mkdir -p "$pnpm_home/bin"
 printf '#!/bin/sh\n' > "$pnpm_home/pnpm"
 chmod +x "$pnpm_home/pnpm"

@@ -45,7 +45,7 @@ _dotfiles() {
   common_options=(
     '--profile[Cumulative profile]:profile:(core cli desktop)'
     '--lang[Interface language]:language:(en es)'
-    '*--feature[Opt-in feature]:feature:(yazi-extras dev-containers dev-js)'
+    '*--feature[Opt-in feature]:feature:(yazi-extras dev-containers dev-js dev-go dev-tauri dev-herdr)'
     '*--layer[Opt-in layer]:layer:(dev)'
     '(--no-overlay)--overlay[Overlay repository with its own layers/]:directory:_files -/'
     '(--overlay)--no-overlay[Stop applying the saved overlay]'
@@ -126,7 +126,7 @@ _dotfiles_completion() {
       return 0
       ;;
     --feature)
-      COMPREPLY=( $(compgen -W "yazi-extras dev-containers dev-js" -- "$cur") )
+      COMPREPLY=( $(compgen -W "yazi-extras dev-containers dev-js dev-go dev-tauri dev-herdr" -- "$cur") )
       return 0
       ;;
     --layer)

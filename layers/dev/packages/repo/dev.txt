@@ -1,6 +1,10 @@
 # Base development tools.
 actionlint
+direnv
 github-cli
+hyperfine
 jq
+oha
 shellcheck
 shfmt
+xh

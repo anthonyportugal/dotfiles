@@ -99,4 +99,12 @@ output=$(run_zsh "$with" 'z proj; zi; whence -w cd')
 output=$(run_zsh "$without" 'whence -w z cd; true')
 [[ "$output" == $'z: none\ncd: builtin' ]] || fail "sin zoxide aparece z o cambia cd: $output"
 
+# btop shows a second GPU box, so a hybrid laptop's integrated and dedicated
+# GPUs both appear (a missing gpu1 is ignored on single-GPU hosts).
+grep -Fxq 'shown_boxes = "cpu mem net proc gpu0 gpu1"' \
+  "$REPO_ROOT/layers/cli/home/btop/.config/btop/btop.conf" || fail 'btop no muestra la caja gpu1'
+
+# nvtop sees Intel and NVIDIA GPUs together, which btop may not on a laptop.
+grep -Fxq nvtop "$REPO_ROOT/layers/cli/packages/repo/cli.txt" || fail 'la capa cli no instala nvtop'
+
 printf 'PASS: cli tools (eza, zoxide, tealdeer, dust, duf)\n'
