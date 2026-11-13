@@ -51,9 +51,15 @@ jobs:
           fi
 
 
+  # The smoke stages run as parallel groups (tests/smoke.sh <group>); the job
+  # below keeps the single required check name and fails if any group failed.
   test:
-    name: Bootstrap & Smoke Tests
+    name: Smoke (${{ matrix.group }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [themes, layers, setup, lifecycle]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -84,4 +90,19 @@ jobs:
       - name: Run smoke tests
         run: |
           chmod +x tests/*.sh layers/wm/*/tests/*.sh layers/system/tests/*.sh bin/dotfiles install.sh
-          ./tests/smoke.sh
+          ./tests/smoke.sh "${{ matrix.group }}"
+
+  smoke:
+    name: Bootstrap & Smoke Tests
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every smoke group to pass
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          if [[ "$RESULT" != success ]]; then
+            echo "::error::smoke test groups finished with: $RESULT"
+            exit 1
+          fi

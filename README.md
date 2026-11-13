@@ -263,6 +263,8 @@ Run the automated smoke test suite locally:
 ./tests/smoke.sh
 ```
 
+It runs every stage in order. `./tests/smoke.sh <group>` runs one group (`themes`, `layers`, `setup` or `lifecycle`); CI runs the four groups as parallel jobs, and the required `Bootstrap & Smoke Tests` check passes only when all of them do.
+
 ---
 
 ## 👤 Author

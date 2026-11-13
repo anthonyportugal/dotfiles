@@ -263,6 +263,8 @@ Ejecuta la suite de smoke tests localmente:
 ./tests/smoke.sh
 ```
 
+Ejecuta todas las etapas en orden. `./tests/smoke.sh <grupo>` ejecuta un solo grupo (`themes`, `layers`, `setup` o `lifecycle`); CI ejecuta los cuatro grupos como jobs en paralelo, y el check requerido `Bootstrap & Smoke Tests` solo pasa cuando pasan todos.
+
 ---
 
 ## 👤 Autor
