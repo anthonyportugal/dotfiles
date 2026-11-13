@@ -34,6 +34,8 @@ FAKE_BIN="$TEST_ROOT/fake-bin"
 mkdir -p "$FAKE_BIN"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$FAKE_BIN/pacman"
 chmod +x "$FAKE_BIN/pacman"
+# A fake AUR helper, so plans that need AUR do not depend on the host having one.
+ln -s /usr/bin/true "$FAKE_BIN/shelly"
 
 H="$TEST_ROOT/home"
 RECEIPT="$H/.local/state/dotfiles/dotfiles.receipt"
