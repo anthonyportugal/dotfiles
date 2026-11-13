@@ -209,6 +209,22 @@ printf '#!/bin/sh\n[ "$1 $2" = "hook zsh" ] && echo DIRENV_HOOKED=yes\n' > "$DIR
 chmod +x "$DIRENV_BIN/direnv"
 [[ $(direnv_hooked "$DIRENV_BIN") == yes ]] || fail 'con direnv la capa dev no cargó su hook de zsh'
 [[ $(direnv_hooked "$PNPM_NONE") == no ]] || fail 'sin direnv la capa dev intentó cargar su hook'
+
+# With Neovim installed the layer makes it the editor (EDITOR, VISUAL and git's
+# GIT_EDITOR, over core's micro default); without it, micro stays.
+dev_editor() {
+  # shellcheck disable=SC2016  # expanded by the zsh it runs
+  env -u GIT_EDITOR EDITOR=micro VISUAL=micro HOME="$H" PATH="$1" "$ZSH_BIN" -dfc \
+    'source "$1"; print -r -- "$EDITOR $VISUAL ${GIT_EDITOR:-unset}"' _ "$dev_link"
+}
+NVIM_BIN="$TEST_ROOT/nvim-bin"
+mkdir -p "$NVIM_BIN"
+printf '#!/bin/sh\n' > "$NVIM_BIN/nvim"
+chmod +x "$NVIM_BIN/nvim"
+output=$(dev_editor "$NVIM_BIN")
+[[ "$output" == 'nvim nvim nvim' ]] || fail "con Neovim la capa dev no lo hizo el editor: $output"
+output=$(dev_editor "$PNPM_NONE")
+[[ "$output" == 'micro micro unset' ]] || fail "sin Neovim la capa dev cambió el editor: $output"
 mkdir -p "$pnpm_home/bin"
 printf '#!/bin/sh\n' > "$pnpm_home/pnpm"
 chmod +x "$pnpm_home/pnpm"
