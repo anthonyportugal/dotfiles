@@ -1,0 +1,2 @@
+-- Loaded by LazyVim (see lua/lazyvim/config/keymaps.lua for its defaults).
+-- Add personal keymaps here.

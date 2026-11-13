@@ -1,10 +1,17 @@
-# Base development tools.
+# Base development tools; gcc, ripgrep, fd and unzip serve Neovim/LazyVim
+# (treesitter parsers, picker search, Mason archives).
 actionlint
 direnv
+fd
+gcc
 github-cli
 hyperfine
 jq
+neovim
 oha
+ripgrep
 shellcheck
 shfmt
+tree-sitter-cli
+unzip
 xh

@@ -95,6 +95,11 @@ plans_repo_package "$dev_plan" xh || fail "la capa dev no planificó xh: $dev_pl
 for package in hyperfine oha; do
   plans_repo_package "$dev_plan" "$package" || fail "la capa dev no planificó $package: $dev_plan"
 done
+# Neovim with LazyVim: the editor, the tree-sitter CLI and C compiler for its
+# parsers, and the search tools of its picker.
+for package in neovim tree-sitter-cli gcc ripgrep fd unzip; do
+  plans_repo_package "$dev_plan" "$package" || fail "la capa dev no planificó $package para Neovim: $dev_plan"
+done
 ! plans_aur_package "$dev_plan" herdr-bin || fail "la capa dev base planificó herdr-bin de AUR: $dev_plan"
 [[ "$dev_plan" != *docker* && "$dev_plan" != *pnpm* ]] || fail "la capa dev planificó features no pedidas: $dev_plan"
 
@@ -148,6 +153,25 @@ dev_link="$H/.config/zsh/conf.d/50-dev.zsh"
 [[ "$(realpath -m -- "$dev_link")" == "$REPO_ROOT/layers/dev/home/"*/.config/zsh/conf.d/50-dev.zsh ]] || \
   fail "el enlace de la capa dev no apunta a layers/dev"
 grep -Fxq 'LAYERS="dev"' "$RECEIPT" || fail "el recibo no guardó la capa opcional: $(<"$RECEIPT")"
+nvim_link="$H/.config/nvim/init.lua"
+[[ -L "$nvim_link" ]] || fail "la capa dev no enlazó la configuración de Neovim"
+[[ "$(realpath -m -- "$nvim_link")" == "$REPO_ROOT/layers/dev/home/nvim/.config/nvim/init.lua" ]] || \
+  fail "el enlace de Neovim no apunta a layers/dev"
+# LazyVim loads the extras of the user's stack.
+LAZY_SPEC="$REPO_ROOT/layers/dev/home/nvim/.config/nvim/lua/config/lazy.lua"
+for extra in lang.typescript lang.vue lang.angular lang.astro lang.tailwind lang.go lang.rust lang.json \
+             lang.yaml lang.toml lang.docker lang.markdown formatting.prettier linting.eslint dap.core test.core; do
+  grep -Fq "{ import = \"lazyvim.plugins.extras.$extra\" }" "$LAZY_SPEC" || \
+    fail "la configuración de LazyVim no importa el extra $extra"
+done
+# Every Lua file of the Neovim configuration parses.
+if command -v luac >/dev/null; then
+  while IFS= read -r -d '' lua_file; do
+    luac -p -- "$lua_file" 2>/dev/null || fail "la configuración de Neovim no compila: $lua_file"
+  done < <(find "$REPO_ROOT/layers/dev/home/nvim" -name '*.lua' -print0)
+else
+  printf 'SKIP: sintaxis Lua de Neovim (falta luac)\n'
+fi
 
 # The layer's zsh file puts pnpm and its binaries on PATH, for a pnpm installed
 # standalone under PNPM_HOME as well as for a packaged one; without pnpm it

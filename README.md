@@ -79,12 +79,22 @@ Some layers are never part of a profile and apply only when asked for with `--la
 
 | Layer / feature | Contents |
 | :--- | :--- |
-| **`dev`** | Development tools: `actionlint`, `direnv` (hooked into zsh), `github-cli`, `hyperfine`, `jq`, `oha`, `shellcheck`, `shfmt`, `xh`; Docker doctor checks. Requires `cli`. |
+| **`dev`** | Development tools: Neovim with LazyVim (`nvim`, see below), `actionlint`, `direnv` (hooked into zsh), `github-cli`, `hyperfine`, `jq`, `oha`, `shellcheck`, `shfmt`, `xh`; Docker doctor checks. Requires `cli`. |
 | **`dev-containers`** | Feature of `dev`: `docker`, `docker-compose`, `lazydocker` |
 | **`dev-js`** | Feature of `dev`: `pnpm`, with its global binaries on `PATH` |
 | **`dev-go`** | Feature of `dev`: `go`, `golangci-lint`, `delve` |
 | **`dev-tauri`** | Feature of `dev`: `rustup` and the Tauri v2 system libraries (`webkit2gtk-4.1`, `libayatana-appindicator`, ...). `rustup` conflicts with the `rust` package: remove `rust` first (`sudo pacman -Rns rust`). After installing, run `rustup default stable` once. |
 | **`dev-herdr`** | Feature of `dev`: `herdr-bin` from AUR (needs an AUR helper such as Shelly, paru or yay), the herdr TUI to supervise several coding agents in one terminal. |
+
+#### Neovim (LazyVim)
+
+The `dev` layer links `~/.config/nvim` from [`layers/dev/home/nvim`](layers/dev/home/nvim/.config/nvim). It is built in three levels:
+
+- **[lazy.nvim](https://github.com/folke/lazy.nvim)** is the plugin manager. On the first `nvim` it clones itself and installs every plugin, recording the exact commits in `~/.config/nvim/lazy-lock.json` (a local file, not part of this repo). `:Lazy` shows and updates them.
+- **[LazyVim](https://www.lazyvim.org)** is a plugin set on top of it: editor defaults, LSP, completion, treesitter, a picker and git integration.
+- **Extras** add one language or tool each: its language server, treesitter parsers and formatter/linter. [`lua/config/lazy.lua`](layers/dev/home/nvim/.config/nvim/lua/config/lazy.lua) imports TypeScript/React, Vue, Angular, Astro, Tailwind, Go, Rust, JSON, YAML, TOML, Docker, Markdown, Prettier, ESLint, the debugger and the test runner. A new stack is one more import (for example `lang.dart` for Flutter); `:LazyExtras` lists them all.
+
+Mason (`:Mason`) installs the language servers under `~/.local/share/nvim`. The TypeScript-family servers need Node.js with `npm` (feature `dev-js`), and the Go tools need `go` (feature `dev-go`).
 
 `~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.
