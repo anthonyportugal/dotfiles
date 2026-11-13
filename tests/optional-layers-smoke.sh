@@ -164,6 +164,8 @@ for extra in lang.typescript lang.vue lang.angular lang.astro lang.tailwind lang
   grep -Fq "{ import = \"lazyvim.plugins.extras.$extra\" }" "$LAZY_SPEC" || \
     fail "la configuración de LazyVim no importa el extra $extra"
 done
+# Neovim's interactive tutorial (:Tutor) stays available to learn the editor.
+grep -q 'disabled_plugins = {[^}]*"tutor"' "$LAZY_SPEC" && fail 'la configuración de LazyVim desactiva :Tutor'
 # Every Lua file of the Neovim configuration parses.
 if command -v luac >/dev/null; then
   while IFS= read -r -d '' lua_file; do

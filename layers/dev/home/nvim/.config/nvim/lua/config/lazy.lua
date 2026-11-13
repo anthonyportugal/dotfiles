@@ -58,7 +58,8 @@ require("lazy").setup({
   checker = { enabled = true, notify = false },
   performance = {
     rtp = {
-      disabled_plugins = { "gzip", "tarPlugin", "tohtml", "tutor", "zipPlugin" },
+      -- Unused runtime plugins; tutor stays enabled so :Tutor teaches the basics.
+      disabled_plugins = { "gzip", "tarPlugin", "tohtml", "zipPlugin" },
     },
   },
 })
