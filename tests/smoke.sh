@@ -110,6 +110,11 @@ check_groups() {
   local group stage
   local -A seen=()
 
+  # GROUP_NAMES (the order) and the SMOKE_GROUPS keys (the stages) list the same groups.
+  [[ "$(printf '%s\n' "${GROUP_NAMES[@]}" | sort)" == "$(printf '%s\n' "${!SMOKE_GROUPS[@]}" | sort)" ]] || {
+    printf 'ERROR: GROUP_NAMES (%s) and SMOKE_GROUPS (%s) differ\n' "${GROUP_NAMES[*]}" "${!SMOKE_GROUPS[*]}" >&2
+    return 1
+  }
   for group in "${GROUP_NAMES[@]}"; do
     for stage in ${SMOKE_GROUPS[$group]}; do
       [[ -z "${seen[$stage]-}" ]] || { printf 'ERROR: stage %s is in groups %s and %s\n' "$stage" "${seen[$stage]}" "$group" >&2; return 1; }
