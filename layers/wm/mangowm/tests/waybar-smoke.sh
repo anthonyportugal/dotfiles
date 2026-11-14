@@ -161,6 +161,8 @@ case "$name" in
     [[ "${1-}" == get ]] && printf 'balanced\n'
     ;;
   notify-send)
+    # NOTIFY_FAIL=1: no notification daemon answers.
+    [[ -z "${NOTIFY_FAIL-}" ]] || exit 1
     # Like libnotify: --print-id prints the id, a new one unless replacing.
     if [[ " $* " == *' --print-id '* || " $* " == *' -p '* ]]; then
       replace=$(sed -n 's/.*--replace-id=\([0-9]*\).*/\1/p' <<< "$*")
@@ -431,6 +433,15 @@ battery_at 5 Charging; battery_check
 battery_at 14 Discharging; battery_check
 mapfile -t sent < <(notify_lines)
 (( ${#sent[@]} == 3 )) || fail "cargar no volvió a armar el aviso: $(notify_lines)"
+# An alert that could not be shown (no notification daemon) is not marked as
+# given, so the next check tries again.
+battery_at 40 Charging; battery_check
+: > "$LOG"
+battery_at 12 Discharging
+NOTIFY_FAIL=1 battery_check
+battery_check
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 2 )) || fail "el aviso de batería no se reintentó tras fallar: $(notify_lines)"
 : > "$LOG"
 MANGOWM_POWER_SUPPLY="$TEST_ROOT/no-supply" "$LIB/battery" check || fail 'sin batería el check falló'
 [[ -z "$(notify_lines)" ]] || fail 'sin batería hubo un aviso'

@@ -43,12 +43,13 @@ check() {
     return 0
   fi
   if (( capacity <= CRITICAL && warned > CRITICAL )); then
-    mangowm_notify_replace battery critical "󰂃  Batería muy baja: ${capacity}%" \
-      'Conecta el cargador ahora: el equipo se apagará pronto.'
+    # Marked as given only once it was shown, so a missing daemon retries.
+    mangowm_notify_send battery critical "󰂃  Batería muy baja: ${capacity}%" \
+      'Conecta el cargador ahora: el equipo se apagará pronto.' || return 0
     printf '%s\n' "$CRITICAL" > "$state_file"
   elif (( capacity <= WARN && warned > WARN )); then
-    mangowm_notify_replace battery normal "󰁺  Batería baja: ${capacity}%" \
-      'Conecta el cargador.'
+    mangowm_notify_send battery normal "󰁺  Batería baja: ${capacity}%" \
+      'Conecta el cargador.' || return 0
     printf '%s\n' "$WARN" > "$state_file"
   fi
 }
