@@ -268,6 +268,14 @@ FAIL_UPDATES=9 PENDING_UPDATES=1 MANGOWM_UPDATES_RETRY_DELAY=0 "$LIB/updates" ch
 jq -e '.text | endswith(" 5")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'un check fallido borró el último contador'
 rm -f "$TEST_ROOT/checkupdates.calls"
 
+# A cache that cannot be written is a failed check, not a silent success.
+chmod 555 "$XDG_CACHE_HOME/mangowm"
+status=0
+PENDING_UPDATES=9 MANGOWM_UPDATES_RETRY_DELAY=0 "$LIB/updates" check 2>/dev/null || status=$?
+chmod 755 "$XDG_CACHE_HOME/mangowm"
+(( status != 0 )) || fail 'check terminó bien sin poder escribir el contador'
+jq -e '.text | endswith(" 5")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'un check sin escritura cambió el contador'
+
 # A timer check and a pacman refresh can overlap, so each writer needs its own
 # temporary file: an mv double records the source of every rename.
 cat > "$FAKE_BIN/mv" <<'FAKE'

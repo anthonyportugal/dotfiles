@@ -38,16 +38,19 @@ count() {
 }
 
 # store [checkupdates arguments...]: caches a new count; fails, keeping the
-# previous one, when it cannot count. Each writer has its own temporary file,
-# so a timer check and a pacman refresh can overlap.
+# previous one, when it cannot count or write. Each writer has its own
+# temporary file, so a timer check and a pacman refresh can overlap. Callers
+# run it under && or ||, where errexit is off, so every step checks itself.
 store() {
   local value tmp
 
   value=$(count "$@") || return 1
-  mkdir -p -- "$cache_dir"
-  tmp=$(mktemp "$cache_file.XXXXXX")
-  printf '%s\n' "$value" > "$tmp"
-  mv -f -- "$tmp" "$cache_file"
+  mkdir -p -- "$cache_dir" || return 1
+  tmp=$(mktemp "$cache_file.XXXXXX") || return 1
+  if ! printf '%s\n' "$value" > "$tmp" || ! mv -f -- "$tmp" "$cache_file"; then
+    rm -f -- "$tmp"
+    return 1
+  fi
   refresh_waybar
 }
 
