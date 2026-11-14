@@ -6,7 +6,6 @@ path=("$HOME/.local/bin" $path)
 export EDITOR="${EDITOR:-micro}"
 export VISUAL="${VISUAL:-$EDITOR}"
 export BROWSER="${BROWSER:-brave}"
-export STARSHIP_CONFIG="${STARSHIP_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml}"
 export FZF_DEFAULT_OPTS="--multi --height=50% --layout=reverse --border"
 
 # Colors rendered by dotfiles-theme. Each tool keeps its own defaults while
@@ -32,6 +31,18 @@ export FZF_DEFAULT_OPTS="--multi --height=50% --layout=reverse --border"
   fi
   if [[ -z "${FZF_DEFAULT_OPTS_FILE-}" && -r "$theme_dir/fzf/options" ]]; then
     export FZF_DEFAULT_OPTS_FILE="$theme_dir/fzf/options"
+  fi
+  # starship reads the copy with the theme palette (cli render hook) while it
+  # is not older than starship.toml; after editing starship.toml the plain
+  # file applies until the next render.
+  if [[ -z "${STARSHIP_CONFIG-}" ]]; then
+    local starship_config="$config_home/starship.toml"
+    local starship_themed="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/starship.toml"
+    if [[ -r "$starship_themed" && ! "$starship_config" -nt "$starship_themed" ]]; then
+      export STARSHIP_CONFIG="$starship_themed"
+    else
+      export STARSHIP_CONFIG="$starship_config"
+    fi
   fi
 }
 

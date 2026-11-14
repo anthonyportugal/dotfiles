@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Builds the themed starship config after dotfiles-theme promotes a revision:
+# ~/.config/starship.toml with the rendered palette selected and appended, in
+# $XDG_CACHE_HOME/dotfiles/starship.toml. zsh uses it while it is not older
+# than starship.toml. starship has no include, hence the merged copy. It never
+# fails the render.
+
+config=${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml
+palette=${DOTFILES_THEME_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme/current}/starship/palette.toml
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles
+output=$cache_dir/starship.toml
+
+[[ -r "$config" && -r "$palette" ]] || exit 0
+# A render into another target (HOME overridden) must not touch the cache of
+# the running session through an inherited XDG_CACHE_HOME.
+if [[ "$cache_dir" != "$HOME"/* ]]; then
+  printf 'starship: la caché %s está fuera de %s; se omite\n' "$cache_dir" "$HOME"
+  exit 0
+fi
+# A palette chosen in starship.toml itself is left alone.
+if grep -Eq '^[[:space:]]*palette[[:space:]]*=' "$config"; then
+  printf 'starship: starship.toml ya elige una paleta; se omite la del tema\n'
+  exit 0
+fi
+
+mkdir -p -- "$cache_dir" || exit 0
+tmp=$(mktemp "$output.XXXXXX") || exit 0
+if { printf 'palette = "dotfiles"\n\n'; cat -- "$config"; printf '\n'; cat -- "$palette"; } > "$tmp" &&
+   mv -f -- "$tmp" "$output"; then
+  exit 0
+fi
+rm -f -- "$tmp"
+printf 'starship: no se pudo escribir %s\n' "$output" >&2
+exit 0

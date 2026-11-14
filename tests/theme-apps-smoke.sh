@@ -129,9 +129,11 @@ check_cli() {
   local palette=$1 revision=$2 output
 
   for output in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml \
-                micro/default.micro fzf/options fastfetch/args; do
+                micro/default.micro fzf/options fastfetch/args starship/palette.toml; do
     expect_rendered "$revision/$output"
   done
+  expect_line "$revision/starship/palette.toml" "red = \"$(palette_value "$palette" hue_red)\""
+  expect_line "$revision/starship/palette.toml" "accent = \"$(palette_value "$palette" accent)\""
   # fastfetch receives the accent as arguments, one per line.
   expect_line "$revision/fastfetch/args" '--color-keys'
   expect_line "$revision/fastfetch/args" "$(palette_value "$palette" accent)"
@@ -335,7 +337,7 @@ for config in "$CLI_HOME/lazygit/.config/lazygit/config.yml" "$CLI_HOME/fastfetc
   expect_no_hex "$config"
 done
 for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro/default.micro fzf/options \
-                yazi/flavor.toml nvim/palette.lua fastfetch/args; do
+                yazi/flavor.toml nvim/palette.lua fastfetch/args starship/palette.toml; do
   expect_no_hex "$SHARED_TEMPLATES/$template"
 done
 for version in 3.0 4.0; do
@@ -537,5 +539,51 @@ if command -v bat >/dev/null 2>&1; then
   BAT_CONFIG_DIR="$REAL/.config/bat" BAT_CACHE_PATH="$REAL/.cache/bat" bat --list-themes --color=never | \
     grep -Fxq dotfiles || fail "bat no lista el tema dotfiles tras un render"
 fi
+
+# starship has no include: its render hook writes starship.toml with the
+# rendered palette selected and appended, and zsh uses that copy while it is
+# not older than starship.toml.
+STARSHIP_HOOK="$CLI_HOME/starship/.local/share/dotfiles/theme/render.d/starship"
+STARSHIP_STATIC="$CLI_HOME/starship/.config/starship.toml"
+[[ -x "$STARSHIP_HOOK" ]] || fail "falta el hook de render ejecutable de starship"
+expect_no_hex "$STARSHIP_STATIC"
+SHIP="$TEST_ROOT/home-starship"
+mkdir -p "$SHIP/.config" "$SHIP/.local/share/dotfiles/theme/render.d"
+cp -- "$STARSHIP_STATIC" "$SHIP/.config/starship.toml"
+cp -- "$STARSHIP_HOOK" "$SHIP/.local/share/dotfiles/theme/render.d/starship"
+render_in catppuccin-mocha-pink "$SHIP" >/dev/null
+THEMED="$SHIP/.cache/dotfiles/starship.toml"
+[[ -s "$THEMED" ]] || fail "el render no generó la configuración de starship con la paleta"
+[[ $(head -n 1 "$THEMED") == 'palette = "dotfiles"' ]] || fail "starship no selecciona la paleta del tema"
+expect_line "$THEMED" "red = \"$(palette_value "$REPO_ROOT/themes/palettes/catppuccin-mocha-pink.conf" hue_red)\""
+grep -Fq '[git_branch]' "$THEMED" || fail "la configuración de starship con paleta perdió los módulos propios"
+if command -v starship >/dev/null 2>&1; then
+  hue_red=$(raw_value "$REPO_ROOT/themes/palettes/catppuccin-mocha-pink.conf" hue_red)
+  printf 'format = "[x](red)"\n' > "$TEST_ROOT/ship-format.toml"
+  { printf 'palette = "dotfiles"\n'; cat "$TEST_ROOT/ship-format.toml"; cat "$SHIP/.local/state/dotfiles/theme/current/starship/palette.toml"; } \
+    > "$TEST_ROOT/ship-probe.toml"
+  prompt=$(STARSHIP_CONFIG="$TEST_ROOT/ship-probe.toml" starship prompt 2>&1)
+  [[ "$prompt" == *"38;2;$((16#${hue_red:0:2}));$((16#${hue_red:2:2}));$((16#${hue_red:4:2}))m"* ]] || \
+    fail "starship no aplicó el rojo de la paleta: $prompt"
+  STARSHIP_CONFIG="$THEMED" starship print-config >/dev/null 2>&1 || fail "starship rechazó la configuración con paleta"
+fi
+if command -v zsh >/dev/null 2>&1; then
+  # shellcheck disable=SC2016
+  ship_env() {
+    env -i HOME="$1" PATH="$PATH" ${2:+STARSHIP_CONFIG="$2"} zsh -fc 'source "$1"; print -r -- "$STARSHIP_CONFIG"' _ "$ENVIRONMENT"
+  }
+  [[ "$(ship_env "$EMPTY")" == "$EMPTY/.config/starship.toml" ]] || fail "zsh sin tema no usa starship.toml: $(ship_env "$EMPTY")"
+  [[ "$(ship_env "$SHIP")" == "$THEMED" ]] || fail "zsh no eligió el starship con paleta: $(ship_env "$SHIP")"
+  [[ "$(ship_env "$SHIP" /custom.toml)" == /custom.toml ]] || fail "zsh pisó un STARSHIP_CONFIG propio"
+  touch -d '+1 minute' "$SHIP/.config/starship.toml"
+  [[ "$(ship_env "$SHIP")" == "$SHIP/.config/starship.toml" ]] || \
+    fail "zsh usó una copia con paleta más vieja que starship.toml"
+fi
+# A palette chosen in starship.toml itself wins over the theme's.
+rm -f -- "$THEMED"
+printf 'palette = "mine"\n' >> "$SHIP/.config/starship.toml"
+env HOME="$SHIP" XDG_CACHE_HOME="$SHIP/.cache" XDG_CONFIG_HOME="$SHIP/.config" XDG_STATE_HOME="$SHIP/.local/state" \
+  "$STARSHIP_HOOK" >/dev/null || fail "el hook de starship falló con una paleta propia"
+[[ ! -e "$THEMED" ]] || fail "el hook de starship reemplazó una paleta elegida en starship.toml"
 
 printf 'OK: %d paletas renderizadas para las aplicaciones\n' "$rendered"

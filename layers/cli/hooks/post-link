@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
-# Rebuilds the bat theme cache after linking the cli layer.
+# Rebuilds the bat theme cache and the themed starship config after linking
+# the cli layer.
 # Run by bin/dotfiles through run_layer_hook (see lib/layers.sh).
 
 set -Eeuo pipefail
@@ -19,4 +20,14 @@ apply_bat_cache() {
   bat cache --build >/dev/null 2>&1 || true
 }
 
+# The themed starship config is otherwise only built when a theme renders.
+apply_starship_palette() {
+  local hook="$HOME/.local/share/dotfiles/theme/render.d/starship"
+
+  target_is_current_home || return 0
+  [[ -x "$hook" ]] || return 0
+  "$hook" >/dev/null 2>&1 || true
+}
+
 apply_bat_cache
+apply_starship_palette
