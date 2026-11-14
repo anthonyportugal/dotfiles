@@ -2,7 +2,8 @@
 # Pending updates counter for Waybar.
 #   check    syncs a temporary copy of the pacman databases (checkupdates) and
 #            caches the count; the session runs it 2 minutes after login and
-#            every 3 hours.
+#            every 3 hours. A failed sync (no network yet) retries 3 times,
+#            5 minutes apart, and keeps the last count meanwhile.
 #   refresh  recounts against the last synced copy without downloading; the
 #            session runs it after every pacman transaction.
 #   waybar   prints the cached count; nothing when there are no updates.
@@ -13,6 +14,8 @@ set -Eeuo pipefail
 source "$HOME/.local/lib/mangowm/common"
 
 MANY=100
+ATTEMPTS=3
+RETRY_DELAY=${MANGOWM_UPDATES_RETRY_DELAY:-300}
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/mangowm"
 cache_file="$cache_dir/updates"
 
@@ -34,14 +37,28 @@ count() {
   esac
 }
 
+# store [checkupdates arguments...]: caches a new count; fails, keeping the
+# previous one, when it cannot count. Each writer has its own temporary file,
+# so a timer check and a pacman refresh can overlap.
 store() {
-  local value
+  local value tmp
 
-  value=$(count "$@") || return 0
+  value=$(count "$@") || return 1
   mkdir -p -- "$cache_dir"
-  printf '%s\n' "$value" > "$cache_file.tmp"
-  mv -f -- "$cache_file.tmp" "$cache_file"
+  tmp=$(mktemp "$cache_file.XXXXXX")
+  printf '%s\n' "$value" > "$tmp"
+  mv -f -- "$tmp" "$cache_file"
   refresh_waybar
+}
+
+check_with_retries() {
+  local attempt
+
+  for (( attempt = 1; attempt <= ATTEMPTS; attempt++ )); do
+    store && return 0
+    (( attempt == ATTEMPTS )) || sleep "$RETRY_DELAY"
+  done
+  return 1
 }
 
 waybar_json() {
@@ -60,10 +77,10 @@ waybar_json() {
 
 case "${1:-waybar}" in
   check)
-    store
+    check_with_retries
     ;;
   refresh)
-    store --nosync
+    store --nosync || true
     ;;
   waybar)
     waybar_json
@@ -71,7 +88,7 @@ case "${1:-waybar}" in
   upgrade)
     mangowm_require shelly
     "$HOME/.local/lib/mangowm/terminal" --app-id=floating-terminal shelly upgrade || true
-    store --nosync
+    store --nosync || true
     ;;
   *)
     printf 'Uso: %s check|refresh|waybar|upgrade\n' "${0##*/}" >&2

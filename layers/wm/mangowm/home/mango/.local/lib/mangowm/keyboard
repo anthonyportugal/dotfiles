@@ -26,6 +26,8 @@ switch_layout() {
 
 # Number of layouts mango is configured with: the last xkb_rules_layout in
 # config.conf, conf.d and config.local.conf (the order mango reads them).
+# Prints 0 when no file sets it: the layouts come from elsewhere, so the
+# indicator stays visible.
 configured_layouts() {
   local dir="${XDG_CONFIG_HOME:-$HOME/.config}/mango" file line value=""
   local files=("$dir/config.conf" "$dir"/conf.d/*.conf "$dir/config.local.conf")
@@ -37,7 +39,7 @@ configured_layouts() {
         value=${BASH_REMATCH[1]}
     done < "$file"
   done
-  [[ -n "$value" ]] || { printf '1\n'; return 0; }
+  [[ -n "$value" ]] || { printf '0\n'; return 0; }
   local commas=${value//[^,]/}
   printf '%s\n' $(( ${#commas} + 1 ))
 }
@@ -46,7 +48,7 @@ print_json() {
   local raw="${1:-}"
 
   # With a single layout there is nothing to switch, so the bar hides it.
-  if (( $(configured_layouts) < 2 )); then
+  if (( $(configured_layouts) == 1 )); then
     printf '{"text":"","class":"single"}\n'
     return 0
   fi

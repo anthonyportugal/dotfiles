@@ -146,6 +146,12 @@ case "$name" in
     fi
     ;;
   checkupdates)
+    # FAIL_UPDATES=<n> fails the first n calls, like a sync without network.
+    if [[ -n "${FAIL_UPDATES-}" ]]; then
+      calls=$(( $(cat "$TEST_ROOT/checkupdates.calls" 2>/dev/null || echo 0) + 1 ))
+      printf '%s\n' "$calls" > "$TEST_ROOT/checkupdates.calls"
+      (( calls > FAIL_UPDATES )) || exit 1
+    fi
     for (( i = 1; i <= ${PENDING_UPDATES:-0}; i++ )); do
       printf 'pkg%s 1.0-1 -> 1.1-1\n' "$i"
     done
@@ -195,6 +201,12 @@ printf 'xkb_rules_layout=us\n' > "$FAKE_HOME/.config/mango/config.local.conf"
   fail 'con una sola distribución (override local) el teclado sigue visible'
 [[ $("$LIB/keyboard" get) == US ]] || fail 'keyboard get dejó de devolver la distribución'
 rm "$FAKE_HOME/.config/mango/config.local.conf"
+# Without any xkb_rules_layout line the layouts come from elsewhere, so the
+# indicator stays visible instead of guessing a single layout.
+: > "$FAKE_HOME/.config/mango/config.conf"
+[[ $(text_of "$("$LIB/keyboard" status)") == US ]] || \
+  fail 'sin xkb_rules_layout en la config el teclado se ocultó'
+printf 'xkb_rules_layout=us,latam\n' > "$FAKE_HOME/.config/mango/config.conf"
 
 # Do not disturb: the bell reflects mako's mode and the right click toggles it.
 out=$("$LIB/notifications" waybar)
@@ -242,6 +254,35 @@ grep -q '^checkupdates --nosync$' "$LOG" || fail 'refresh descargó en lugar de 
 [[ $(text_of "$("$LIB/updates" waybar)") == '' ]] || fail 'con 0 pendientes el contador sigue visible'
 PENDING_UPDATES=150 "$LIB/updates" check
 jq -e '.class == "many"' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'más de 100 no se resalta'
+
+# A failed sync (no network at login) retries instead of waiting 3 hours.
+: > "$LOG"
+FAIL_UPDATES=2 PENDING_UPDATES=5 MANGOWM_UPDATES_RETRY_DELAY=0 "$LIB/updates" check || \
+  fail 'check falló aunque el tercer intento sincronizó'
+[[ $(grep -c '^checkupdates$' "$LOG") == 3 ]] || fail "check no reintentó tras fallar: $(<"$LOG")"
+jq -e '.text | endswith(" 5")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'el reintento no guardó el contador'
+rm -f "$TEST_ROOT/checkupdates.calls"
+status=0
+FAIL_UPDATES=9 PENDING_UPDATES=1 MANGOWM_UPDATES_RETRY_DELAY=0 "$LIB/updates" check || status=$?
+(( status != 0 )) || fail 'check terminó bien aunque todos los intentos fallaron'
+jq -e '.text | endswith(" 5")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'un check fallido borró el último contador'
+rm -f "$TEST_ROOT/checkupdates.calls"
+
+# A timer check and a pacman refresh can overlap, so each writer needs its own
+# temporary file: an mv double records the source of every rename.
+cat > "$FAKE_BIN/mv" <<'FAKE'
+#!/usr/bin/env bash
+printf '%s\n' "${@: -2:1}" >> "$TEST_ROOT/mv.sources"
+exec /usr/bin/mv "$@"
+FAKE
+chmod +x "$FAKE_BIN/mv"
+PENDING_UPDATES=7 "$LIB/updates" refresh
+PENDING_UPDATES=7 "$LIB/updates" refresh
+rm "$FAKE_BIN/mv"
+[[ $(sort -u "$TEST_ROOT/mv.sources" | wc -l) == 2 ]] || \
+  fail "dos escritores del contador comparten el temporal: $(<"$TEST_ROOT/mv.sources")"
+jq -e '.text | endswith(" 7")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'el recuento no guardó el contador'
+find "$XDG_CACHE_HOME/mangowm" -name 'updates.*' | grep -q . && fail 'quedaron temporales del contador'
 
 # The session schedules the check 2 minutes after login and every 3 hours,
 # and refreshes after any pacman transaction (its lock file).
