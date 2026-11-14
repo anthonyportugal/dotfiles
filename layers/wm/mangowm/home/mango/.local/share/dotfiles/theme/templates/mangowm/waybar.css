@@ -22,6 +22,8 @@
 @define-color flamingo {{hue_rose}};
 @define-color accent {{accent}};
 @define-color urgent {{urgent}};
+/* State reads the same everywhere: dim = off, neutral = available,
+   colour = connected or active. Modules with nothing to say hide. */
 * {
   border: none;
   border-radius: 0;
@@ -32,65 +34,127 @@
 }
 window#waybar {
   background: alpha(@base, 0.96);
+  border-bottom: 1px solid @surface1;
   color: @text;
 }
-#custom-launcher, #custom-recording, #mpris, #custom-nightlight, #custom-idle, #idle_inhibitor, #tray,
-#wireplumber, #backlight, #network, #bluetooth, #custom-keyboard, #custom-power-profile, #battery, #clock, #custom-power {
-  padding: 0 8px;
-  margin: 0;
-  background: transparent;
-  transition: all 0.2s ease;
+tooltip {
+  background: @surface0;
+  border: 1px solid @surface1;
+  border-radius: 8px;
 }
+tooltip label {
+  color: @text;
+  font-weight: 400;
+}
+#custom-launcher, #mpris, #clock, #custom-recording, #custom-nightlight, #custom-idle,
+#custom-updates, #custom-notifications, #tray, #wireplumber, #backlight, #network,
+#bluetooth, #custom-keyboard, #battery, #custom-power {
+  padding: 0 8px;
+  margin: 4px 0;
+  border-radius: 6px;
+  background: transparent;
+  color: @subtext0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+#custom-launcher:hover, #mpris:hover, #clock:hover, #custom-recording:hover,
+#custom-nightlight:hover, #custom-idle:hover, #custom-updates:hover,
+#custom-notifications:hover, #wireplumber:hover, #backlight:hover, #network:hover,
+#bluetooth:hover, #custom-keyboard:hover, #battery:hover, #custom-power:hover,
+#layout:hover, #workspaces button:hover {
+  background: @surface1;
+}
+
+/* Left: where you are. */
 #custom-launcher {
   color: @accent;
   font-size: 16px;
-  padding: 0 10px 0 14px;
+  padding: 0 10px 0 12px;
 }
-#custom-launcher:hover {
-  color: @lavender;
-}
-#custom-recording {
-  color: @red;
+#layout {
+  color: @accent;
+  border: 1px solid alpha(@accent, 0.45);
+  border-radius: 6px;
+  padding: 0 7px;
+  margin: 6px 6px 6px 2px;
   font-weight: 700;
 }
-#custom-recording:hover {
-  color: @peach;
+/* Scrolling layouts keep windows off screen; stacking ones hide them. */
+#layout.S, #layout.VS {
+  color: @teal;
+  border-color: alpha(@teal, 0.5);
+}
+#layout.M, #layout.K, #layout.VK {
+  color: @base;
+  background: @accent;
+  border-color: @accent;
+}
+#workspaces {
+  margin: 0 4px 0 0;
+}
+#workspaces button {
+  color: @subtext0;
+  background: transparent;
+  min-width: 24px;
+  padding: 0 4px;
+  margin: 5px 1px;
+  border-radius: 6px;
+  font-weight: 700;
+  box-shadow: inset 0 -2px alpha(@subtext0, 0.35);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+#workspaces button.active {
+  color: @base;
+  background: @accent;
+  box-shadow: none;
+}
+#workspaces button.urgent {
+  color: @urgent;
+  background: alpha(@urgent, 0.2);
+  box-shadow: none;
 }
 #mpris {
-  color: @flamingo;
-}
-#mpris:hover {
   color: @pink;
 }
-#custom-nightlight {
+#mpris.paused {
   color: @overlay0;
-  font-size: 15px;
 }
+
+/* Centre: when. */
+#clock {
+  color: @text;
+  font-weight: 700;
+  padding: 0 10px;
+}
+#custom-recording {
+  color: @base;
+  background: @red;
+  margin: 6px 0 6px 4px;
+  padding: 0 7px;
+  font-weight: 700;
+}
+
+/* Right: toggles show only while on. */
 #custom-nightlight.on {
   color: @peach;
 }
-#custom-nightlight.off {
-  color: @overlay0;
-}
-#custom-nightlight:hover {
-  color: @yellow;
-}
-#custom-idle, #idle_inhibitor {
-  color: @overlay0;
-  font-size: 15px;
-}
-#custom-idle.activated, #idle_inhibitor.activated {
+#custom-idle.activated {
   color: @pink;
 }
-#custom-idle.activated:hover, #idle_inhibitor.activated:hover {
-  color: @flamingo;
+#custom-updates.pending {
+  color: @yellow;
 }
-#custom-idle:hover, #idle_inhibitor:hover {
-  color: @text;
+#custom-updates.many {
+  color: @red;
+}
+#custom-notifications {
+  color: @mauve;
+  font-size: 14px;
+}
+#custom-notifications.dnd {
+  color: @overlay0;
 }
 #tray {
   padding: 0 6px;
-  margin: 4px 0;
 }
 #tray > .widget {
   padding: 0 3px;
@@ -102,93 +166,37 @@ window#waybar {
   -gtk-icon-effect: highlight;
   color: @urgent;
 }
-#workspaces {
-  padding: 0;
-  margin: 0;
-}
-#layout {
-  color: @subtext0;
-  padding: 0 8px;
-  margin: 5px 0 5px 4px;
-  border-radius: 6px;
-  font-weight: 700;
-}
-#workspaces button {
-  color: @overlay0;
-  background: transparent;
-  padding: 0 6px;
-  margin: 5px 0;
-  border-radius: 6px;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-#workspaces button.occupied, #workspaces button.visible {
-  color: @subtext0;
-}
-#workspaces button.focused, #workspaces button.active, #workspaces button.selected {
-  color: @accent;
-  background: alpha(@accent, 0.18);
-  border-radius: 6px;
-}
-#workspaces button.urgent {
-  color: @urgent;
-  background: alpha(@urgent, 0.2);
-  border-radius: 6px;
-}
-#workspaces button:hover {
-  color: @text;
-  background: alpha(@surface0, 0.6);
-}
+
+/* Right: system. */
 #wireplumber {
   color: @green;
 }
 #wireplumber.muted {
   color: @overlay0;
 }
-#wireplumber:hover {
-  color: @teal;
-}
 #backlight {
   color: @sky;
 }
-#backlight:hover {
-  color: @sapphire;
-}
-#network {
+#network.wifi, #network.ethernet {
   color: @yellow;
+}
+#network.linked {
+  color: @peach;
 }
 #network.disconnected {
   color: @urgent;
 }
-#network:hover {
-  color: @peach;
-}
-#bluetooth {
-  color: @sapphire;
-}
-#bluetooth.disabled, #bluetooth.off {
+#network.disabled {
   color: @overlay0;
 }
+#bluetooth.off, #bluetooth.disabled {
+  color: @overlay0;
+}
+#bluetooth.on {
+  color: @subtext0;
+}
 #bluetooth.connected {
-  color: @blue;
-}
-#bluetooth:hover {
   color: @sky;
-}
-#custom-power-profile {
-  color: @green;
-}
-#custom-power-profile.performance {
-  color: @red;
-}
-#custom-power-profile.balanced {
-  color: @blue;
-}
-#custom-power-profile.power-saver {
-  color: @green;
-}
-#custom-power-profile:hover {
-  color: @teal;
 }
 #battery {
   color: @teal;
@@ -202,21 +210,8 @@ window#waybar {
 #battery.critical:not(.charging) {
   color: @urgent;
 }
-#battery:hover {
-  color: @sapphire;
-}
-#clock {
-  color: @mauve;
-  font-weight: 700;
-}
-#clock:hover {
-  color: @lavender;
-}
 #custom-power {
   color: @red;
   font-size: 15px;
-  padding: 0 14px 0 8px;
-}
-#custom-power:hover {
-  color: @maroon;
+  padding: 0 12px 0 8px;
 }

@@ -84,6 +84,8 @@ assert_manifest_line "$MONOREPO_ROOT/layers/desktop/packages/repo/desktop.txt" f
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" fuzzel
 assert_manifest_line "$REPO_ROOT/packages/repo/core.txt" swayidle
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" waybar
+# checkupdates, for the Waybar pending updates counter.
+assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" pacman-contrib
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" satty
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" xdg-user-dirs
 assert_manifest_line "$REPO_ROOT/packages/repo/desktop.txt" brightnessctl
@@ -199,16 +201,27 @@ grep -Fq 'MangoWM' "$REPO_ROOT/README.es.md" || \
   fail "README.es.md no describe MangoWM"
 
 
-# Every right-side Waybar module shares the padded rule, so no icon sits
-# flush against its neighbour (custom/keyboard once had no rule at all).
+# Every right-side Waybar module, in both bars, shares the padded rule so no
+# icon sits flush against its neighbour (custom/keyboard once had no rule at
+# all). Named instances (network#compact) use their module's selector and a
+# group is checked through the modules it holds.
 waybar_config="$REPO_ROOT/home/mango/.config/waybar/config.json"
+waybar_modules="$REPO_ROOT/home/mango/.config/waybar/modules.json"
 waybar_css="$REPO_ROOT/home/mango/.local/share/dotfiles/theme/templates/mangowm/waybar.css"
-padded_rule=$(awk '/#bluetooth,/ && /#wireplumber/ { print; exit }' "$waybar_css")
+padded_rule=$(awk '/^#custom-launcher, #mpris/ { found = 1 } found { printf "%s ", $0 } found && /\{/ { exit }' "$waybar_css")
 [[ -n "$padded_rule" ]] || fail 'no se encontró la regla con padding de los módulos de Waybar'
 while IFS= read -r module; do
-  selector="#${module//\//-}"
-  [[ "$padded_rule" == *"$selector,"* || "$padded_rule" == *"$selector {"* ]] || \
-    fail "el módulo $module de Waybar no tiene padding"
-done < <(jq -r '."modules-right"[]' "$waybar_config")
+  if [[ "$module" == group/* ]]; then
+    mapfile -t members < <(jq -r --arg g "$module" '.[$g].modules[]' "$waybar_modules")
+  else
+    members=("$module")
+  fi
+  for member in "${members[@]}"; do
+    member=${member%%#*}
+    selector="#${member//\//-}"
+    [[ "$padded_rule" == *"$selector,"* || "$padded_rule" == *"$selector {"* ]] || \
+      fail "el módulo $member de Waybar no tiene padding"
+  done
+done < <(jq -r '.[]."modules-right"[]' "$waybar_config" | sort -u)
 
 printf 'OK: scaffold, manifests y paleta MangoWM validados\n'

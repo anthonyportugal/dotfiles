@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Notification bell: shows whether mako is in do-not-disturb mode, toggles it
+# and brings back the last dismissed notification.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+DND_MODE=do-not-disturb
+
+refresh_waybar() {
+  pkill -RTMIN+13 waybar 2>/dev/null || true
+}
+
+is_dnd() {
+  command -v makoctl >/dev/null 2>&1 || return 1
+  makoctl mode 2>/dev/null | grep -Fqx "$DND_MODE"
+}
+
+waybar_json() {
+  if is_dnd; then
+    printf '{"text":"󰂛","tooltip":"No molestar activado\\n\\nClic: ajustes rápidos · Clic derecho: desactivar","class":"dnd"}\n'
+  else
+    printf '{"text":"󰂚","tooltip":"Notificaciones\\n\\nClic: ajustes rápidos · Clic derecho: No molestar","class":"normal"}\n'
+  fi
+}
+
+case "${1:-waybar}" in
+  waybar)
+    waybar_json
+    ;;
+  dnd)
+    mangowm_require makoctl
+    makoctl mode -t "$DND_MODE" >/dev/null
+    refresh_waybar
+    ;;
+  restore)
+    mangowm_require makoctl
+    makoctl restore
+    ;;
+  *)
+    printf 'Uso: %s waybar|dnd|restore\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

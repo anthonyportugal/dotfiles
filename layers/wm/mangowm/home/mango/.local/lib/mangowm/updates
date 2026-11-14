@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Pending updates counter for Waybar.
+#   check    syncs a temporary copy of the pacman databases (checkupdates) and
+#            caches the count; the session runs it 2 minutes after login and
+#            every 3 hours. A failed sync (no network yet) retries 3 times,
+#            5 minutes apart, and keeps the last count meanwhile.
+#   refresh  recounts against the last synced copy without downloading; the
+#            session runs it after every pacman transaction.
+#   waybar   prints the cached count; nothing when there are no updates.
+#   upgrade  opens shelly upgrade in the floating terminal, then recounts.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+MANY=100
+ATTEMPTS=3
+RETRY_DELAY=${MANGOWM_UPDATES_RETRY_DELAY:-300}
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/mangowm"
+cache_file="$cache_dir/updates"
+
+refresh_waybar() {
+  pkill -RTMIN+12 waybar 2>/dev/null || true
+}
+
+# count [checkupdates arguments...]: exit 0 lists updates, 2 means none; any
+# other status is a failure and keeps the previous count.
+count() {
+  local output status=0
+
+  command -v checkupdates >/dev/null 2>&1 || return 1
+  output=$(checkupdates "$@" 2>/dev/null) || status=$?
+  case "$status" in
+    0) grep -c . <<< "$output" ;;
+    2) printf '0\n' ;;
+    *) return 1 ;;
+  esac
+}
+
+# store [checkupdates arguments...]: caches a new count; fails, keeping the
+# previous one, when it cannot count or write. Each writer has its own
+# temporary file, so a timer check and a pacman refresh can overlap. Callers
+# run it under && or ||, where errexit is off, so every step checks itself.
+store() {
+  local value tmp
+
+  value=$(count "$@") || return 1
+  mkdir -p -- "$cache_dir" || return 1
+  tmp=$(mktemp "$cache_file.XXXXXX") || return 1
+  if ! printf '%s\n' "$value" > "$tmp" || ! mv -f -- "$tmp" "$cache_file"; then
+    rm -f -- "$tmp"
+    return 1
+  fi
+  refresh_waybar
+}
+
+check_with_retries() {
+  local attempt
+
+  for (( attempt = 1; attempt <= ATTEMPTS; attempt++ )); do
+    store && return 0
+    (( attempt == ATTEMPTS )) || sleep "$RETRY_DELAY"
+  done
+  return 1
+}
+
+waybar_json() {
+  local value=0 class=pending
+
+  [[ -r "$cache_file" ]] && value=$(<"$cache_file")
+  [[ "$value" =~ ^[0-9]+$ ]] || value=0
+  if (( value == 0 )); then
+    printf '{"text":"","class":"none"}\n'
+    return 0
+  fi
+  (( value > MANY )) && class=many
+  printf '{"text":"󰚰 %s","tooltip":"%s actualizaciones pendientes\\n\\nClic: actualizar con shelly","class":"%s"}\n' \
+    "$value" "$value" "$class"
+}
+
+case "${1:-waybar}" in
+  check)
+    check_with_retries
+    ;;
+  refresh)
+    store --nosync || true
+    ;;
+  waybar)
+    waybar_json
+    ;;
+  upgrade)
+    mangowm_require shelly
+    "$HOME/.local/lib/mangowm/terminal" --app-id=floating-terminal shelly upgrade || true
+    store --nosync || true
+    ;;
+  *)
+    printf 'Uso: %s check|refresh|waybar|upgrade\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

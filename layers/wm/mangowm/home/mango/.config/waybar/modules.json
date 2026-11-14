@@ -1,0 +1,235 @@
+{
+  "custom/launcher": {
+    "format": "󰣇",
+    "tooltip": false,
+    "on-click": "$HOME/.local/lib/mangowm/launcher"
+  },
+  "mango/layout": {
+    "format": "󰕰 {symbol}",
+    "format-T": "󰛽 {symbol}",
+    "format-RT": "󰛾 {symbol}",
+    "format-CT": "󰕭 {symbol}",
+    "format-VT": "󰛼 {symbol}",
+    "format-DW": "󰕴 {symbol}",
+    "format-F": "󰯌 {symbol}",
+    "format-VF": "󰯋 {symbol}",
+    "format-G": "󰋁 {symbol}",
+    "format-VG": "󱇙 {symbol}",
+    "format-S": "󰕬 {symbol}",
+    "format-VS": "󰮾 {symbol}",
+    "format-M": "󰊓 {symbol}",
+    "format-K": "󰘸 {symbol}",
+    "format-VK": "󱟱 {symbol}",
+    "tooltip-format": "Layout: {symbol}\n\nClic: elegir layout · Rueda: alternar",
+    "on-click": "$HOME/.local/lib/mangowm/layout",
+    "on-scroll-up": "mmsg dispatch switch_layout",
+    "on-scroll-down": "mmsg dispatch switch_layout"
+  },
+  "mango/workspaces": {
+    "format": "{name}",
+    "hide-empty": true,
+    "on-click": "activate"
+  },
+  "mpris": {
+    "format": "{player_icon} {dynamic}",
+    "format-paused": "{status_icon} <i>{dynamic}</i>",
+    "max-length": 32,
+    "dynamic-len": 28,
+    "title-len": 18,
+    "artist-len": 12,
+    "dynamic-order": ["title", "artist"],
+    "dynamic-importance-order": ["title", "artist"],
+    "dynamic-separator": " · ",
+    "ellipsis": "…",
+    "tooltip-format": "{player} ({status})\n{title} - {artist}",
+    "tooltip-format-paused": "{player} ({status})\n<i>{title} - {artist}</i>",
+    "player-icons": {
+      "default": "󰐊",
+      "spotify": "󰓇",
+      "firefox": "󰈹",
+      "chromium": "",
+      "brave": "",
+      "chrome": "",
+      "mpv": "󰎆"
+    },
+    "status-icons": {
+      "paused": "󰏤"
+    }
+  },
+  "mpris#compact": {
+    "format": "{player_icon}",
+    "format-paused": "{status_icon}",
+    "tooltip-format": "{player} ({status})\n{title} - {artist}",
+    "tooltip-format-paused": "{player} ({status})\n<i>{title} - {artist}</i>",
+    "player-icons": {
+      "default": "󰐊",
+      "spotify": "󰓇",
+      "firefox": "󰈹",
+      "chromium": "",
+      "brave": "",
+      "chrome": "",
+      "mpv": "󰎆"
+    },
+    "status-icons": {
+      "paused": "󰏤"
+    }
+  },
+  "clock": {
+    "format": "{:%I:%M %p}",
+    "format-alt": "{:%a, %d %b %Y}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "right"
+    }
+  },
+  "custom/recording": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/recording waybar",
+    "interval": "once",
+    "signal": 10,
+    "on-click": "$HOME/.local/lib/mangowm/recording stop",
+    "tooltip": true
+  },
+  "custom/nightlight": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/night-light waybar",
+    "signal": 9,
+    "on-click": "$HOME/.local/lib/mangowm/night-light toggle"
+  },
+  "custom/idle": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/idle-inhibit waybar",
+    "signal": 11,
+    "on-click": "$HOME/.local/lib/mangowm/idle-inhibit toggle",
+    "tooltip": true
+  },
+  "custom/updates": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/updates waybar",
+    "interval": "once",
+    "signal": 12,
+    "on-click": "$HOME/.local/lib/mangowm/updates upgrade",
+    "tooltip": true
+  },
+  "group/quick": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-duration": 250,
+      "children-class": "quick-child",
+      "transition-left-to-right": false
+    },
+    "modules": ["custom/notifications", "tray"]
+  },
+  "custom/notifications": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/notifications waybar",
+    "interval": "once",
+    "signal": 13,
+    "on-click": "$HOME/.local/lib/mangowm/quick-settings",
+    "on-click-right": "$HOME/.local/lib/mangowm/notifications dnd",
+    "tooltip": true
+  },
+  "tray": {
+    "icon-size": 14,
+    "spacing": 8
+  },
+  "wireplumber": {
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟 {volume}%",
+    "format-icons": ["󰕿", "󰖀", "󰕾"],
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-click-right": "$HOME/.local/lib/mangowm/volume menu",
+    "scroll-step": 5
+  },
+  "backlight": {
+    "format": "{icon} {percent}%",
+    "format-icons": ["󰃞", "󰃟", "󰃠"],
+    "scroll-step": 5
+  },
+  "network": {
+    "format-wifi": "{icon} {essid}",
+    "format-ethernet": "󰈀",
+    "format-linked": "󰤫 {ifname}",
+    "format-disconnected": "󰤯 Sin red",
+    "format-disabled": "󰤮",
+    "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
+    "interval": 10,
+    "tooltip-format-wifi": "{essid} · {signalStrength}%\n{ipaddr}/{cidr} vía {gwaddr}\n󰇚 {bandwidthDownBytes} · 󰕒 {bandwidthUpBytes}",
+    "tooltip-format-ethernet": "{ifname} · {ipaddr}/{cidr}\n󰇚 {bandwidthDownBytes} · 󰕒 {bandwidthUpBytes}",
+    "tooltip-format-linked": "{ifname}: conectado sin dirección IP",
+    "tooltip-format-disconnected": "Sin conexión · el wifi está encendido",
+    "tooltip-format-disabled": "Wifi apagado",
+    "on-click": "$HOME/.local/lib/mangowm/wifi select",
+    "on-click-right": "$HOME/.local/lib/mangowm/wifi toggle"
+  },
+  "network#compact": {
+    "format-wifi": "{icon}",
+    "format-ethernet": "󰈀",
+    "format-linked": "󰤫",
+    "format-disconnected": "󰤯",
+    "format-disabled": "󰤮",
+    "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
+    "interval": 10,
+    "tooltip-format-wifi": "{essid} · {signalStrength}%\n{ipaddr}/{cidr} vía {gwaddr}\n󰇚 {bandwidthDownBytes} · 󰕒 {bandwidthUpBytes}",
+    "tooltip-format-ethernet": "{ifname} · {ipaddr}/{cidr}\n󰇚 {bandwidthDownBytes} · 󰕒 {bandwidthUpBytes}",
+    "tooltip-format-linked": "{ifname}: conectado sin dirección IP",
+    "tooltip-format-disconnected": "Sin conexión · el wifi está encendido",
+    "tooltip-format-disabled": "Wifi apagado",
+    "on-click": "$HOME/.local/lib/mangowm/wifi select",
+    "on-click-right": "$HOME/.local/lib/mangowm/wifi toggle"
+  },
+  "bluetooth": {
+    "format-no-controller": "",
+    "format-disabled": "󰂲",
+    "format-off": "󰂲",
+    "format-on": "󰂯",
+    "format-connected": "󰂱 {device_alias}",
+    "format-connected-battery": "󰂱 {device_alias} {device_battery_percentage}%",
+    "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} conectado(s)",
+    "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} conectado(s)\n\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
+    "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
+    "on-click": "\"$HOME/.local/lib/mangowm/bluetooth\""
+  },
+  "bluetooth#compact": {
+    "format-no-controller": "",
+    "format-disabled": "󰂲",
+    "format-off": "󰂲",
+    "format-on": "󰂯",
+    "format-connected": "󰂱",
+    "format-connected-battery": "󰂱 {device_battery_percentage}%",
+    "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} conectado(s)",
+    "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} conectado(s)\n\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
+    "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
+    "on-click": "\"$HOME/.local/lib/mangowm/bluetooth\""
+  },
+  "custom/keyboard": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "$HOME/.local/lib/mangowm/keyboard watch",
+    "on-click": "$HOME/.local/lib/mangowm/keyboard switch",
+    "tooltip": true
+  },
+  "battery": {
+    "states": {
+      "warning": 25,
+      "critical": 10
+    },
+    "format": "{icon} {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-plugged": "󰚥 {capacity}%",
+    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+  },
+  "custom/power": {
+    "format": "󰐥",
+    "tooltip": false,
+    "on-click": "$HOME/.local/lib/mangowm/power-menu"
+  }
+}

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Quick settings: the toggles that no longer take room in the bar, each with
+# its current state. Opened from the Waybar bell.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+lib="$HOME/.local/lib/mangowm"
+
+state() { "$@" >/dev/null 2>&1 && printf 'activada' || printf 'desactivada'; }
+
+night_on() { [[ "$("$lib/night-light" waybar)" == *'"class":"on"'* ]]; }
+idle_on() { [[ "$("$lib/idle-inhibit" status)" == inhibited ]]; }
+dnd_on() { [[ "$("$lib/notifications" waybar)" == *'"class":"dnd"'* ]]; }
+
+profile=''
+if command -v powerprofilesctl >/dev/null 2>&1; then
+  case "$(powerprofilesctl get 2>/dev/null || true)" in
+    power-saver) profile='Ahorro de energía' ;;
+    performance) profile='Alto rendimiento' ;;
+    balanced) profile='Equilibrado' ;;
+  esac
+fi
+
+rows=$(
+  printf '󰖔  Luz nocturna: %s\tnight\n' "$(state night_on)"
+  printf '󰅶  Pantalla siempre encendida: %s\tidle\n' "$(state idle_on)"
+  printf '󰂛  No molestar: %s\tdnd\n' "$(state dnd_on)"
+  [[ -z "$profile" ]] || printf '󰾅  Perfil de energía: %s\tprofile\n' "$profile"
+  printf '󰂚  Última notificación\trestore\n'
+)
+
+choice=$(mangowm_menu 'Ajustes ❯ ' <<< "$rows") || exit 0
+case "$choice" in
+  night) exec "$lib/night-light" toggle ;;
+  idle) exec "$lib/idle-inhibit" toggle ;;
+  dnd) exec "$lib/notifications" dnd ;;
+  profile) exec "$lib/power-profile" select ;;
+  restore) exec "$lib/notifications" restore ;;
+esac

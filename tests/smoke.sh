@@ -57,9 +57,10 @@ stage_4() {
 }
 
 stage_5() {
-  printf '\n--> 5/13: Executing MangoWM scaffold and menu smoke tests...\n'
+  printf '\n--> 5/13: Executing MangoWM scaffold, menu and Waybar smoke tests...\n'
   "$REPO_ROOT/layers/wm/mangowm/tests/scaffold-smoke.sh"
   "$REPO_ROOT/layers/wm/mangowm/tests/menu-smoke.sh"
+  "$REPO_ROOT/layers/wm/mangowm/tests/waybar-smoke.sh"
 }
 
 stage_6() {

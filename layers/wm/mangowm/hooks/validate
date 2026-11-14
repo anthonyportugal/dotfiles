@@ -123,6 +123,12 @@ validate_portability() {
       '/etc/skel|/usr/share/archcraft|DP-[0-9]|HDMI-[0-9]|BAT[0-9]|amdgpu_bl[0-9]|enp[0-9]' \
       "$STOW_DIR/$package_name" || true)
   done
+  # The one allowed output name: the Waybar bar selectors for built-in laptop
+  # panels (eDP-N is the connector type every laptop panel reports, not a
+  # specific machine). Any other output on that line still fails.
+  matches=$(grep -vE \
+    '/\.config/waybar/config\.json:[0-9]+:[[:space:]]*"output": \[("!?eDP-[0-9]+", ?)*"!?eDP-[0-9]+"(, "\*")?\],?$' \
+    <<< "$matches" || true)
   if [[ -n "$matches" ]]; then
     error "se encontraron dependencias Archcraft o nombres de hardware fijos"
     printf '%s\n' "$matches" >&2

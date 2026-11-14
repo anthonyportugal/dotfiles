@@ -64,6 +64,23 @@ if [[ -r "$XDG_CONFIG_HOME/waybar/config.json" ]] && command -v waybar >/dev/nul
     --style "$theme_dir/waybar.css"
 fi
 
+# Pending updates: a check 2 minutes after login and every 3 hours, and a
+# recount without downloading whenever pacman takes or releases its lock.
+updates="$HOME/.local/lib/mangowm/updates"
+if [[ -x "$updates" ]] && command -v checkupdates >/dev/null 2>&1; then
+  if ! systemctl --user --quiet is-active mangowm-updates.timer; then
+    systemd-run --user --quiet --collect \
+      --unit=mangowm-updates --on-active=2min --on-unit-active=3h \
+      -- "$updates" check || true
+  fi
+  if ! systemctl --user --quiet is-active mangowm-updates-refresh.path; then
+    systemd-run --user --quiet --collect \
+      --unit=mangowm-updates-refresh \
+      --path-property=PathChanged=/var/lib/pacman/db.lck \
+      -- "$updates" refresh || true
+  fi
+fi
+
 polkit_agent=/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 if [[ -x "$polkit_agent" ]]; then
   start_unit mangowm-polkit "$polkit_agent"

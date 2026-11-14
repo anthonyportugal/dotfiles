@@ -79,11 +79,19 @@ case "${1:-toggle}" in
   status)
     status
     ;;
-  waybar|status-json)
+  status-json)
     status_json
     ;;
+  waybar)
+    # The bar only shows the coffee cup while the screen is kept on.
+    if is_inhibited; then
+      status_json
+    else
+      printf '{"text":"","class":"deactivated"}\n'
+    fi
+    ;;
   *)
-    printf 'Uso: %s toggle|status|waybar\n' "${0##*/}" >&2
+    printf 'Uso: %s toggle|status|status-json|waybar\n' "${0##*/}" >&2
     exit 2
     ;;
 esac

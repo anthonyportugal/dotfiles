@@ -51,6 +51,7 @@ for managed_path in \
   .config/mango/config.conf \
   .config/mango/conf.d/50-desktop.conf \
   .config/waybar/config.json \
+  .config/waybar/modules.json \
   .config/wlogout/layout \
   .config/swayidle/config \
   .config/xdg-desktop-portal/mango-portals.conf \
@@ -60,7 +61,10 @@ for managed_path in \
   .local/lib/mangowm/brightness \
   .local/lib/mangowm/color-picker \
   .local/lib/mangowm/keyboard \
+  .local/lib/mangowm/notifications \
+  .local/lib/mangowm/quick-settings \
   .local/lib/mangowm/recording \
+  .local/lib/mangowm/updates \
   .local/lib/mangowm/wallpaper; do
   [[ -L "$TARGET/$managed_path" ]] || fail "falta el enlace $managed_path"
 done
@@ -216,9 +220,9 @@ grep -q '^pkill .*waybar' "$LOG" || \
   fail 'night-light no refrescó waybar mediante señal'
 # The Waybar bluetooth icon stays native; a click opens bluetui in the
 # floating terminal through the terminal helper.
-waybar_config="$TARGET/.config/waybar/config.json"
-[[ $(jq -r '.bluetooth.format' "$waybar_config") == '󰂯' ]] || fail 'waybar perdió el icono de bluetooth'
-bluetooth_click=$(jq -r '.bluetooth["on-click"]' "$waybar_config")
+waybar_modules="$TARGET/.config/waybar/modules.json"
+[[ $(jq -r '.bluetooth."format-on"' "$waybar_modules") == '󰂯' ]] || fail 'waybar perdió el icono de bluetooth'
+bluetooth_click=$(jq -r '.bluetooth["on-click"]' "$waybar_modules")
 sh -c "$bluetooth_click"
 grep -q '^foot --config=[^ ]*/mangowm/foot\.ini --app-id=floating-terminal bluetui $' "$LOG" || \
   fail "el clic de bluetooth no abrió bluetui en el terminal: $bluetooth_click"
@@ -304,9 +308,9 @@ grep -Fq 'Super + Shift + T ' "$TARGET/.local/lib/mangowm/keybinds" || \
   fail 'la ayuda de atajos no muestra Super+Shift+T'
 grep -Fq 'Dwindle / Tiling' "$TARGET/.local/lib/mangowm/keybinds" && \
   fail 'la ayuda de Super+T no refleja los layouts que alterna'
-jq -e '."modules-center" | index("mango/layout")' "$TARGET/.config/waybar/config.json" >/dev/null || \
+jq -e 'all(.[]; ."modules-left" | index("mango/layout"))' "$TARGET/.config/waybar/config.json" >/dev/null || \
   fail 'Waybar no muestra el layout de mango'
-[[ $(jq -r '."mango/layout"."on-click"' "$TARGET/.config/waybar/config.json") == \
+[[ $(jq -r '."mango/layout"."on-click"' "$TARGET/.config/waybar/modules.json") == \
    "\$HOME/.local/lib/mangowm/layout" ]] || fail 'el módulo de layout no abre el selector'
 : > "$LOG"
 MANGOWM_TEST_FUZZEL_PICK=1 MANGOWM_TEST_FUZZEL_ROWS="$TEST_ROOT/layout-rows" \
