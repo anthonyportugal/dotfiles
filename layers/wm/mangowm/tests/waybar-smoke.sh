@@ -470,7 +470,6 @@ grep -Fq 'mangowm-battery.service' "$MANGO_HOME/.local/lib/mangowm/session-stop"
 # wlogout opens on the focused output, sized for the active monitor. With
 # --no-span and -P it stays invisible on mango 0.18.
 rm -f "$FAKE_BIN/mmsg"
-rm -f "$FAKE_BIN/mmsg"
 cat > "$FAKE_BIN/mmsg" <<'FAKE'
 #!/usr/bin/env bash
 printf 'mmsg %s\n' "$*" >> "$TEST_LOG"
