@@ -22,7 +22,7 @@ set_profile() {
       performance) label="Alto rendimiento"; icon="󰓅" ;;
       *)           label="$target"; icon="" ;;
     esac
-    mangowm_notify low "Perfil de Energía" "$icon $label activo"
+    mangowm_notify_replace power-profile low "Perfil de Energía" "$icon $label activo"
     pkill -RTMIN+8 waybar 2>/dev/null || true
   fi
 }

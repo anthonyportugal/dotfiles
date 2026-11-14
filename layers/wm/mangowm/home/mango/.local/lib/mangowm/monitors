@@ -173,9 +173,9 @@ except Exception:
 ' 2>/dev/null || echo 1)
 
   if (( count > 1 )); then
-    mangowm_notify normal "Monitores configurados" "Disposición dual activa: Pantalla izquierda (1-5), derecha (6-9)"
+    mangowm_notify_replace monitors normal "Monitores configurados" "Disposición dual activa: Pantalla izquierda (1-5), derecha (6-9)"
   else
-    mangowm_notify normal "Monitor configurado" "Disposición única activa: 9 escritorios en pantalla"
+    mangowm_notify_replace monitors normal "Monitor configurado" "Disposición única activa: 9 escritorios en pantalla"
   fi
 }
 

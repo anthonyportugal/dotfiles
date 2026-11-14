@@ -32,14 +32,14 @@ enable() {
   sleep 0.05
   gammastep -O "$temp" >/dev/null 2>&1 &
   printf 'on\n' > "$state_file"
-  mangowm_notify low 'Luz nocturna activada' "${temp} K"
+  mangowm_notify_replace night-light low 'Luz nocturna activada' "${temp} K"
   refresh_waybar
 }
 
 disable() {
   pkill -x gammastep 2>/dev/null || true
   rm -f "$state_file"
-  mangowm_notify low 'Luz nocturna desactivada'
+  mangowm_notify_replace night-light low 'Luz nocturna desactivada'
   refresh_waybar
 }
 
