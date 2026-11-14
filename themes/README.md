@@ -133,6 +133,7 @@ $XDG_STATE_HOME/dotfiles/theme/
     ├── lazygit/theme.yml         # appended to LG_CONFIG_FILE by zsh
     ├── fzf/options               # FZF_DEFAULT_OPTS_FILE set by zsh
     ├── nvim/palette.lua          # read by ~/.config/nvim/colors/dotfiles.lua (dev layer)
+    ├── fastfetch/args            # accent arguments passed by the zsh fastfetch wrapper
     ├── background
     ├── metadata                  # schema=2, id, family, flavour, accent_name
     └── <wm>/...                  # one directory per installed WM
@@ -158,7 +159,7 @@ Each application still starts when no theme was rendered yet:
 | lazygit | `LG_CONFIG_FILE` | zsh leaves it unset: lazygit's default colors |
 | fzf | `FZF_DEFAULT_OPTS_FILE` | zsh leaves it unset: fzf's default colors |
 | Neovim (dev layer) | the `colorscheme` option in `lua/plugins/colorscheme.lua` loads `colors/dotfiles.lua`, which builds the highlights with mini.base16 from the rendered palette | tokyonight (LazyVim's default) |
-| fastfetch | ANSI color names | follows the terminal palette (no rendered file) |
+| fastfetch | the zsh `fastfetch` function (`conf.d/45-fastfetch.zsh`) passes `fastfetch/args` before the caller's arguments | the config's ANSI color names, which follow the terminal palette |
 
 bat only sees a new palette after `bat cache --build`: the cli layer's
 post-link builds it, and the bat render hook

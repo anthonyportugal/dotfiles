@@ -129,9 +129,13 @@ check_cli() {
   local palette=$1 revision=$2 output
 
   for output in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml \
-                micro/default.micro fzf/options; do
+                micro/default.micro fzf/options fastfetch/args; do
     expect_rendered "$revision/$output"
   done
+  # fastfetch receives the accent as arguments, one per line.
+  expect_line "$revision/fastfetch/args" '--color-keys'
+  expect_line "$revision/fastfetch/args" "$(palette_value "$palette" accent)"
+  expect_line "$revision/fastfetch/args" "$(palette_value "$palette" hue_yellow)"
   python3 - "$revision/bat/dotfiles.tmTheme" "$palette" <<'PY' || fail "bat/dotfiles.tmTheme no lleva la paleta"
 import plistlib, sys
 theme = plistlib.load(open(sys.argv[1], "rb"))
@@ -331,7 +335,7 @@ for config in "$CLI_HOME/lazygit/.config/lazygit/config.yml" "$CLI_HOME/fastfetc
   expect_no_hex "$config"
 done
 for template in bat/dotfiles.tmTheme btop/dotfiles.theme lazygit/theme.yml micro/default.micro fzf/options \
-                yazi/flavor.toml nvim/palette.lua; do
+                yazi/flavor.toml nvim/palette.lua fastfetch/args; do
   expect_no_hex "$SHARED_TEMPLATES/$template"
 done
 for version in 3.0 4.0; do
@@ -377,6 +381,39 @@ if command -v zsh >/dev/null 2>&1; then
     fail "zsh con tema renderizado y sin caché de bat: $(zsh_env "$LINKS")"
   : > "$LINKS/.cache/bat/themes.bin"
   [[ "$(zsh_env "$LINKS")" == dotfiles\|* ]] || fail "zsh no seleccionó el tema de bat con la caché al día"
+fi
+
+# The fastfetch wrapper passes the rendered arguments before the caller's, so
+# an explicit flag still wins, and adds nothing without a rendered theme.
+FASTFETCH_ZSH="$CLI_HOME/fastfetch/.config/zsh/conf.d/45-fastfetch.zsh"
+if command -v zsh >/dev/null 2>&1; then
+  FF_BIN="$TEST_ROOT/fastfetch-bin"
+  mkdir -p "$FF_BIN"
+  printf '#!/bin/sh\nprintf "%%s|" "$@"\n' > "$FF_BIN/fastfetch"
+  chmod +x "$FF_BIN/fastfetch"
+  # shellcheck disable=SC2016
+  ff_args() {
+    env -i HOME="$1" PATH="$FF_BIN:$PATH" zsh -fc 'source "$1"; fastfetch --pipe' _ "$FASTFETCH_ZSH"
+  }
+  [[ "$(ff_args "$EMPTY")" == '--pipe|' ]] || fail "fastfetch sin tema recibió argumentos: $(ff_args "$EMPTY")"
+  accent=$(palette_value "$REPO_ROOT/themes/palettes/catppuccin-mocha-pink.conf" accent)
+  [[ "$(ff_args "$LINKS")" == "--color-keys|$accent|"*'|--pipe|' ]] || \
+    fail "fastfetch no recibió el acento del tema: $(ff_args "$LINKS")"
+fi
+
+# The fastfetch config parses, shows the four sections and draws the logo
+# with its four color slots.
+FF_CONFIG="$CLI_HOME/fastfetch/.config/fastfetch"
+for slot in 1 2 3 4; do
+  grep -Fq "\$$slot" "$FF_CONFIG/logo.txt" || fail "el logo de fastfetch no usa el color \$$slot"
+done
+if command -v fastfetch >/dev/null 2>&1; then
+  ff_out=$(command fastfetch -c "$FF_CONFIG/config.jsonc" --logo none --pipe 2>&1) || \
+    fail "fastfetch rechazó la configuración: $ff_out"
+  for section in sistema escritorio desarrollo hardware; do
+    [[ "$ff_out" == *"$section"* ]] || fail "fastfetch no muestra la sección $section"
+  done
+  [[ "$ff_out" != *'Local IP'* ]] || fail 'fastfetch muestra la IP local'
 fi
 
 # fzf parses the rendered options file.

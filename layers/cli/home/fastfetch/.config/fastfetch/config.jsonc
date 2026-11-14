@@ -1,20 +1,48 @@
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  // Colors here are the ANSI fallback. With a rendered theme, the zsh wrapper
+  // passes the accent from $XDG_STATE_HOME/dotfiles/theme/current/fastfetch/args.
   "logo": {
     "source": "~/.config/fastfetch/logo.txt",
     "type": "file",
     "color": {
-      "1": "magenta",
-      "2": "cyan"
+      "1": "white",
+      "2": "yellow",
+      "3": "magenta",
+      "4": "bright_white"
     },
     "padding": {
       "top": 1,
       "left": 2,
-      "right": 3
+      "right": 4
     }
   },
   "display": {
-    "separator": " 󰄾 "
+    "separator": "  ",
+    "color": {
+      "keys": "magenta",
+      "title": "magenta"
+    },
+    "key": {
+      "width": 10
+    },
+    "bar": {
+      "width": 14,
+      "char": {
+        "elapsed": "■",
+        "total": "■"
+      },
+      "border": {
+        "left": "",
+        "right": ""
+      },
+      "color": {
+        "total": "bright_black"
+      }
+    },
+    "percent": {
+      "type": ["bar"]
+    }
   },
   "modules": [
     {
@@ -26,73 +54,43 @@
       }
     },
     {
-      "type": "separator",
-      "string": "─"
+      // WM and active theme, dim, under the title.
+      "type": "command",
+      "key": " ",
+      "keyWidth": 1,
+      "shell": "/bin/sh",
+      "text": "theme=$(sed -n 's/^id=//p' \"${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme/current/metadata\" 2>/dev/null); printf '%s%s' \"${XDG_CURRENT_DESKTOP:-tty}\" \"${theme:+ · $theme}\"",
+      "format": "{#90}{}"
     },
+    "break",
+    { "type": "custom", "format": "{#1}sistema {#90}────────────────────────────" },
+    { "type": "os", "key": "os", "format": "{name} · kernel {kernel-release}" },
+    { "type": "uptime", "key": "uptime" },
+    { "type": "packages", "key": "pkgs" },
+    "break",
+    { "type": "custom", "format": "{#1}escritorio {#90}─────────────────────────" },
+    { "type": "wm", "key": "wm" },
+    { "type": "terminal", "key": "term" },
+    { "type": "terminalfont", "key": "fuente" },
+    { "type": "shell", "key": "shell" },
+    "break",
+    { "type": "custom", "format": "{#1}desarrollo {#90}─────────────────────────" },
+    { "type": "editor", "key": "editor" },
     {
-      "type": "os",
-      "key": " OS",
-      "keyColor": "cyan"
+      // Major versions of the installed runtimes only; the module hides when
+      // none is installed.
+      "type": "command",
+      "key": "stack",
+      "shell": "/bin/sh",
+      "text": "out=''; add() { out=\"${out:+$out · }$1\"; }; command -v node >/dev/null 2>&1 && add \"node $(node --version | sed 's/^v//; s/\\..*//')\"; command -v go >/dev/null 2>&1 && add \"go $(go version | sed -n 's/.*go\\([0-9]*\\.[0-9]*\\).*/\\1/p')\"; command -v rustc >/dev/null 2>&1 && add \"rust $(rustc --version | sed -n 's/^rustc \\([0-9]*\\.[0-9]*\\).*/\\1/p')\"; [ -n \"$out\" ] && printf '%s' \"$out\""
     },
-    {
-      "type": "kernel",
-      "key": " Kernel",
-      "keyColor": "cyan"
-    },
-    {
-      "type": "uptime",
-      "key": "󰅐 Uptime",
-      "keyColor": "cyan"
-    },
-    {
-      "type": "packages",
-      "key": "󰏖 Packages",
-      "keyColor": "yellow"
-    },
-    {
-      "type": "shell",
-      "key": " Shell",
-      "keyColor": "yellow"
-    },
-    {
-      "type": "wm",
-      "key": " WM",
-      "keyColor": "yellow"
-    },
-    {
-      "type": "terminal",
-      "key": " Terminal",
-      "keyColor": "yellow"
-    },
-    {
-      "type": "break"
-    },
-    {
-      "type": "cpu",
-      "key": " CPU",
-      "keyColor": "green"
-    },
-    {
-      "type": "gpu",
-      "key": "󰢮 GPU",
-      "keyColor": "green"
-    },
-    {
-      "type": "memory",
-      "key": "󰍛 Memory",
-      "keyColor": "green"
-    },
-    {
-      "type": "disk",
-      "key": "󰋊 Disk",
-      "keyColor": "green"
-    },
-    {
-      "type": "break"
-    },
-    {
-      "type": "colors",
-      "symbol": "circle"
-    }
+    "break",
+    { "type": "custom", "format": "{#1}hardware {#90}───────────────────────────" },
+    { "type": "cpu", "key": "cpu" },
+    { "type": "gpu", "key": "gpu" },
+    { "type": "memory", "key": "memoria" },
+    { "type": "disk", "key": "disco", "folders": "/" },
+    "break",
+    { "type": "colors", "symbol": "circle" }
   ]
 }

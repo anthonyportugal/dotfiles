@@ -1,0 +1,14 @@
+--color-keys
+{{accent}}
+--color-title
+{{accent}}
+--logo-color-1
+{{foreground_muted}}
+--logo-color-2
+{{hue_yellow}}
+--logo-color-3
+{{accent}}
+--logo-color-4
+{{foreground}}
+--bar-color-total
+{{surface_hover}}
