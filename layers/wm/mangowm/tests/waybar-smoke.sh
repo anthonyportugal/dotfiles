@@ -177,6 +177,10 @@ case "$name" in
       fi
     fi
     ;;
+  pkill)
+    # No wlogout is open unless WLOGOUT_RUNNING says so.
+    [[ "$*" != *wlogout* || -n "${WLOGOUT_RUNNING-}" ]] || exit 1
+    ;;
   wpctl)
     [[ "${1-}" == get-volume ]] && printf 'Volume: %s%s\n' "${WPCTL_VOLUME:-0.45}" "${WPCTL_MUTED:+ [MUTED]}"
     ;;
@@ -187,7 +191,7 @@ esac
 exit 0
 FAKE
 chmod +x "$FAKE_BIN/fake"
-for tool in fuzzel makoctl checkupdates pkill gammastep notify-send systemctl wpctl brightnessctl \
+for tool in fuzzel makoctl checkupdates pkill gammastep notify-send systemctl wpctl brightnessctl wlogout \
   systemd-run powerprofilesctl mmsg foot; do
   ln -s "$FAKE_BIN/fake" "$FAKE_BIN/$tool"
 done
@@ -460,5 +464,26 @@ MANGOWM_POWER_SUPPLY="$TEST_ROOT/no-supply" "$LIB/battery" check || fail 'sin ba
 start=$(<"$MANGO_HOME/.local/lib/mangowm/session-start")
 [[ "$start" == *'start_unit mangowm-battery'* ]] || fail 'session-start no vigila la batería'
 grep -Fq 'mangowm-battery.service' "$MANGO_HOME/.local/lib/mangowm/session-stop" || fail 'session-stop no detiene el aviso de batería'
+
+# --- Power menu -----------------------------------------------------------------
+
+# wlogout opens on the focused output, sized for the active monitor. With
+# --no-span and -P it stays invisible on mango 0.18.
+rm -f "$FAKE_BIN/mmsg"
+rm -f "$FAKE_BIN/mmsg"
+cat > "$FAKE_BIN/mmsg" <<'FAKE'
+#!/usr/bin/env bash
+printf 'mmsg %s\n' "$*" >> "$TEST_LOG"
+[[ "$*" == 'get all-monitors' ]] && \
+  printf '{"monitors":[{"name":"HDMI-A-1","active":false,"width":1920,"height":1080},{"name":"DP-1","active":true,"width":2560,"height":1440}]}\n'
+exit 0
+FAKE
+chmod +x "$FAKE_BIN/mmsg"
+: > "$LOG"
+"$LIB/power-menu" || fail 'power-menu falló'
+menu=$(grep '^wlogout ' "$LOG") || fail "power-menu no abrió wlogout: $(<"$LOG")"
+[[ " $menu " != *' --no-span '* && " $menu " != *' -P '* ]] || fail "wlogout recibe opciones que lo dejan invisible: $menu"
+[[ " $menu " == *' --protocol layer-shell '* ]] || fail "wlogout no usa layer-shell: $menu"
+[[ " $menu " == *' -L 1090 -R 1090 -T 530 -B 530 '* ]] || fail "wlogout no se centró en el monitor activo: $menu"
 
 printf 'OK: Waybar, ajustes rápidos, notificaciones y actualizaciones validados\n'
