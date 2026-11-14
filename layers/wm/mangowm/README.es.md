@@ -28,7 +28,8 @@ Sesión de Wayland autónoma, modular y minimalista optimizada para **Arch Linux
 
 - 🚀 **Mosaico Wayland Dinámico:** Compositor moderno de última generación con cambio de disposiciones en caliente (*Dwindle, Tile, Grid, Monocle, Scroller*).
 - 🎨 **Tematización Dinámica Atómica:** MangoWM aporta plantillas al motor compartido `dotfiles-theme` (capa desktop), que genera la configuración de MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock y Wlogout con 14 acentos Mocha intercambiables.
-- 📊 **Waybar y Notificaciones a Medida:** Barra de estado con controles interactivos, reproducción multimedia en vivo, estado de red, batería y notificaciones con Mako.
+- 📊 **Waybar y Notificaciones a Medida:** Barra de estado organizada por zonas (izquierda: layout, workspaces y música; centro: reloj; derecha: sistema). Los módulos se ocultan cuando no tienen nada que mostrar (luz nocturna y pantalla siempre encendida solo mientras están activas, el teclado solo con varias distribuciones, las actualizaciones solo si hay pendientes). La campana abre los ajustes rápidos (luz nocturna, pantalla siempre encendida, No molestar, perfil de energía, última notificación); el clic derecho alterna No molestar y al pasar el cursor despliega el tray. Las pantallas de laptop (`eDP-*`) usan una barra compacta y los monitores externos la completa.
+- 📦 **Actualizaciones pendientes:** `checkupdates` se ejecuta 2 minutos después de iniciar sesión y cada 3 horas, recuenta sin descargar tras cada transacción de pacman, y un clic abre `shelly upgrade`.
 - 💻 **Laptop y Grabación Integradas:** Control de brillo por hardware (`brightnessctl`) y grabación fluida de pantalla (`wf-recorder`) listos para usar sin configuración adicional.
 - 🌙 **Confort Visual y Luz Nocturna:** Integración con Gammastep para ajuste de temperatura de color con estado en vivo y conmutable desde Waybar.
 - 🔒 **GNU Stow y Cero Basura:** Arquitectura limpia de 2 niveles (`core`, `desktop`) con simulación segura (dry-run) y diagnósticos de salud del sistema (`doctor`).
@@ -178,7 +179,7 @@ El entorno utiliza el tema **Catppuccin Mocha**, compatible con sus **14 paletas
 | `Super + Shift + W` | Abrir selector interactivo de redes Wi-Fi (Fuzzel) |
 | `Super + Shift + B` | Abrir el gestor Bluetooth (bluetui en terminal flotante) |
 | `Super + V` | Abrir menú interactivo de control de volumen (Fuzzel) |
-| `Super + N` | Alternar filtro de luz nocturna (Gammastep con indicador en Waybar) |
+| `Super + N` | Alternar filtro de luz nocturna (Gammastep; su icono en Waybar aparece mientras está activa) |
 | `Super + W` / `Super + Ctrl + W` | Seleccionar fondo desde la galería vía Fuzzel (Swaybg) |
 | `Print` / `Super + Print` / `Super + Shift + S` | Captura interactiva por región con editor de anotaciones Satty |
 | `Shift + Print` | Captura de pantalla completa con editor Satty |

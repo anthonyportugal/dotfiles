@@ -28,7 +28,8 @@ Autonomous, modular, and minimal Wayland session optimized for **Arch Linux** us
 
 - 🚀 **Dynamic Wayland Tiling:** Next-generation dynamic tiling compositor with runtime layout switching (*Dwindle, Tile, Grid, Monocle, Scroller*).
 - 🎨 **Atomic Dynamic Theming:** MangoWM ships templates for the shared `dotfiles-theme` engine (desktop layer), which renders MangoWM, Foot, Fuzzel, Waybar, Mako, Swaylock, and Wlogout configs with 14 hot-swappable Mocha accents.
-- 📊 **Tailored Waybar & Notifications:** Sleek status bar with interactive popups, live media controls, network status, battery monitors, and Mako notifications.
+- 📊 **Tailored Waybar & Notifications:** Status bar read by zones (left: layout, workspaces, media; centre: clock; right: system). Modules hide when they have nothing to say (night light and screen-always-on only while active, the keyboard only with several layouts, updates only when pending). The bell opens quick settings (night light, screen always on, do not disturb, power profile, last notification); a right click toggles do not disturb and hovering it reveals the tray. Laptop panels (`eDP-*`) get a compact bar, external monitors the full one.
+- 📦 **Pending updates:** `checkupdates` runs 2 minutes after login and every 3 hours, recounts without downloading after every pacman transaction, and a click opens `shelly upgrade`.
 - 💻 **Integrated Laptop & Recording:** Out-of-the-box hardware brightness control (`brightnessctl`) and Wayland screen recording (`wf-recorder`).
 - 🌙 **Eye Comfort & Night Light:** Integrated Gammastep warm color temperature with real-time toggle and status in Waybar.
 - 🔒 **GNU Stow & Zero Bloat:** Clean 2-tier architecture (`core`, `desktop`) with built-in dry-run safety and health checks (`doctor`).
@@ -178,7 +179,7 @@ The desktop is styled with **Catppuccin Mocha**, supporting all **14 official ac
 | `Super + Shift + W` | Open interactive Wi-Fi network selector (Fuzzel) |
 | `Super + Shift + B` | Open the Bluetooth manager (bluetui in a floating terminal) |
 | `Super + V` | Open interactive audio volume control menu (Fuzzel) |
-| `Super + N` | Toggle warm night light (Gammastep with real-time Waybar status) |
+| `Super + N` | Toggle warm night light (Gammastep; its Waybar icon shows while it is on) |
 | `Super + W` / `Super + Ctrl + W` | Select wallpaper from gallery via Fuzzel (Swaybg) |
 | `Print` / `Super + Print` / `Super + Shift + S` | Interactive region screenshot with Satty annotation editor |
 | `Shift + Print` | Fullscreen screenshot with Satty editor |
