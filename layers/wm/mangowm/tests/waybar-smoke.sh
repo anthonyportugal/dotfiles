@@ -169,6 +169,8 @@ case "$name" in
       if [[ -n "$replace" ]]; then
         printf '%s\n' "$replace"
       else
+        # NOTIFY_SLOW widens the window between reading and saving an id.
+        [[ -z "${NOTIFY_SLOW-}" ]] || sleep "$NOTIFY_SLOW"
         next=$(( $(cat "$TEST_ROOT/notify.next" 2>/dev/null || echo 100) + 1 ))
         printf '%s\n' "$next" > "$TEST_ROOT/notify.next"
         printf '%s\n' "$next"
@@ -374,6 +376,16 @@ mapfile -t sent < <(notify_lines)
 "$LIB/volume" mic-mute
 mapfile -t sent < <(notify_lines)
 [[ "${sent[1]}" == *'--replace-id='* ]] || fail "el micrófono se apiló: ${sent[1]}"
+
+# Key repeat starts overlapping processes; they must still share one
+# notification instead of each creating its own.
+rm -f "$TEST_ROOT/runtime/mangowm/notify.volume"
+start_id=$(cat "$TEST_ROOT/notify.next" 2>/dev/null || echo 100)
+pids=()
+for _ in 1 2 3 4; do NOTIFY_SLOW=0.3 "$LIB/volume" up & pids+=("$!"); done
+for pid in "${pids[@]}"; do wait "$pid"; done
+(( $(<"$TEST_ROOT/notify.next") == start_id + 1 )) || \
+  fail "pulsaciones simultáneas de volumen crearon $(( $(<"$TEST_ROOT/notify.next") - start_id )) notificaciones"
 
 # Toggles replace their previous state instead of stacking.
 : > "$LOG"

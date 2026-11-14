@@ -68,12 +68,17 @@ mangowm_notify_send() {
     return 1
   fi
   id_file="$(mangowm_runtime_dir)/notify.$channel"
-  [[ -r "$id_file" ]] && id=$(<"$id_file")
-  [[ "$id" =~ ^[0-9]+$ ]] || id=''
-  new_id=$(notify-send --print-id ${id:+"--replace-id=$id"} --urgency="$urgency" \
-    --app-name=MangoWM "$@" "$summary" "$body" 2>/dev/null) || return 1
-  [[ "$new_id" =~ ^[0-9]+$ ]] || return 1
-  printf '%s\n' "$new_id" > "$id_file"
+  # Key repeat runs overlapping calls: the lock keeps read, send and save
+  # together so they replace one notification instead of each creating one.
+  (
+    command -v flock >/dev/null 2>&1 && flock -w 2 9
+    [[ -r "$id_file" ]] && id=$(<"$id_file")
+    [[ "$id" =~ ^[0-9]+$ ]] || id=''
+    new_id=$(notify-send --print-id ${id:+"--replace-id=$id"} --urgency="$urgency" \
+      --app-name=MangoWM "$@" "$summary" "$body" 2>/dev/null) || exit 1
+    [[ "$new_id" =~ ^[0-9]+$ ]] || exit 1
+    printf '%s\n' "$new_id" > "$id_file"
+  ) 9>"$id_file.lock"
 }
 
 # mangowm_notify_replace: mangowm_notify_send for feedback that may be lost
