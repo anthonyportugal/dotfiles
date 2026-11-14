@@ -119,7 +119,7 @@ fi
   fail "layers/wm/mangowm/themes duplica las paletas compartidas"
 for template in mango.conf foot.ini fuzzel.ini mako.conf swaylock.conf \
   waybar.css wlogout.css xdg-config/satty/config.toml \
-  icons/{suspend,logout,reboot,shutdown}{,-dark}.svg; do
+  icons/{suspend,logout,reboot,shutdown}{,-hover}.svg; do
   [[ -s "$TEMPLATES/$template" ]] || fail "falta la plantilla mangowm/$template"
 done
 for shared_output in gtk.css yazi background metadata; do
