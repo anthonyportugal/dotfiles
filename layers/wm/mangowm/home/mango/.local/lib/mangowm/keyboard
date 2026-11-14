@@ -24,8 +24,32 @@ switch_layout() {
   mangowm_notify low "Teclado" "Distribución cambiada"
 }
 
+# Number of layouts mango is configured with: the last xkb_rules_layout in
+# config.conf, conf.d and config.local.conf (the order mango reads them).
+configured_layouts() {
+  local dir="${XDG_CONFIG_HOME:-$HOME/.config}/mango" file line value=""
+  local files=("$dir/config.conf" "$dir"/conf.d/*.conf "$dir/config.local.conf")
+
+  for file in "${files[@]}"; do
+    [[ -r "$file" ]] || continue
+    while IFS= read -r line; do
+      [[ "$line" =~ ^[[:space:]]*xkb_rules_layout[[:space:]]*=[[:space:]]*([^#[:space:]]*) ]] && \
+        value=${BASH_REMATCH[1]}
+    done < "$file"
+  done
+  [[ -n "$value" ]] || { printf '1\n'; return 0; }
+  local commas=${value//[^,]/}
+  printf '%s\n' $(( ${#commas} + 1 ))
+}
+
 print_json() {
   local raw="${1:-}"
+
+  # With a single layout there is nothing to switch, so the bar hides it.
+  if (( $(configured_layouts) < 2 )); then
+    printf '{"text":"","class":"single"}\n'
+    return 0
+  fi
   local val="$raw"
 
   if [[ "$raw" =~ \"layout\":[[:space:]]*\"([^\"]+)\" ]]; then

@@ -11,6 +11,8 @@ declare -a session_units=(
   mangowm-mako.service
   mangowm-polkit.service
   mangowm-monitors.service
+  mangowm-updates.timer
+  mangowm-updates-refresh.path
 )
 
 command -v systemctl >/dev/null 2>&1 || exit 0

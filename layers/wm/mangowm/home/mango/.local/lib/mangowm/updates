@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Pending updates counter for Waybar.
+#   check    syncs a temporary copy of the pacman databases (checkupdates) and
+#            caches the count; the session runs it 2 minutes after login and
+#            every 3 hours.
+#   refresh  recounts against the last synced copy without downloading; the
+#            session runs it after every pacman transaction.
+#   waybar   prints the cached count; nothing when there are no updates.
+#   upgrade  opens shelly upgrade in the floating terminal, then recounts.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+MANY=100
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/mangowm"
+cache_file="$cache_dir/updates"
+
+refresh_waybar() {
+  pkill -RTMIN+12 waybar 2>/dev/null || true
+}
+
+# count [checkupdates arguments...]: exit 0 lists updates, 2 means none; any
+# other status is a failure and keeps the previous count.
+count() {
+  local output status=0
+
+  command -v checkupdates >/dev/null 2>&1 || return 1
+  output=$(checkupdates "$@" 2>/dev/null) || status=$?
+  case "$status" in
+    0) grep -c . <<< "$output" ;;
+    2) printf '0\n' ;;
+    *) return 1 ;;
+  esac
+}
+
+store() {
+  local value
+
+  value=$(count "$@") || return 0
+  mkdir -p -- "$cache_dir"
+  printf '%s\n' "$value" > "$cache_file.tmp"
+  mv -f -- "$cache_file.tmp" "$cache_file"
+  refresh_waybar
+}
+
+waybar_json() {
+  local value=0 class=pending
+
+  [[ -r "$cache_file" ]] && value=$(<"$cache_file")
+  [[ "$value" =~ ^[0-9]+$ ]] || value=0
+  if (( value == 0 )); then
+    printf '{"text":"","class":"none"}\n'
+    return 0
+  fi
+  (( value > MANY )) && class=many
+  printf '{"text":"󰚰 %s","tooltip":"%s actualizaciones pendientes\\n\\nClic: actualizar con shelly","class":"%s"}\n' \
+    "$value" "$value" "$class"
+}
+
+case "${1:-waybar}" in
+  check)
+    store
+    ;;
+  refresh)
+    store --nosync
+    ;;
+  waybar)
+    waybar_json
+    ;;
+  upgrade)
+    mangowm_require shelly
+    "$HOME/.local/lib/mangowm/terminal" --app-id=floating-terminal shelly upgrade || true
+    store --nosync
+    ;;
+  *)
+    printf 'Uso: %s check|refresh|waybar|upgrade\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

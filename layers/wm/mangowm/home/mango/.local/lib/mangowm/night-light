@@ -57,15 +57,24 @@ case "$command_name" in
       enable
     fi
     ;;
-  status|waybar)
+  status)
     status_json
+    ;;
+  waybar)
+    # The bar only shows the moon while it is on; Super+N and quick settings
+    # turn it on.
+    if is_enabled; then
+      status_json
+    else
+      printf '{"text":"","class":"off"}\n'
+    fi
     ;;
   restore)
     rm -f "$state_file"
     pkill -x gammastep 2>/dev/null || true
     ;;
   *)
-    printf 'Uso: %s toggle|on|off|status|restore\n' "${0##*/}" >&2
+    printf 'Uso: %s toggle|on|off|status|waybar|restore\n' "${0##*/}" >&2
     exit 2
     ;;
 esac
