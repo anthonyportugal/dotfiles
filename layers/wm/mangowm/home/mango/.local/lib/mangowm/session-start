@@ -64,6 +64,12 @@ if [[ -r "$XDG_CONFIG_HOME/waybar/config.json" ]] && command -v waybar >/dev/nul
     --style "$theme_dir/waybar.css"
 fi
 
+# Low battery warning, only on machines with a battery.
+battery="$HOME/.local/lib/mangowm/battery"
+if [[ -x "$battery" ]] && "$battery" has-battery; then
+  start_unit mangowm-battery "$battery" watch
+fi
+
 # Pending updates: a check 2 minutes after login and every 3 hours, and a
 # recount without downloading whenever pacman takes or releases its lock.
 updates="$HOME/.local/lib/mangowm/updates"

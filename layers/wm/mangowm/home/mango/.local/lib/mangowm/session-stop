@@ -11,6 +11,7 @@ declare -a session_units=(
   mangowm-mako.service
   mangowm-polkit.service
   mangowm-monitors.service
+  mangowm-battery.service
   mangowm-updates.timer
   mangowm-updates-refresh.path
 )

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Low battery warning for laptops: a warning at 15 % and a critical alert at
+# 5 %, each once per discharge and replacing each other; plugging in re-arms
+# them. `watch` checks every minute (session unit, only when a battery
+# exists); `check` runs one pass.
+
+set -Eeuo pipefail
+# shellcheck source=/dev/null
+source "$HOME/.local/lib/mangowm/common"
+
+WARN=15
+CRITICAL=5
+INTERVAL=60
+supply=${MANGOWM_POWER_SUPPLY:-/sys/class/power_supply}
+state_file="$(mangowm_runtime_dir)/battery.warned"
+
+# First battery: prints "<capacity> <status>"; fails without one.
+read_battery() {
+  local dir capacity status
+
+  for dir in "$supply"/BAT*; do
+    [[ -r "$dir/capacity" && -r "$dir/status" ]] || continue
+    capacity=$(<"$dir/capacity")
+    status=$(<"$dir/status")
+    [[ "$capacity" =~ ^[0-9]+$ ]] || continue
+    printf '%s %s\n' "$capacity" "$status"
+    return 0
+  done
+  return 1
+}
+
+has_battery() { read_battery >/dev/null; }
+
+check() {
+  local capacity status warned=100
+
+  read -r capacity status < <(read_battery) || return 0
+  [[ -r "$state_file" ]] && warned=$(<"$state_file")
+  [[ "$warned" =~ ^[0-9]+$ ]] || warned=100
+
+  if [[ "$status" != Discharging ]]; then
+    rm -f -- "$state_file"
+    return 0
+  fi
+  if (( capacity <= CRITICAL && warned > CRITICAL )); then
+    mangowm_notify_replace battery critical "󰂃  Batería muy baja: ${capacity}%" \
+      'Conecta el cargador ahora: el equipo se apagará pronto.'
+    printf '%s\n' "$CRITICAL" > "$state_file"
+  elif (( capacity <= WARN && warned > WARN )); then
+    mangowm_notify_replace battery normal "󰁺  Batería baja: ${capacity}%" \
+      'Conecta el cargador.'
+    printf '%s\n' "$WARN" > "$state_file"
+  fi
+}
+
+case "${1:-check}" in
+  check)
+    check
+    ;;
+  has-battery)
+    has_battery
+    ;;
+  watch)
+    has_battery || exit 0
+    while true; do
+      check || true
+      sleep "$INTERVAL"
+    done
+    ;;
+  *)
+    printf 'Uso: %s check|watch|has-battery\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac

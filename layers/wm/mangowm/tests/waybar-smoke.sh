@@ -410,4 +410,32 @@ else
   printf 'SKIP: validación de mako.conf con mako (no instalado)\n'
 fi
 
+# Low battery: one warning at 15 % and a critical one at 5 %, each once per
+# discharge, replacing each other; charging re-arms them. No battery, no unit.
+SUPPLY="$TEST_ROOT/power_supply"
+mkdir -p "$SUPPLY/BAT0"
+battery_at() { printf '%s\n' "$1" > "$SUPPLY/BAT0/capacity"; printf '%s\n' "$2" > "$SUPPLY/BAT0/status"; }
+battery_check() { MANGOWM_POWER_SUPPLY="$SUPPLY" "$LIB/battery" check; }
+: > "$LOG"
+battery_at 40 Discharging; battery_check
+[[ -z "$(notify_lines)" ]] || fail "la batería al 40 % avisó: $(notify_lines)"
+battery_at 15 Discharging; battery_check; battery_check
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 1 )) || fail "el aviso del 15 % no salió una sola vez: $(notify_lines)"
+[[ "${sent[0]}" == *'--urgency=normal'* && "${sent[0]}" == *'15'* ]] || fail "aviso del 15 % incorrecto: ${sent[0]}"
+battery_at 5 Discharging; battery_check
+mapfile -t sent < <(notify_lines)
+[[ "${sent[1]}" == *'--urgency=critical'* && "${sent[1]}" == *'--replace-id='* ]] || \
+  fail "el aviso del 5 % no es crítico o no reemplazó al del 15 %: ${sent[1]-}"
+battery_at 5 Charging; battery_check
+battery_at 14 Discharging; battery_check
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 3 )) || fail "cargar no volvió a armar el aviso: $(notify_lines)"
+: > "$LOG"
+MANGOWM_POWER_SUPPLY="$TEST_ROOT/no-supply" "$LIB/battery" check || fail 'sin batería el check falló'
+[[ -z "$(notify_lines)" ]] || fail 'sin batería hubo un aviso'
+start=$(<"$MANGO_HOME/.local/lib/mangowm/session-start")
+[[ "$start" == *'start_unit mangowm-battery'* ]] || fail 'session-start no vigila la batería'
+grep -Fq 'mangowm-battery.service' "$MANGO_HOME/.local/lib/mangowm/session-stop" || fail 'session-stop no detiene el aviso de batería'
+
 printf 'OK: Waybar, ajustes rápidos, notificaciones y actualizaciones validados\n'
