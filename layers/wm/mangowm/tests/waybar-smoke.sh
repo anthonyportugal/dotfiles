@@ -160,11 +160,34 @@ case "$name" in
   powerprofilesctl)
     [[ "${1-}" == get ]] && printf 'balanced\n'
     ;;
+  notify-send)
+    # NOTIFY_FAIL=1: no notification daemon answers.
+    [[ -z "${NOTIFY_FAIL-}" ]] || exit 1
+    # Like libnotify: --print-id prints the id, a new one unless replacing.
+    if [[ " $* " == *' --print-id '* || " $* " == *' -p '* ]]; then
+      replace=$(sed -n 's/.*--replace-id=\([0-9]*\).*/\1/p' <<< "$*")
+      if [[ -n "$replace" ]]; then
+        printf '%s\n' "$replace"
+      else
+        # NOTIFY_SLOW widens the window between reading and saving an id.
+        [[ -z "${NOTIFY_SLOW-}" ]] || sleep "$NOTIFY_SLOW"
+        next=$(( $(cat "$TEST_ROOT/notify.next" 2>/dev/null || echo 100) + 1 ))
+        printf '%s\n' "$next" > "$TEST_ROOT/notify.next"
+        printf '%s\n' "$next"
+      fi
+    fi
+    ;;
+  wpctl)
+    [[ "${1-}" == get-volume ]] && printf 'Volume: %s%s\n' "${WPCTL_VOLUME:-0.45}" "${WPCTL_MUTED:+ [MUTED]}"
+    ;;
+  brightnessctl)
+    [[ "${1-}" == -m ]] && printf 'intel_backlight,backlight,600,%s,1000\n' "${BRIGHTNESS:-60%}"
+    ;;
 esac
 exit 0
 FAKE
 chmod +x "$FAKE_BIN/fake"
-for tool in fuzzel makoctl checkupdates pkill gammastep notify-send systemctl \
+for tool in fuzzel makoctl checkupdates pkill gammastep notify-send systemctl wpctl brightnessctl \
   systemd-run powerprofilesctl mmsg foot; do
   ln -s "$FAKE_BIN/fake" "$FAKE_BIN/$tool"
 done
@@ -321,4 +344,121 @@ sed -i 's/"output": \["eDP-1", "eDP-2"\]/"output": ["eDP-1", "HDMI-A-1"]/' \
   "$GUARD/layers/wm/mangowm/home/mango/.config/waybar/config.json"
 [[ $(run_guard) == *'nombres de hardware fijos'* ]] || fail 'el guard dejó pasar HDMI-A-1 junto a eDP'
 
-printf 'OK: Waybar, ajustes rápidos y actualizaciones validados\n'
+# --- Notifications ------------------------------------------------------------
+
+notify_lines() { grep '^notify-send ' "$LOG" || true; }
+
+# Volume and brightness are an OSD: one notification per channel that each
+# press replaces, with the level as a progress value.
+: > "$LOG"
+"$LIB/volume" up
+WPCTL_VOLUME=0.50 "$LIB/volume" up
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 2 )) || fail "el volumen no notificó dos veces: $(<"$LOG")"
+[[ "${sent[0]}" == *'--category=osd'* && "${sent[0]}" == *'int:value:45'* ]] || fail "el OSD de volumen no lleva categoría y nivel: ${sent[0]}"
+first_id=$(<"$TEST_ROOT/notify.next")
+[[ "${sent[1]}" == *"--replace-id=$first_id"* && "${sent[1]}" == *'int:value:50'* ]] || \
+  fail "la segunda pulsación de volumen no reemplazó la primera: ${sent[1]}"
+grep -q 'x-canonical-private-synchronous' "$LOG" && fail 'el volumen aún usa un hint que mako ignora'
+: > "$LOG"
+WPCTL_MUTED=1 "$LIB/volume" mute
+[[ "$(notify_lines)" == *'--category=osd-muted'* && "$(notify_lines)" == *"--replace-id=$first_id"* ]] || \
+  fail "silenciar no reemplazó el OSD de volumen con su estilo tenue: $(notify_lines)"
+: > "$LOG"
+"$LIB/brightness" up
+BRIGHTNESS=65% "$LIB/brightness" up
+mapfile -t sent < <(notify_lines)
+[[ "${sent[0]}" == *'--category=osd'* && "${sent[0]}" == *'int:value:60'* ]] || fail "el OSD de brillo no lleva categoría y nivel: ${sent[0]}"
+[[ "${sent[1]}" == *'--replace-id='* && "${sent[1]}" == *'int:value:65'* ]] || fail "el brillo se apiló: ${sent[1]}"
+[[ "${sent[1]}" != *"--replace-id=$first_id"* ]] || fail 'el brillo reemplazó la notificación del volumen'
+: > "$LOG"
+"$LIB/volume" mic-mute
+"$LIB/volume" mic-mute
+mapfile -t sent < <(notify_lines)
+[[ "${sent[1]}" == *'--replace-id='* ]] || fail "el micrófono se apiló: ${sent[1]}"
+
+# Key repeat starts overlapping processes; they must still share one
+# notification instead of each creating its own.
+rm -f "$TEST_ROOT/runtime/mangowm/notify.volume"
+start_id=$(cat "$TEST_ROOT/notify.next" 2>/dev/null || echo 100)
+pids=()
+for _ in 1 2 3 4; do NOTIFY_SLOW=0.3 "$LIB/volume" up & pids+=("$!"); done
+for pid in "${pids[@]}"; do wait "$pid"; done
+(( $(<"$TEST_ROOT/notify.next") == start_id + 1 )) || \
+  fail "pulsaciones simultáneas de volumen crearon $(( $(<"$TEST_ROOT/notify.next") - start_id )) notificaciones"
+
+# Toggles replace their previous state instead of stacking.
+: > "$LOG"
+"$LIB/night-light" on
+"$LIB/night-light" off
+mapfile -t sent < <(notify_lines)
+[[ "${sent[1]}" == *'--replace-id='* ]] || fail "la luz nocturna se apiló: ${sent[1]}"
+grep -c 'mangowm_notify_replace' "$MANGO_HOME/.local/lib/mangowm/wifi" >/dev/null || fail 'wifi no reemplaza su progreso'
+for script in idle-inhibit power-profile keyboard recording wallpaper monitors wifi; do
+  grep -q 'mangowm_notify_replace' "$MANGO_HOME/.local/lib/mangowm/$script" || \
+    fail "$script no reemplaza sus notificaciones"
+done
+
+# mako: OSD at the bottom centre with an accent bar (dim when muted), shown
+# even in do not disturb; repeated notifications group with a count; low
+# urgency is discreet and short.
+MAKO="$MANGO_HOME/.local/share/dotfiles/theme/templates/mangowm/mako.conf"
+section() { awk -v h="[$1]" '$0 == h { on = 1; next } /^\[/ { on = 0 } on' "$MAKO"; }
+section 'category=osd' | grep -Fxq 'anchor=bottom-center' || fail 'el OSD no está abajo al centro'
+section 'category=osd' | grep -Fxq 'progress-color=over {{accent}}' || fail 'la barra del OSD no usa el acento'
+section 'category=osd-muted' | grep -Fxq 'anchor=bottom-center' || fail 'el OSD silenciado no comparte posición'
+section 'category=osd-muted' | grep -q '^progress-color=over {{foreground_disabled}}' || fail 'el OSD silenciado no es tenue'
+section 'mode=do-not-disturb category=osd' | grep -Fxq 'invisible=0' || fail 'No molestar oculta el OSD'
+grep -Fxq 'group-by=app-name,summary' "$MAKO" || fail 'mako no agrupa notificaciones repetidas'
+section 'grouped' | grep -q '%g' || fail 'las notificaciones agrupadas no muestran el contador'
+section 'urgency=low' | grep -q '^default-timeout=' || fail 'la urgencia baja no tiene su propio tiempo'
+section 'urgency=critical' | grep -Fxq 'default-timeout=0' || fail 'las críticas se cierran solas'
+# mako parses the config before it claims the bus; with the markers replaced
+# by a color, a parse error is reported before any bus error.
+if command -v mako >/dev/null 2>&1; then
+  sed -E 's/\{\{[a-z_.]+\}\}/#101010/g' "$MAKO" > "$TEST_ROOT/mako.conf"
+  mako_out=$(env -u WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent \
+    timeout 3 /usr/bin/mako -c "$TEST_ROOT/mako.conf" 2>&1 || true)
+  [[ "$mako_out" != *'Failed to parse'* ]] || fail "mako rechazó la configuración: $mako_out"
+else
+  printf 'SKIP: validación de mako.conf con mako (no instalado)\n'
+fi
+
+# Low battery: one warning at 15 % and a critical one at 5 %, each once per
+# discharge, replacing each other; charging re-arms them. No battery, no unit.
+SUPPLY="$TEST_ROOT/power_supply"
+mkdir -p "$SUPPLY/BAT0"
+battery_at() { printf '%s\n' "$1" > "$SUPPLY/BAT0/capacity"; printf '%s\n' "$2" > "$SUPPLY/BAT0/status"; }
+battery_check() { MANGOWM_POWER_SUPPLY="$SUPPLY" "$LIB/battery" check; }
+: > "$LOG"
+battery_at 40 Discharging; battery_check
+[[ -z "$(notify_lines)" ]] || fail "la batería al 40 % avisó: $(notify_lines)"
+battery_at 15 Discharging; battery_check; battery_check
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 1 )) || fail "el aviso del 15 % no salió una sola vez: $(notify_lines)"
+[[ "${sent[0]}" == *'--urgency=normal'* && "${sent[0]}" == *'15'* ]] || fail "aviso del 15 % incorrecto: ${sent[0]}"
+battery_at 5 Discharging; battery_check
+mapfile -t sent < <(notify_lines)
+[[ "${sent[1]}" == *'--urgency=critical'* && "${sent[1]}" == *'--replace-id='* ]] || \
+  fail "el aviso del 5 % no es crítico o no reemplazó al del 15 %: ${sent[1]-}"
+battery_at 5 Charging; battery_check
+battery_at 14 Discharging; battery_check
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 3 )) || fail "cargar no volvió a armar el aviso: $(notify_lines)"
+# An alert that could not be shown (no notification daemon) is not marked as
+# given, so the next check tries again.
+battery_at 40 Charging; battery_check
+: > "$LOG"
+battery_at 12 Discharging
+NOTIFY_FAIL=1 battery_check
+battery_check
+mapfile -t sent < <(notify_lines)
+(( ${#sent[@]} == 2 )) || fail "el aviso de batería no se reintentó tras fallar: $(notify_lines)"
+: > "$LOG"
+MANGOWM_POWER_SUPPLY="$TEST_ROOT/no-supply" "$LIB/battery" check || fail 'sin batería el check falló'
+[[ -z "$(notify_lines)" ]] || fail 'sin batería hubo un aviso'
+start=$(<"$MANGO_HOME/.local/lib/mangowm/session-start")
+[[ "$start" == *'start_unit mangowm-battery'* ]] || fail 'session-start no vigila la batería'
+grep -Fq 'mangowm-battery.service' "$MANGO_HOME/.local/lib/mangowm/session-stop" || fail 'session-stop no detiene el aviso de batería'
+
+printf 'OK: Waybar, ajustes rápidos, notificaciones y actualizaciones validados\n'

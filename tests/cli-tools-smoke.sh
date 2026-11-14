@@ -104,6 +104,10 @@ output=$(run_zsh "$without" 'whence -w z cd; true')
 grep -Fxq 'shown_boxes = "cpu mem net proc gpu0 gpu1"' \
   "$REPO_ROOT/layers/cli/home/btop/.config/btop/btop.conf" || fail 'btop no muestra la caja gpu1'
 
+# btop.conf is a link into the repository, so btop must not rewrite it on
+# exit (it once dropped the GPU boxes from the tracked file).
+grep -Fxq 'save_config_on_exit = false' \
+  "$REPO_ROOT/layers/cli/home/btop/.config/btop/btop.conf" || fail 'btop reescribe btop.conf del repositorio al salir'
 # nvtop sees Intel and NVIDIA GPUs together, which btop may not on a laptop.
 grep -Fxq nvtop "$REPO_ROOT/layers/cli/packages/repo/cli.txt" || fail 'la capa cli no instala nvtop'
 

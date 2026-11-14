@@ -19,4 +19,5 @@ case "${1-}" in
 esac
 
 pct=$(brightnessctl -m 2>/dev/null | awk -F, 'NF>=4 {print $4; exit}' || true)
-mangowm_notify normal "Brillo" "󰃠 ${pct}"
+pct=${pct%\%}
+mangowm_osd brightness "󰃠  Brillo ${pct:-0}%" "${pct:-0}"

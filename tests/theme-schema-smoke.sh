@@ -64,6 +64,17 @@ for palette in "$REPO_ROOT"/themes/palettes/*.conf; do
   expect_line "$revision/mangowm/foot.ini" "bright7=$(palette_value "$palette" ansi_bright_white | tr -d '#')"
   expect_line "$revision/mangowm/mango.conf" "border_color=0x$(palette_value "$palette" border | tr -d '#')ff"
   expect_line "$revision/mangowm/waybar.css" "@define-color base $(palette_value "$palette" background);"
+  # One emphasis color: fuzzel matches and the wlogout hover use the accent.
+  accent_raw=$(palette_value "$palette" accent | tr -d '#')
+  expect_line "$revision/mangowm/fuzzel.ini" "match=${accent_raw}ff"
+  expect_line "$revision/mangowm/fuzzel.ini" "selection-match=${accent_raw}ff"
+  for icon in suspend logout reboot shutdown; do
+    grep -Fq "stroke=\"$(palette_value "$palette" accent)\"" "$revision/mangowm/icons/$icon-hover.svg" || \
+      fail "el icono $icon de wlogout no usa el acento al pasar el cursor ($id)"
+    grep -Fq "stroke=\"$(palette_value "$palette" foreground)\"" "$revision/mangowm/icons/$icon.svg" || \
+      fail "el icono $icon de wlogout no sigue el texto del tema ($id)"
+  done
+  grep -Fq '#ffffff' "$revision/mangowm/wlogout.css" && fail "wlogout.css conserva blanco fijo ($id)"
   expect_line "$revision/bspwm/polybar-colors.ini" "ALTWHITE = $(palette_value "$palette" ansi_white)"
   expect_line "$revision/gtk.css" "@define-color accent_color $(palette_value "$palette" accent);"
   ((rendered++)) || true

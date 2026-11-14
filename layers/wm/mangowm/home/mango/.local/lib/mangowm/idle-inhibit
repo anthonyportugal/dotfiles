@@ -29,7 +29,7 @@ refresh_waybar() {
 inhibit() {
   systemctl --user stop mangowm-swayidle 2>/dev/null || true
   printf 'on\n' > "$state_file"
-  mangowm_notify normal "Inhibidor de Reposo" "󰅶 Modo presentación activo (pantalla siempre encendida)"
+  mangowm_notify_replace idle-inhibit low "Inhibidor de Reposo" "󰅶 Modo presentación activo (pantalla siempre encendida)"
   refresh_waybar
 }
 
@@ -44,7 +44,7 @@ resume() {
         -- swayidle -w -C "$config" 2>/dev/null || true
     fi
   fi
-  mangowm_notify normal "Reposo Automático" "󰾪 Modo ahorro activo"
+  mangowm_notify_replace idle-inhibit low "Reposo Automático" "󰾪 Modo ahorro activo"
   refresh_waybar
 }
 

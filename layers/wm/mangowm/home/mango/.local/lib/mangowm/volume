@@ -197,17 +197,17 @@ esac
 if [[ "$action" == "mic-mute" ]]; then
   status=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null || true)
   if grep -q 'MUTED' <<< "$status"; then
-    mangowm_notify normal "Micrófono" "󰍭 Silenciado"
+    mangowm_notify_replace mic low "󰍭  Micrófono silenciado"
   else
-    mangowm_notify normal "Micrófono" "󰍬 Activo"
+    mangowm_notify_replace mic low "󰍬  Micrófono activo"
   fi
 else
   status=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)
+  vol=$(awk '{print int(($2 * 100) + 0.5)}' <<< "$status")
+  vol=${vol:-0}
   if grep -q 'MUTED' <<< "$status"; then
-    mangowm_notify normal "Volumen" "󰝟 Silenciado"
+    mangowm_osd volume "󰝟  Silenciado" "$vol" muted
   else
-    vol=$(awk '{print int(($2 * 100) + 0.5)}' <<< "$status")
-    vol=${vol:-0}
     if (( vol < 33 )); then
       icon="󰕿"
     elif (( vol < 66 )); then
@@ -215,10 +215,6 @@ else
     else
       icon="󰕾"
     fi
-    if command -v notify-send >/dev/null 2>&1; then
-      notify-send -h string:x-canonical-private-synchronous:volume -h "int:value:$vol" --urgency=normal --app-name=MangoWM "Volumen: ${vol}%" "$icon"
-    else
-      mangowm_notify normal "Volumen: ${vol}%" "$icon"
-    fi
+    mangowm_osd volume "$icon  Volumen ${vol}%" "$vol"
   fi
 fi

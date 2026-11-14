@@ -72,13 +72,15 @@ txn_track_tree() {
 
 # What the engine and the layer hooks write outside the Stow packages: the
 # dotfiles command link, the generated mimeapps.list, the links the theme
-# engine makes into app config folders (link_outputs in dotfiles-theme) and
-# the bat cache the cli post-link builds.
+# engine makes into app config folders (link_outputs in dotfiles-theme), the
+# bat cache the cli post-link builds and the themed starship config the
+# starship render hook writes.
 txn_track_engine_outputs() {
   txn_track .local/bin/dotfiles .config/mimeapps.list .config/yazi/flavors/theme.yazi \
     .config/bat/themes/dotfiles.tmTheme .config/btop/themes/dotfiles.theme \
     .config/micro/colorschemes/default.micro
   txn_track_tree .cache/bat
+  txn_track_tree .cache/dotfiles
 }
 
 # Prints the first transaction left unfinished. One without a manifest was

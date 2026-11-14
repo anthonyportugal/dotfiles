@@ -21,7 +21,7 @@ switch_layout() {
   if command -v mmsg >/dev/null 2>&1; then
     mmsg dispatch switch_keyboard_layout 2>/dev/null || true
   fi
-  mangowm_notify low "Teclado" "Distribución cambiada"
+  mangowm_notify_replace keyboard low "Teclado" "Distribución cambiada"
 }
 
 # Number of layouts mango is configured with: the last xkb_rules_layout in

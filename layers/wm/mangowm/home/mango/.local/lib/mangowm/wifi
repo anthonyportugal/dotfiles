@@ -36,7 +36,7 @@ launch_nmtui() {
   elif command -v nm-connection-editor >/dev/null 2>&1; then
     nm-connection-editor &
   else
-    mangowm_notify critical 'Wi-Fi' 'No se encontró nmtui ni terminal compatible'
+    mangowm_notify_replace wifi critical 'Wi-Fi' 'No se encontró nmtui ni terminal compatible'
   fi
 }
 
@@ -129,7 +129,7 @@ manage_saved_connections() {
   done < <(wifi_saved_profiles)
 
   if (( ${#formatted[@]} == 0 )); then
-    mangowm_notify normal 'Wi-Fi' 'No hay redes Wi-Fi guardadas en el sistema'
+    mangowm_notify_replace wifi normal 'Wi-Fi' 'No hay redes Wi-Fi guardadas en el sistema'
     return 0
   fi
 
@@ -166,18 +166,18 @@ manage_saved_connections() {
 
   case "$action" in
     *"Conectar"*)
-      mangowm_notify low 'Wi-Fi' "Conectando a $target_name..."
+      mangowm_notify_replace wifi low 'Wi-Fi' "Conectando a $target_name..."
       if connect_saved_profile "$target_uuid" >/dev/null 2>&1; then
-        mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $target_name"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Conectado exitosamente a $target_name"
       else
-        mangowm_notify critical 'Wi-Fi' "Fallo al conectar a $target_name"
+        mangowm_notify_replace wifi critical 'Wi-Fi' "Fallo al conectar a $target_name"
       fi
       ;;
     *"Olvidar"*)
       if nmcli connection delete uuid "$target_uuid" >/dev/null 2>&1; then
-        mangowm_notify normal 'Wi-Fi' "Red eliminada: $target_name"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Red eliminada: $target_name"
       else
-        mangowm_notify critical 'Wi-Fi' "Fallo al eliminar: $target_name"
+        mangowm_notify_replace wifi critical 'Wi-Fi' "Fallo al eliminar: $target_name"
       fi
       manage_saved_connections
       ;;
@@ -220,18 +220,18 @@ show_active_connection_menu() {
       fi
 
       if (( disc_ok == 1 )); then
-        mangowm_notify normal 'Wi-Fi' "Desconectado de $ssid"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Desconectado de $ssid"
       else
-        mangowm_notify critical 'Wi-Fi' "No se pudo desconectar de $ssid"
+        mangowm_notify_replace wifi critical 'Wi-Fi' "No se pudo desconectar de $ssid"
       fi
       ;;
     *"Olvidar"*)
       if [[ -n "$active_uuid" ]] && nmcli connection delete uuid "$active_uuid" >/dev/null 2>&1; then
-        mangowm_notify normal 'Wi-Fi' "Red eliminada: $ssid"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Red eliminada: $ssid"
       elif nmcli connection delete id "$ssid" >/dev/null 2>&1; then
-        mangowm_notify normal 'Wi-Fi' "Red eliminada: $ssid"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Red eliminada: $ssid"
       else
-        mangowm_notify critical 'Wi-Fi' "Fallo al eliminar: $ssid"
+        mangowm_notify_replace wifi critical 'Wi-Fi' "Fallo al eliminar: $ssid"
       fi
       ;;
     *"Información"*)
@@ -257,24 +257,24 @@ connect_wifi_network() {
   theme_dir=$(mangowm_theme_dir)
 
   if [[ "$is_saved" == 1 ]]; then
-    mangowm_notify low 'Wi-Fi' "Conectando a $ssid..."
+    mangowm_notify_replace wifi low 'Wi-Fi' "Conectando a $ssid..."
     local best_uuid
     best_uuid=$(find_best_saved_uuid "$ssid")
 
     if [[ -n "$best_uuid" ]]; then
       if connect_saved_profile "$best_uuid" >/dev/null 2>&1; then
-        mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Conectado exitosamente a $ssid"
         return 0
       fi
     else
       if nmcli device wifi connect "$ssid" >/dev/null 2>&1; then
-        mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+        mangowm_notify_replace wifi normal 'Wi-Fi' "Conectado exitosamente a $ssid"
         return 0
       fi
     fi
 
     # Saved profile connection failed; offer password retry or nmtui
-    mangowm_notify critical 'Wi-Fi' "Fallo al conectar a $ssid con el perfil guardado"
+    mangowm_notify_replace wifi critical 'Wi-Fi' "Fallo al conectar a $ssid con el perfil guardado"
     local retry_options=(
       "󰌘   Ingresar nueva contraseña"
       "󰒓   Abrir configuración (nmtui)"
@@ -291,11 +291,11 @@ connect_wifi_network() {
           --prompt="Contraseña ($ssid) ❯ " --lines=0 --width=38 || true)
         [[ -n "$password" ]] || return 0
 
-        mangowm_notify low 'Wi-Fi' "Autenticando en $ssid..."
+        mangowm_notify_replace wifi low 'Wi-Fi' "Autenticando en $ssid..."
         if nmcli device wifi connect "$ssid" password "$password" >/dev/null 2>&1; then
-          mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+          mangowm_notify_replace wifi normal 'Wi-Fi' "Conectado exitosamente a $ssid"
         else
-          mangowm_notify critical 'Wi-Fi' "Error de autenticación en $ssid"
+          mangowm_notify_replace wifi critical 'Wi-Fi' "Error de autenticación en $ssid"
         fi
         ;;
       *"nmtui"*)
@@ -312,18 +312,18 @@ connect_wifi_network() {
 
     [[ -n "$password" ]] || return 0
 
-    mangowm_notify low 'Wi-Fi' "Autenticando en $ssid..."
+    mangowm_notify_replace wifi low 'Wi-Fi' "Autenticando en $ssid..."
     if nmcli device wifi connect "$ssid" password "$password" >/dev/null 2>&1; then
-      mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+      mangowm_notify_replace wifi normal 'Wi-Fi' "Conectado exitosamente a $ssid"
     else
-      mangowm_notify critical 'Wi-Fi' "Error de autenticación en $ssid"
+      mangowm_notify_replace wifi critical 'Wi-Fi' "Error de autenticación en $ssid"
     fi
   else
-    mangowm_notify low 'Wi-Fi' "Conectando a red abierta $ssid..."
+    mangowm_notify_replace wifi low 'Wi-Fi' "Conectando a red abierta $ssid..."
     if nmcli device wifi connect "$ssid" >/dev/null 2>&1; then
-      mangowm_notify normal 'Wi-Fi' "Conectado exitosamente a $ssid"
+      mangowm_notify_replace wifi normal 'Wi-Fi' "Conectado exitosamente a $ssid"
     else
-      mangowm_notify critical 'Wi-Fi' "Error al conectar a $ssid"
+      mangowm_notify_replace wifi critical 'Wi-Fi' "Error al conectar a $ssid"
     fi
   fi
 }
@@ -345,7 +345,7 @@ select_wifi_menu() {
     case "$choice" in
       *"Activar Wi-Fi"*)
         nmcli radio wifi on
-        mangowm_notify normal 'Wi-Fi' 'Wi-Fi activado'
+        mangowm_notify_replace wifi normal 'Wi-Fi' 'Wi-Fi activado'
         ;;
       *"Configuración avanzada"*)
         launch_nmtui
@@ -445,10 +445,10 @@ select_wifi_menu() {
     case "$action" in
       off)
         nmcli radio wifi off
-        mangowm_notify normal 'Wi-Fi' 'Wi-Fi desactivado'
+        mangowm_notify_replace wifi normal 'Wi-Fi' 'Wi-Fi desactivado'
         ;;
       rescan)
-        mangowm_notify low 'Wi-Fi' 'Escaneando redes cercanas...'
+        mangowm_notify_replace wifi low 'Wi-Fi' 'Escaneando redes cercanas...'
         nmcli dev wifi rescan 2>/dev/null || true
         sleep 1.5
         select_wifi_menu
@@ -483,10 +483,10 @@ toggle_wifi() {
   radio=$(wifi_radio_status)
   if [[ "$radio" == "enabled" ]]; then
     nmcli radio wifi off
-    mangowm_notify normal 'Wi-Fi' 'Wi-Fi desactivado'
+    mangowm_notify_replace wifi normal 'Wi-Fi' 'Wi-Fi desactivado'
   else
     nmcli radio wifi on
-    mangowm_notify normal 'Wi-Fi' 'Wi-Fi activado'
+    mangowm_notify_replace wifi normal 'Wi-Fi' 'Wi-Fi activado'
   fi
 }
 
@@ -516,15 +516,15 @@ case "$command_name" in
     ;;
   on)
     nmcli radio wifi on
-    mangowm_notify normal 'Wi-Fi' 'Wi-Fi activado'
+    mangowm_notify_replace wifi normal 'Wi-Fi' 'Wi-Fi activado'
     ;;
   off)
     nmcli radio wifi off
-    mangowm_notify normal 'Wi-Fi' 'Wi-Fi desactivado'
+    mangowm_notify_replace wifi normal 'Wi-Fi' 'Wi-Fi desactivado'
     ;;
   rescan)
     nmcli dev wifi rescan
-    mangowm_notify low 'Wi-Fi' 'Escaneando redes...'
+    mangowm_notify_replace wifi low 'Wi-Fi' 'Escaneando redes...'
     ;;
   status)
     wifi_status

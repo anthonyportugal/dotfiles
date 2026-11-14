@@ -67,7 +67,7 @@ start_recording() {
   local -a recorder=(wf-recorder)
 
   is_active && {
-    mangowm_notify normal 'Grabación activa' 'Detén la grabación actual antes de iniciar otra.'
+    mangowm_notify_replace recording normal 'Grabación activa' 'Detén la grabación actual antes de iniciar otra.'
     return 0
   }
   mangowm_require wf-recorder
@@ -153,7 +153,7 @@ start_recording() {
     desktop) audio_note=" (con audio del sistema)" ;;
     both) audio_note=" (con micrófono y audio del sistema)" ;;
   esac
-  mangowm_notify low 'Grabación iniciada' "$destination$audio_note"
+  mangowm_notify_replace recording low 'Grabación iniciada' "$destination$audio_note"
 }
 
 stop_recording() {
@@ -166,7 +166,7 @@ stop_recording() {
   if ! is_active; then
     rm -f -- "$destination_file" "$mode_file"
     notify_waybar
-    mangowm_notify low 'Grabación inactiva'
+    mangowm_notify_replace recording low 'Grabación inactiva'
     return 0
   fi
 
@@ -191,7 +191,7 @@ stop_recording() {
     rm -f -- "$destination_file"
   fi
   rm -f -- "$mode_file"
-  mangowm_notify low 'Grabación guardada' "$saved_msg"
+  mangowm_notify_replace recording low 'Grabación guardada' "$saved_msg"
 }
 
 waybar_status() {

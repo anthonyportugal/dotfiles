@@ -56,7 +56,7 @@ apply_swaybg() {
 set_wallpaper() {
   local target_file=$1
   [[ -r "$target_file" ]] || {
-    mangowm_notify critical 'Wallpaper' "No se puede leer la imagen: $target_file"
+    mangowm_notify_replace wallpaper critical 'Wallpaper' "No se puede leer la imagen: $target_file"
     return 1
   }
 
@@ -65,7 +65,7 @@ set_wallpaper() {
   mkdir -p -- "$STATE_DIR"
   printf '%s\n' "$canonical_path" > "$WALLPAPER_STATE"
   apply_swaybg "$canonical_path"
-  mangowm_notify normal 'Wallpaper' "Fondo actualizado: ${canonical_path##*/}"
+  mangowm_notify_replace wallpaper normal 'Wallpaper' "Fondo actualizado: ${canonical_path##*/}"
 }
 
 restore_wallpaper() {
@@ -95,7 +95,7 @@ restore_wallpaper() {
 clear_wallpaper() {
   rm -f -- "$WALLPAPER_STATE"
   apply_swaybg ""
-  mangowm_notify normal 'Wallpaper' 'Fondo restablecido al color del tema'
+  mangowm_notify_replace wallpaper normal 'Wallpaper' 'Fondo restablecido al color del tema'
 }
 
 select_wallpaper() {
@@ -105,7 +105,7 @@ select_wallpaper() {
   mapfile -t files < <(list_wallpapers)
 
   if (( ${#files[@]} == 0 )); then
-    mangowm_notify normal 'Wallpaper' \
+    mangowm_notify_replace wallpaper normal 'Wallpaper' \
       'No se encontraron imágenes en ~/.local/share/wallpapers ni ~/Pictures/Wallpapers'
     return 0
   fi

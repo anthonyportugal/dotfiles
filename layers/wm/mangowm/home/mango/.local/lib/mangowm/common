@@ -53,6 +53,53 @@ mangowm_notify() {
   fi
 }
 
+# mangowm_notify_send <channel> <urgency> <summary> [body] [notify-send args...]
+# One notification per channel: each call replaces the previous one instead of
+# stacking (mako ignores the x-canonical-private-synchronous hint, but honours
+# --replace-id). The last id lives in the runtime dir. Fails when no
+# notification was shown, for callers that must retry (the battery alert).
+mangowm_notify_send() {
+  local channel=$1 urgency=$2 summary=$3 body=${4-}
+  local id_file id='' new_id
+
+  shift $(( $# < 4 ? $# : 4 ))
+  if ! command -v notify-send >/dev/null 2>&1; then
+    printf '%s: %s\n' "$summary" "$body" >&2
+    return 1
+  fi
+  id_file="$(mangowm_runtime_dir)/notify.$channel"
+  # Key repeat runs overlapping calls: the lock keeps read, send and save
+  # together so they replace one notification instead of each creating one.
+  (
+    command -v flock >/dev/null 2>&1 && flock -w 2 9
+    [[ -r "$id_file" ]] && id=$(<"$id_file")
+    [[ "$id" =~ ^[0-9]+$ ]] || id=''
+    new_id=$(notify-send --print-id ${id:+"--replace-id=$id"} --urgency="$urgency" \
+      --app-name=MangoWM "$@" "$summary" "$body" 2>/dev/null) || exit 1
+    [[ "$new_id" =~ ^[0-9]+$ ]] || exit 1
+    printf '%s\n' "$new_id" > "$id_file"
+  ) 9>"$id_file.lock"
+}
+
+# mangowm_notify_replace: mangowm_notify_send for feedback that may be lost
+# (volume, toggles, progress); it never fails its caller.
+mangowm_notify_replace() {
+  mangowm_notify_send "$@" || true
+}
+
+# mangowm_osd <channel> <summary> <percent> [muted]: the volume/brightness
+# overlay, a short notification with a progress bar styled by mako's
+# osd (or osd-muted) category.
+mangowm_osd() {
+  local channel=$1 summary=$2 value=$3 category=osd
+
+  [[ "$value" =~ ^[0-9]+$ ]] || value=0
+  (( value > 100 )) && value=100
+  [[ -n "${4-}" ]] && category=osd-muted
+  mangowm_notify_replace "$channel" low "$summary" '' \
+    --category="$category" --hint="int:value:$value"
+}
+
 mangowm_require() {
   command -v "$1" >/dev/null 2>&1 || {
     mangowm_notify critical 'Componente no disponible' "Instala el comando: $1"
