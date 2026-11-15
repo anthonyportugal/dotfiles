@@ -35,7 +35,7 @@ stage_2() {
 }
 
 stage_3() {
-  printf '\n--> 3/13: Executing shared theme engine, Sanctuary palette, theme picker, mimeapps, font and image viewer smoke tests...\n'
+  printf '\n--> 3/13: Executing shared theme engine, Sanctuary palette, theme picker, mimeapps, font, session PATH and image viewer smoke tests...\n'
   "$SCRIPT_DIR/theme-smoke.sh"
   "$SCRIPT_DIR/theme-schema-smoke.sh"
   "$SCRIPT_DIR/theme-apps-smoke.sh"
@@ -44,6 +44,7 @@ stage_3() {
   "$SCRIPT_DIR/mimeapps-smoke.sh"
   "$SCRIPT_DIR/fonts-smoke.sh"
   "$SCRIPT_DIR/cli-tools-smoke.sh"
+  "$SCRIPT_DIR/session-path-smoke.sh"
   "$SCRIPT_DIR/cursor-smoke.sh"
   "$SCRIPT_DIR/imv-folder-smoke.sh"
   "$SCRIPT_DIR/checkout-copy-smoke.sh"
