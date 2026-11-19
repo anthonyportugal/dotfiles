@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Pending updates counter for Waybar.
+# Pending updates counter for Waybar: repository packages plus AUR packages.
 #   check    syncs a temporary copy of the pacman databases (checkupdates) and
-#            caches the count; the session runs it 2 minutes after login and
-#            every 3 hours. A failed sync (no network yet) retries 3 times,
-#            5 minutes apart, and keeps the last count meanwhile.
-#   refresh  recounts against the last synced copy without downloading; the
-#            session runs it after every pacman transaction.
-#   waybar   prints the cached count; nothing when there are no updates.
-#   upgrade  opens shelly upgrade in the floating terminal, then recounts.
+#            asks shelly for the AUR updates, caching both counts; the session
+#            runs it 2 minutes after login and every 3 hours. A failed sync (no
+#            network yet) retries 3 times, 5 minutes apart, and keeps the last
+#            counts meanwhile. A failed AUR query keeps the last AUR count.
+#   refresh  recounts repository packages against the last synced copy without
+#            downloading; the session runs it after every pacman transaction.
+#   waybar   prints the cached total; nothing when there are no updates.
+#   upgrade  opens shelly in the floating terminal, which shows the upgrade
+#            plan (repositories and AUR) and asks before changing anything,
+#            then recounts. Flatpak and AppImage are never touched.
 
 set -Eeuo pipefail
 # shellcheck source=/dev/null
@@ -18,6 +21,7 @@ ATTEMPTS=3
 RETRY_DELAY=${MANGOWM_UPDATES_RETRY_DELAY:-300}
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/mangowm"
 cache_file="$cache_dir/updates"
+aur_cache_file="$cache_dir/updates-aur"
 
 refresh_waybar() {
   pkill -RTMIN+12 waybar 2>/dev/null || true
@@ -37,21 +41,59 @@ count() {
   esac
 }
 
-# store [checkupdates arguments...]: caches a new count; fails, keeping the
-# previous one, when it cannot count or write. Each writer has its own
-# temporary file, so a timer check and a pacman refresh can overlap. Callers
-# run it under && or ||, where errexit is off, so every step checks itself.
-store() {
-  local value tmp
+# count_aur: number of AUR packages with a newer version, from shelly.
+count_aur() {
+  local output
 
-  value=$(count "$@") || return 1
+  command -v shelly >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  output=$(shelly list-updates aur --json 2>/dev/null < /dev/null) || return 1
+  jq -e 'if type == "array" then length else error("not a list") end' <<< "$output" 2>/dev/null
+}
+
+# write_cache file value: replaces the cached value atomically. Each writer
+# has its own temporary file, so a timer check and a pacman refresh can
+# overlap.
+write_cache() {
+  local file=$1 value=$2 tmp
+
   mkdir -p -- "$cache_dir" || return 1
-  tmp=$(mktemp "$cache_file.XXXXXX") || return 1
-  if ! printf '%s\n' "$value" > "$tmp" || ! mv -f -- "$tmp" "$cache_file"; then
+  tmp=$(mktemp "$file.XXXXXX") || return 1
+  if ! printf '%s\n' "$value" > "$tmp" || ! mv -f -- "$tmp" "$file"; then
     rm -f -- "$tmp"
     return 1
   fi
+}
+
+# store_standard [checkupdates arguments...]: caches a new repository count;
+# fails, keeping the previous one, when it cannot count or write. Callers run
+# it under && or ||, where errexit is off, so every step checks itself.
+store_standard() {
+  local value
+
+  value=$(count "$@") || return 1
+  write_cache "$cache_file" "$value" || return 1
   refresh_waybar
+}
+
+# store_aur: same for the AUR count; it needs the network, so only check and
+# upgrade run it.
+store_aur() {
+  local value
+
+  value=$(count_aur) || return 1
+  write_cache "$aur_cache_file" "$value" || return 1
+  refresh_waybar
+}
+
+# store [checkupdates arguments...]: both counts. Only the repository count
+# decides success, so a missing AUR answer never triggers the retries.
+store() {
+  local status=0
+
+  store_standard "$@" || status=1
+  store_aur || true
+  return "$status"
 }
 
 check_with_retries() {
@@ -64,18 +106,28 @@ check_with_retries() {
   return 1
 }
 
-waybar_json() {
-  local value=0 class=pending
+# read_cache file: the cached count, 0 when missing or unreadable.
+read_cache() {
+  local value=0
 
-  [[ -r "$cache_file" ]] && value=$(<"$cache_file")
+  [[ -r "$1" ]] && value=$(<"$1")
   [[ "$value" =~ ^[0-9]+$ ]] || value=0
+  printf '%s\n' "$value"
+}
+
+waybar_json() {
+  local repo aur value class=pending
+
+  repo=$(read_cache "$cache_file")
+  aur=$(read_cache "$aur_cache_file")
+  value=$(( repo + aur ))
   if (( value == 0 )); then
     printf '{"text":"","class":"none"}\n'
     return 0
   fi
   (( value > MANY )) && class=many
-  printf '{"text":"󰚰 %s","tooltip":"%s actualizaciones pendientes\\n\\nClic: actualizar con shelly","class":"%s"}\n' \
-    "$value" "$value" "$class"
+  printf '{"text":"󰚰 %s","tooltip":"%s actualizaciones pendientes (%s repos, %s AUR)\\n\\nClic: revisar y actualizar con shelly","class":"%s"}\n' \
+    "$value" "$value" "$repo" "$aur" "$class"
 }
 
 case "${1:-waybar}" in
@@ -83,14 +135,14 @@ case "${1:-waybar}" in
     check_with_retries
     ;;
   refresh)
-    store --nosync || true
+    store_standard --nosync || true
     ;;
   waybar)
     waybar_json
     ;;
   upgrade)
     mangowm_require shelly
-    "$HOME/.local/lib/mangowm/terminal" --app-id=floating-terminal shelly upgrade || true
+    "$HOME/.local/lib/mangowm/terminal" --app-id=floating-terminal shelly upgrade all --no-flatpak --no-appimage || true
     store --nosync || true
     ;;
   *)
