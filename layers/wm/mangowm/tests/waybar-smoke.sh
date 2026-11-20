@@ -160,6 +160,18 @@ case "$name" in
   powerprofilesctl)
     [[ "${1-}" == get ]] && printf 'balanced\n'
     ;;
+  shelly)
+    # AUR_UPDATES=<n> answers the AUR query with n packages; AUR_FAIL=1 fails it.
+    if [[ "${1-} ${2-}" == 'list-updates aur' ]]; then
+      [[ -z "${AUR_FAIL-}" ]] || exit 1
+      printf '['
+      for (( i = 1; i <= ${AUR_UPDATES:-0}; i++ )); do
+        (( i == 1 )) || printf ','
+        printf '{"Name":"aur%s"}' "$i"
+      done
+      printf ']\n'
+    fi
+    ;;
   notify-send)
     # NOTIFY_FAIL=1: no notification daemon answers.
     [[ -z "${NOTIFY_FAIL-}" ]] || exit 1
@@ -192,7 +204,7 @@ exit 0
 FAKE
 chmod +x "$FAKE_BIN/fake"
 for tool in fuzzel makoctl checkupdates pkill gammastep notify-send systemctl wpctl brightnessctl wlogout \
-  systemd-run powerprofilesctl mmsg foot; do
+  systemd-run powerprofilesctl mmsg foot shelly; do
   ln -s "$FAKE_BIN/fake" "$FAKE_BIN/$tool"
 done
 
@@ -281,6 +293,31 @@ grep -q '^checkupdates --nosync$' "$LOG" || fail 'refresh descargó en lugar de 
 [[ $(text_of "$("$LIB/updates" waybar)") == '' ]] || fail 'con 0 pendientes el contador sigue visible'
 PENDING_UPDATES=150 "$LIB/updates" check
 jq -e '.class == "many"' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'más de 100 no se resalta'
+
+# AUR updates add to the repository count and show in the tooltip; a refresh
+# after a pacman transaction does not query the AUR and keeps the last count.
+: > "$LOG"
+PENDING_UPDATES=2 AUR_UPDATES=4 "$LIB/updates" check
+grep -Fqx 'shelly list-updates aur --json' "$LOG" || fail 'check no consultó las actualizaciones de AUR'
+out=$("$LIB/updates" waybar)
+jq -e '(.text | endswith(" 6")) and (.tooltip | contains("2 repos, 4 AUR"))' <<< "$out" >/dev/null || \
+  fail "el contador no suma repos y AUR: $out"
+: > "$LOG"
+PENDING_UPDATES=1 "$LIB/updates" refresh
+grep -q '^shelly' "$LOG" && fail 'refresh consultó AUR sin red de por medio'
+jq -e '.text | endswith(" 5")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'refresh no conservó el contador de AUR'
+PENDING_UPDATES=2 AUR_FAIL=1 "$LIB/updates" check || fail 'un AUR caído hizo fallar el check'
+jq -e '.text | endswith(" 6")' <<< "$("$LIB/updates" waybar)" >/dev/null || fail 'un AUR caído borró el contador de AUR'
+PENDING_UPDATES=0 AUR_UPDATES=0 "$LIB/updates" check
+[[ $(text_of "$("$LIB/updates" waybar)") == '' ]] || fail 'sin repos ni AUR el contador sigue visible'
+
+# The click shows shelly's plan and asks first: no --no-confirm, and neither
+# Flatpak nor AppImage are touched.
+: > "$LOG"
+PENDING_UPDATES=0 "$LIB/updates" upgrade
+grep -Fqx 'foot --config='"$THEME"'/mangowm/foot.ini --app-id=floating-terminal shelly upgrade all --no-flatpak --no-appimage' "$LOG" || \
+  fail "el clic no abre shelly upgrade all sin flatpak ni appimage: $(<"$LOG")"
+grep -qE 'no-confirm| -n( |$)' "$LOG" && fail 'el clic actualiza sin pedir confirmación'
 
 # A failed sync (no network at login) retries instead of waiting 3 hours.
 : > "$LOG"
