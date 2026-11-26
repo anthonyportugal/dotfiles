@@ -98,7 +98,7 @@ Los colores siguen la paleta activa: el colorscheme `dotfiles` lee la paleta que
 
 Con `nvim` instalado, el archivo de zsh de la capa lo convierte en el editor: `EDITOR`, `VISUAL` y `GIT_EDITOR` (solo reemplaza los valores `micro` de `core`: un editor que hayas exportado tú se conserva, y git también lo usa). Micro sigue instalado por `cli` y es el editor sin la capa `dev`.
 
-Mason (`:Mason`) instala los servidores de lenguaje en `~/.local/share/nvim`. Los servidores de la familia TypeScript necesitan Node.js con `npm` (feature `dev-js`), y las herramientas de Go necesitan `go` (feature `dev-go`).
+Mason (`:Mason`) instala los servidores de lenguaje en `~/.local/share/nvim`. Los servidores de la familia TypeScript necesitan Node.js con `npm`, que ninguna feature instala (`dev-js` instala solo `pnpm`; configura Node.js aparte, por ejemplo con `pnpm runtime`), y las herramientas de Go necesitan `go` (feature `dev-go`).
 
 `~/.config/mimeapps.list` se genera, no se enlaza: las aplicaciones escriben en él, así que un enlace les dejaría modificar el checkout. La capa `desktop` mezcla
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) en él en cada apply. Las claves del repo siempre ganan, y se conserva cualquier otra entrada que haya registrado una aplicación. `doctor` avisa cuando una clave del repo se desvió.

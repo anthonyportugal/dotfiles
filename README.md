@@ -98,7 +98,7 @@ Colors follow the active palette: the `dotfiles` colorscheme reads the palette t
 
 With `nvim` installed, the layer's zsh file makes it the editor: `EDITOR`, `VISUAL` and `GIT_EDITOR` (replacing only the `micro` defaults of `core`: an editor you exported yourself is kept, and git follows it too). Micro stays installed by `cli` and remains the editor without the `dev` layer.
 
-Mason (`:Mason`) installs the language servers under `~/.local/share/nvim`. The TypeScript-family servers need Node.js with `npm` (feature `dev-js`), and the Go tools need `go` (feature `dev-go`).
+Mason (`:Mason`) installs the language servers under `~/.local/share/nvim`. The TypeScript-family servers need Node.js with `npm`, which no feature installs (`dev-js` installs only `pnpm`; set up Node.js separately, for example with `pnpm runtime`), and the Go tools need `go` (feature `dev-go`).
 
 `~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.
