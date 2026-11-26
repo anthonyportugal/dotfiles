@@ -112,9 +112,10 @@ Profiles are cumulative:
 - **Zsh Plugins:** Plugins are sourced directly from standard system paths
   (`/usr/share/zsh/plugins/`). Login shells are not switched automatically: activation
   remains an explicit user choice via `chsh`.
-- **JavaScript Ecosystem Exclusion:** No Node.js, npm, pnpm, or Bun runtimes are
-  declared in this public repository. Runtimes, package managers, and AI agent
-  skills belong strictly to the private overlay.
+- **JavaScript Tooling:** No profile declares JavaScript tooling. The opt-in
+  `dev-js` feature of the `dev` layer installs only `pnpm`. No Node.js, npm, or
+  Bun packages are declared in this public repository: runtimes (for example
+  Node.js through `pnpm runtime`) and AI agent skills are managed outside it.
 
 ## Bootstrap Backends
 

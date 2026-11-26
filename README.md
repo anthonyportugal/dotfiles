@@ -6,7 +6,7 @@
   <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux"></a>
   <a href="https://cachyos.org"><img src="https://img.shields.io/badge/CachyOS-Supported-00A86B?style=flat-square" alt="CachyOS"></a>
   <a href="https://www.gnu.org/software/stow/"><img src="https://img.shields.io/badge/Manager-GNU_Stow-informational?style=flat-square" alt="GNU Stow"></a>
-  <a href="https://github.com/catppuccin/catppuccin"><img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-cba6f7?style=flat-square&logo=catppuccin&logoColor=1e1e2e" alt="Theme"></a>
+  <a href="themes/README.md"><img src="https://img.shields.io/badge/Themes-Catppuccin_%7C_Sanctuary-cba6f7?style=flat-square" alt="Themes"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
@@ -16,9 +16,54 @@ Public, modular, and portable configuration for **Arch Linux**, in one repositor
 
 > [!TIP]
 > 🧩 **Inside this repository:**  
-> [MangoWM (Wayland)](layers/wm/mangowm/README.md) • [BSPWM (X11)](layers/wm/bspwm/README.md) • [System](layers/system/README.md) • [Themes](themes/README.md) • external: [Wallpapers](https://github.com/anthonyportugal/walls)
+> [MangoWM (Wayland)](layers/wm/mangowm/README.md) • [BSPWM (X11)](layers/wm/bspwm/README.md) • [System](layers/system/README.md) • [Themes](themes/README.md) • [Clean CachyOS install](docs/cachyos-install-guide.md) • external: [Wallpapers](https://github.com/anthonyportugal/walls)
 >
 > The previous multi-repository install lives on the [`legacy`](https://github.com/anthonyportugal/dotfiles/tree/legacy) branch; `dotfiles setup` offers to migrate it.
+
+**Contents:** [Quickstart](#-quickstart) • [Highlights](#-key-highlights) • [What's inside](#-whats-inside) • [Themes](#-themes) • [Guided setup](#-guided-setup) • [Commands](#️-commands) • [Private dotfiles](#-integration-with-optional-private-dotfiles) • [Testing](#-testing)
+
+---
+
+## 🚀 Quickstart
+
+### New machine: one line
+
+Deploy the entire ecosystem with a single command. It clones the repository into `~/.dotfiles` and launches the interactive setup wizard; no SSH key is needed, it clones over HTTPS:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+
+# Somewhere else, e.g. next to your other repositories:
+DOTFILES_BASE_DIR=~/dev/personal/dotfiles bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+```
+
+The wizard is one short guided flow (see [Guided setup](#-guided-setup)): profile, window managers, overlay and extras, then the plan.
+
+<details>
+<summary><b>Installer variables</b></summary>
+
+| Variable | Default | Effect |
+| :--- | :--- | :--- |
+| `DOTFILES_BASE_DIR` | `~/.dotfiles` | Where the repository is cloned. Links point into this checkout, so keep it there. |
+| `DOTFILES_REPO` / `DOTFILES_BRANCH` | this repository / `main` | Clone another remote or branch. |
+| `DOTFILES_OVERLAY_DIR` | the checkout path plus `-private` | Where `setup` looks for the overlay and clones it (`~/.dotfiles-private`, or `~/dev/personal/dotfiles-private` for the example above). |
+
+</details>
+
+### Already cloned
+
+If you already cloned the repository (anywhere), run the guided setup from it:
+
+```bash
+# Option A: Launch the guided setup (language follows $LANG: es_* is Spanish, anything else English)
+./bin/dotfiles setup
+
+# Option B: Launch in Spanish explicitly
+./bin/dotfiles setup --lang es
+
+# Option C: Via the bootstrap installer
+./install.sh
+```
 
 ---
 
@@ -33,7 +78,9 @@ Public, modular, and portable configuration for **Arch Linux**, in one repositor
 
 ---
 
-## 🧱 Modular Architecture
+## 🧱 What's Inside
+
+### Architecture
 
 Everything lives in this repository except what is private or heavy. A layer applies with the layers it requires, so choosing a window manager brings the desktop, the CLI tools and the core with it.
 
@@ -46,7 +93,7 @@ dotfiles (this repository)
 │   ├── desktop           requires cli: Alacritty, Foot, theme engine, GTK preferences
 │   ├── wm/mangowm        requires desktop: Wayland session (Waybar, Fuzzel, Swaylock, wlogout)
 │   ├── wm/bspwm          requires desktop: X11 session (Polybar, Rofi, Picom, Dunst)
-│   ├── dev               opt-in: development tools, with Docker and pnpm features
+│   ├── dev               opt-in: development tools, with Docker, JavaScript, Go, Tauri and herdr features
 │   └── system            opt-in, needs sudo: Ly, Limine, DNS-over-TLS
 ├── themes/               palettes shared by every window manager
 └── components.conf       external repositories pinned to a commit (walls)
@@ -54,17 +101,18 @@ dotfiles (this repository)
 private overlay           optional repository of your own, in the same layer format
 ```
 
----
-
-## 📦 Packages & Profiles
+### Packages & profiles
 
 Configurations are structured into small packages managed with [GNU Stow](https://www.gnu.org/software/stow/):
 
 | Package | Contents | Included In |
 | :--- | :--- | :--- |
-| **`git`** | Fail-closed Git configuration template (requires explicit identity setup) | `core`, `desktop` |
-| **`zsh`** | Clean Zsh configuration with auto-suggestions, syntax-highlighting, and aliases | `core`, `desktop` |
+| **`git`** | Fail-closed Git configuration template (requires explicit identity setup) | `core`, `cli`, `desktop` |
+| **`zsh`** | Clean Zsh configuration with auto-suggestions, syntax-highlighting, and aliases | `core`, `cli`, `desktop` |
 | **`bat`** | `bat` (syntax-highlighting `cat`) with the theme engine's colors | `cli`, `desktop` |
+| **`btop`** | System monitor configured to use the theme engine's colors | `cli`, `desktop` |
+| **`fastfetch`** | System information summary with the theme engine's accent | `cli`, `desktop` |
+| **`lazygit`** | Terminal UI for Git with the theme engine's colors | `cli`, `desktop` |
 | **`micro`** | Terminal text editor with the theme engine's colors | `cli`, `desktop` |
 | **`starship`** | Cross-shell modern prompt theme | `cli`, `desktop` |
 | **`yazi`** | Blazing fast terminal file manager with the theme engine's colors | `cli`, `desktop` |
@@ -98,67 +146,51 @@ Colors follow the active palette: the `dotfiles` colorscheme reads the palette t
 
 With `nvim` installed, the layer's zsh file makes it the editor: `EDITOR`, `VISUAL` and `GIT_EDITOR` (replacing only the `micro` defaults of `core`: an editor you exported yourself is kept, and git follows it too). Micro stays installed by `cli` and remains the editor without the `dev` layer.
 
-Mason (`:Mason`) installs the language servers under `~/.local/share/nvim`. The TypeScript-family servers need Node.js with `npm` (feature `dev-js`), and the Go tools need `go` (feature `dev-go`).
+Mason (`:Mason`) installs the language servers under `~/.local/share/nvim`. The TypeScript-family servers need Node.js with `npm`, which no feature installs (`dev-js` installs only `pnpm`; set up Node.js separately, for example with `pnpm runtime`), and the Go tools need `go` (feature `dev-go`).
+
+### Default applications
 
 `~/.config/mimeapps.list` is generated, not linked: applications write to it, so a link would let them edit the checkout. The `desktop` layer merges
 [`layers/desktop/mimeapps/defaults.list`](layers/desktop/mimeapps/defaults.list) into it on every apply. The repo's keys always win, and every other entry an application registered is kept. `doctor` warns when a repo key drifted.
 
 ---
 
-## 🔒 Integration with Optional Private Dotfiles
+## 🎨 Themes
 
-The base repository enforces a strict **3-tier configuration precedence**:
+`dotfiles-theme` (stowed by the `desktop` layer) renders one palette for every window manager. The default is `catppuccin-mocha-pink`.
 
-```text
-Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machine Overrides
-   (~/.config/...)            (private overlay)             (*.local.*)
+| Family | Variants |
+| :--- | :--- |
+| **Catppuccin Mocha** | 14 accents |
+| **Sanctuary** | `compline`, `vespers` and `matins`, each with 12 pigments |
+
+```bash
+dotfiles-theme list      # theme ids
+dotfiles-theme current   # active theme
+dotfiles-theme set <id>  # render and apply
 ```
 
-1. **Git Multi-Identity:** `layers/core/home/git/.config/git/config` loads `~/.config/git/private.gitconfig` (if present) for personal/work emails and signing keys, followed by machine-specific `~/.config/git/local.gitconfig`.
-2. **Shell Environment:** `layers/core/home/zsh/.zshrc` automatically sources `~/.config/zsh/private.zsh` (if present) for private aliases, environment variables, and work paths, followed by `~/.config/zsh/local.zsh`.
-   `layers/core/home/zsh/.zprofile` puts `~/.local/bin` first on the `PATH` of login shells. Display managers such as ly start the graphical session through one, so the compositor and the apps it launches (desktop entries, keybindings) find the helpers installed there. It stays environment-only: if you already have a `~/.zprofile`, linking stops at the collision: move your file aside first (interactive settings belong in `~/.config/zsh/local.zsh`).
-3. **Fail-Closed & Independent:** The absence of the private layer never breaks the public setup. No secrets, credentials, or private keys are ever tracked in public repositories.
-4. **Overlay:** a private repository of your own can add layers: it uses the same format (`layers/<name>/layer.conf`, `packages/`, `home/`) and is applied with `--overlay ~/.dotfiles-private`. Each of its layers applies on its own once every layer it `requires` is selected (for example `requires=core`, or `requires=dev` to apply only with the opt-in `dev` layer); its features work like public ones. The overlay path is saved in the selection receipt, so `sync` and `update` re-apply and pull it; `--no-overlay` stops applying it. Overlay layer names cannot reuse a public layer name.
+Palette format and how each tool reads it: [`themes/README.md`](themes/README.md).
 
 ---
 
-## 🚀 Installation & Quickstart
-
-### 1. One-Line Installation (Recommended for New Machines)
-
-Deploy the entire ecosystem with a single command. It clones the repository into `~/.dotfiles` and launches the interactive setup wizard; no SSH key is needed, it clones over HTTPS:
+## 🧭 Guided Setup
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
-
-# Somewhere else, e.g. next to your other repositories:
-DOTFILES_BASE_DIR=~/dev/personal/dotfiles bash -c "$(curl -fsSL https://raw.githubusercontent.com/anthonyportugal/dotfiles/main/install.sh)"
+./bin/dotfiles setup            # language from $LANG
+./bin/dotfiles setup --lang es  # Spanish interface
 ```
 
-| Variable | Default | Effect |
-| :--- | :--- | :--- |
-| `DOTFILES_BASE_DIR` | `~/.dotfiles` | Where the repository is cloned. Links point into this checkout, so keep it there. |
-| `DOTFILES_REPO` / `DOTFILES_BRANCH` | this repository / `main` | Clone another remote or branch. |
-| `DOTFILES_OVERLAY_DIR` | the checkout path plus `-private` | Where `setup` looks for the overlay and clones it (`~/.dotfiles-private`, or `~/dev/personal/dotfiles-private` for the example above). |
+<details>
+<summary><b>When another install is already there (migration)</b></summary>
 
-The wizard is one short guided flow (see below): profile, window managers, overlay and extras, then the plan.
+- When the target still has links of another install (the previous `~/.dotfiles` ecosystem or another monorepo checkout, detected like `switch` does), `setup` first shows what it found (the install, its profile, WMs, extras, overlay, the links to replace and anything `Not migrated:`) and asks `migrate`, `continue` or `cancel` (the default, also at the end of input).
+- `migrate` runs the `switch` logic for this checkout: it shows the switch plan and asks `apply`, `dry-run` or `cancel`; apply checks collisions, keeps the manifest and rolls back on failure (setup then exits non-zero), and on success setup ends with the selection applied and tells you that `dotfiles switch --rollback --apply` undoes it; the next `setup` starts from that receipt.
+- `continue` goes on to the questions and leaves the old links alone.
+- When an install is there but the switch cannot be prepared (for example no selection receipt, or an `--overlay` without `layers/`), setup shows the switch's error and what to do, and asks `continue` or `cancel` (the default); when a change was left unfinished it also offers `rollback`, which shows the rollback plan and asks `apply` or `cancel`, so `dotfiles switch --rollback --apply` is never needed.
+- On a fresh home or one already on this checkout nothing is shown.
 
-### 2. If You Already Cloned the Repository
-
-If you already cloned the repository (anywhere), run the guided setup from it:
-
-```bash
-# Option A: Launch the guided setup (language follows $LANG: es_* is Spanish, anything else English)
-./bin/dotfiles setup
-
-# Option B: Launch in Spanish explicitly
-./bin/dotfiles setup --lang es
-
-# Option C: Via the bootstrap installer
-./install.sh
-```
-
-When the target still has links of another install (the previous `~/.dotfiles` ecosystem or another monorepo checkout, detected like `switch` does), `setup` first shows what it found (the install, its profile, WMs, extras, overlay, the links to replace and anything `Not migrated:`) and asks `migrate`, `continue` or `cancel` (the default, also at the end of input). `migrate` runs the `switch` logic for this checkout: it shows the switch plan and asks `apply`, `dry-run` or `cancel`; apply checks collisions, keeps the manifest and rolls back on failure (setup then exits non-zero), and on success setup ends with the selection applied and tells you that `dotfiles switch --rollback --apply` undoes it; the next `setup` starts from that receipt. `continue` goes on to the questions and leaves the old links alone. When an install is there but the switch cannot be prepared (for example no selection receipt, or an `--overlay` without `layers/`), setup shows the switch's error and what to do, and asks `continue` or `cancel` (the default); when a change was left unfinished it also offers `rollback`, which shows the rollback plan and asks `apply` or `cancel`, so `dotfiles switch --rollback --apply` is never needed. On a fresh home or one already on this checkout nothing is shown.
+</details>
 
 `setup` asks four questions, then shows the plan:
 
@@ -167,11 +199,45 @@ When the target still has links of another install (the previous `~/.dotfiles` e
 3. **Overlay:** an overlay with `layers/` found next to the checkout (`<checkout>-private`, e.g. `~/.dotfiles-private`; `DOTFILES_OVERLAY_DIR` overrides it) or recorded in the receipt is offered with Yes by default; otherwise paste a Git URL, cloned there only when you apply, or press Enter to skip. Without an overlay the public Git config stays fail-closed until you configure an identity.
 4. **Extras:** nothing is checked by default. The list is built at run time from the opt-in layers, the features declared in `layer.conf` and the components in `components.conf`, each with its `description`, plus the features of the overlay chosen in the previous question (an overlay given by URL is cloned on apply, so its features are offered on the next run), and only shows what fits the chosen profile and window managers. A new layer, feature or component appears without changing the wizard.
 
-On a machine set up before, every question starts from the selection saved in the receipt: the saved profile is the default, saved WMs and extras are marked `[x]`, and the saved overlay is offered with Yes. Enter keeps the marked entries, `-` clears them and any other answer replaces them, so pressing Enter on every question changes nothing. Whatever you uncheck (an extra, a WM, the overlay, or `server` instead of `desktop`) is retired: the plan lists it in a `Retiring:` line (`Se retiran:` in Spanish) and apply removes its links.
+### Answering and applying
 
-Then choose `apply`, `dry-run` or `cancel` (the default). Apply runs the same path as `bootstrap --apply` and then adds the selected components. Answer with numbers or names; an empty answer or the end of input takes the default, so the wizard can also be driven by piped input. Flags such as `--stow-only`, `--target` and `--lang` still apply. Maintenance stays in its own commands (`sync`, `update`, `doctor`, `unlink`), and the system layer is applied separately with `dotfiles system`.
+- Then choose `apply`, `dry-run` or `cancel` (the default).
+- Apply runs the same path as `bootstrap --apply` and then adds the selected components.
+- Answer with numbers or names; an empty answer or the end of input takes the default, so the wizard can also be driven by piped input.
+- Flags such as `--stow-only`, `--target` and `--lang` still apply.
+- Maintenance stays in its own commands (`sync`, `update`, `doctor`, `unlink`), and the system layer is applied separately with `dotfiles system`.
 
-### 3. Manual Command-Line Orchestration
+<details>
+<summary><b>Running setup again on a configured machine</b></summary>
+
+- On a machine set up before, every question starts from the selection saved in the receipt: the saved profile is the default, saved WMs and extras are marked `[x]`, and the saved overlay is offered with Yes.
+- Enter keeps the marked entries, `-` clears them and any other answer replaces them, so pressing Enter on every question changes nothing.
+- Whatever you uncheck (an extra, a WM, the overlay, or `server` instead of `desktop`) is retired: the plan lists it in a `Retiring:` line (`Se retiran:` in Spanish) and apply removes its links.
+
+</details>
+
+---
+
+## 🛠️ Commands
+
+Run them as `./bin/dotfiles <command>` from the checkout.
+
+| Command | What it does |
+| :--- | :--- |
+| [`setup`](#-guided-setup) | Guided install, in English or Spanish |
+| [`bootstrap`](#install-with-flags-bootstrap) | Install from flags; only prints the plan without `--apply` |
+| [`add`](#external-components-add) | Add a pinned external component, such as `walls` |
+| [`sync`](#local-synchronization-sync) | Re-apply the saved selection without touching Git (it may fetch a pinned component) |
+| [`update`](#remote-update-update) | Pull clean repositories, then offer to synchronize |
+| [`doctor`](#system-diagnostics-doctor) | Check links, shells, dependencies and components |
+| [`unlink`](#unlink--clean-unlink) | Remove managed links |
+| [`switch`](#switch-the-active-checkout-switch) | Move your home to another checkout, with rollback |
+| [`system`](#optional-system-layer-system) | Apply the opt-in system layer with `sudo` |
+| [`completion`](#shell-completion-completion) | Print the zsh or bash completion script |
+
+### Install with flags (`bootstrap`)
+
+The same install as `setup` without questions; without `--apply` it only prints the plan.
 
 You can also orchestrate components directly using explicit flags:
 
@@ -194,55 +260,125 @@ You can also orchestrate components directly using explicit flags:
     --overlay "$HOME/.dotfiles-private" \
     --apply
   ```
-- **External Components (`add`):** Repositories that are not layers, such as the [walls](https://github.com/anthonyportugal/walls) wallpaper collection, are declared in [`components.conf`](components.conf), one per line: `name url ref [src=dst ...] [-- description]`, where `ref` is the full commit SHA the component is pinned to, `src` a path inside the component and `dst` a path inside your home. `add` clones the component into `~/.local/share/dotfiles/<name>`, checks out the pinned commit and links every `dst` to its `src`. An existing symlink at `dst` (such as the old `~/.local/share/wallpapers` link) is replaced; a real file or directory is refused before anything changes. The component is recorded in `~/.local/state/dotfiles/components.receipt`, so `sync` re-applies it and `update` moves it to the commit a pulled `components.conf` pins. `--wallpapers` and `--wallpapers-path` were removed in favour of this command:
-  ```bash
-  ./bin/dotfiles add walls --dry-run  # print the plan only
-  ./bin/dotfiles add walls
-  ```
 
-### 4. Lifecycle Management: Commands
+### External components (`add`)
 
-- **Guided Setup (`setup`):** The short guided flow described above, in English or Spanish:
-  ```bash
-  ./bin/dotfiles setup            # language from $LANG
-  ./bin/dotfiles setup --lang es  # Spanish interface
-  ```
-- **Flag-driven install (`bootstrap`):** The same install without questions; without `--apply` it only prints the plan. See the examples in section 3.
-- **Retiring a dropped selection:** when an applied `bootstrap`, `sync` or `setup` selects less than the receipt recorded (an opt-in layer, a feature, a WM layer, a lower profile such as `desktop` to `cli`, or the overlay changed or cleared with `--no-overlay`), the links of what was dropped are removed before the new selection is linked. The plan names it first in one `Retiring:` line; a dry-run prints the line and changes nothing. Only links into this checkout or the recorded overlay are removed (`stow --delete`), foreign files and links are left alone, and installed packages stay installed. `--packages-only` never retires links. Retiring and linking are one transaction: when any step after the retire fails, the retired links come back and whatever the run linked goes, so the home is left as it was. The preflight already counts the links being retired as replaceable, so a new layer may take over a path a retired one linked.
-- **Shell completion (`completion`):** `./bin/dotfiles completion zsh` (or `bash`) prints the completion script.
-- **Local Synchronization (`sync`):** Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap, plus the components added with `add`), and validates packages without touching Git. The one exception is a component: sync fetches it when the commit pinned in `components.conf` is not in its local checkout yet (for example after a pull changed `components.conf`). Explicit flags such as `--profile` override the saved values, and what that drops is retired as described above (an opt-in layer that requires `cli` keeps `cli` selected):
-  ```bash
-  ./bin/dotfiles sync
-  ```
-- **Remote Update (`update`):** Safely checks Git status of the public repository and of the overlay of the saved selection (the WM and system layers live inside it under `layers/`; components are never pulled, they follow the commit pinned in `components.conf`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
-  ```bash
-  ./bin/dotfiles update
-  ./bin/dotfiles update -y
-  ```
-- **System Diagnostics (`doctor`):** Inspects link integrity, shells, and dependencies for base, auto-detects active WM layers and checks every added component (checkout present, at its pinned commit, links in place; a failure suggests `dotfiles add <name>`) to produce a composite diagnostics report:
-  ```bash
-  ./bin/dotfiles doctor             # Composite diagnostics across active layers
-  ./bin/dotfiles doctor --base-only # Isolated diagnostics for base repository only
-  ./bin/dotfiles doctor --all       # Audit all repositories available on disk
-  ```
-- **Unlink / Clean (`unlink`):** Safely removes managed GNU Stow symlinks and the links of added components that point into their checkout; component checkouts stay in `~/.local/share/dotfiles/`:
-  ```bash
-  ./bin/dotfiles unlink --apply
-  ```
-- **Switching the active checkout (`switch`):** Moves a home to another checkout, for example from the previous multi-repository install under `~/.dotfiles` (base, `wm/<x>`, private, walls) to this monorepo, or between two monorepo checkouts such as `~/dev/personal/dotfiles` and `~/.dotfiles`. `setup` offers this same migration when it finds an old install, so you only need the command in scripts. Without `--apply` it only prints the plan:
-  ```bash
-  ./bin/dotfiles switch ~/dev/personal/dotfiles            # plan: what migrates and what does not
-  ./bin/dotfiles switch ~/dev/personal/dotfiles --apply    # switch (links only)
-  ./bin/dotfiles switch --rollback --apply                 # undo the last switch
-  ```
-  The current install is detected from `~/.local/bin/dotfiles` (or `~/.dotfiles/base`; `--from DIR` overrides it). Its selection is translated: the base packages that are linked set the profile, `wm/<x>` becomes the WM layer `<x>` (its receipt keeps its profile), the old private install becomes the overlay (`--overlay DIR`, else the recorded overlay, else a sibling `DIR-private` or `dotfiles-private` next to the new checkout; the plan says which) with `development` mapped to the `dev` layer and each work component `<w>` to the overlay feature `work-<w>`, the old walls links become the `walls` component (a wallpaper a WM saved from the old walls checkout, `~/.local/state/<wm>/wallpaper`, is pointed at the same file of the component), the theme selected for the WM the shared theme points to becomes `~/.local/state/dotfiles/theme/selected`, and a `mimeapps.list` linked into the old checkout is kept as a real file with every association apps wrote through it. A monorepo checkout keeps its recorded selection. Whatever has no equivalent is listed as `No migrado:` (agent-harness and system keep their own installers) and its links stay.
+- Repositories that are not layers, such as the [walls](https://github.com/anthonyportugal/walls) wallpaper collection, are declared in [`components.conf`](components.conf), one per line: `name url ref [src=dst ...] [-- description]`, where `ref` is the full commit SHA the component is pinned to, `src` a path inside the component and `dst` a path inside your home.
+- `add` clones the component into `~/.local/share/dotfiles/<name>`, checks out the pinned commit and links every `dst` to its `src`.
+- An existing symlink at `dst` (such as the old `~/.local/share/wallpapers` link) is replaced; a real file or directory is refused before anything changes.
+- The component is recorded in `~/.local/state/dotfiles/components.receipt`, so `sync` re-applies it and `update` moves it to the commit a pulled `components.conf` pins.
+- `--wallpapers` and `--wallpapers-path` were removed in favour of this command:
 
-  Before anything changes, the new checkout's own dry-run checks collisions: a real file or a link that points anywhere but the replaced checkouts aborts the switch with nothing changed and every path listed. Then a manifest of every link being replaced (path and old destination) and a snapshot of the state directory are saved under `~/.local/state/dotfiles/transactions/`; only links into the replaced checkouts are removed and the selection is applied through the new checkout's `bootstrap` (`--stow-only` unless `--with-packages`). If any step fails, the target is restored as it was. `switch --rollback --apply` restores the last switch later: old links, files and receipts come back, and files that appeared since are moved aside to `transactions/displaced-*`, never deleted, including inside directories the switch created. A change interrupted before its manifest was written changed nothing and is discarded with a warning. Neither checkout is ever modified.
-- **Optional System Layer (`system`):** Applies [`layers/system`](layers/system/README.md) (Ly display manager, Limine theme, DNS-over-TLS) to `/etc` and `/boot` under an explicit `sudo`. It is opt-in: `bootstrap`, `sync` and `update` never run it, and `update` only warns when a pulled change touched it. The applied selection is saved in `~/.local/state/dotfiles/system.receipt`:
-  ```bash
-  ./bin/dotfiles system setup --ly --dns --provider quad9 --install
-  ./bin/dotfiles system doctor
-  ```
+```bash
+./bin/dotfiles add walls --dry-run  # print the plan only
+./bin/dotfiles add walls
+```
+
+### Local synchronization (`sync`)
+
+Re-applies the selection saved on this machine (profile, features, opt-in layers and WM layers, recorded in `~/.local/state/dotfiles/dotfiles.receipt` by every applied bootstrap, plus the components added with `add`), and validates packages without touching Git. The one exception is a component: sync fetches it when the commit pinned in `components.conf` is not in its local checkout yet (for example after a pull changed `components.conf`). Explicit flags such as `--profile` override the saved values, and what that drops is retired as described in [Retiring a dropped selection](#retiring-a-dropped-selection) (an opt-in layer that requires `cli` keeps `cli` selected):
+
+```bash
+./bin/dotfiles sync
+```
+
+### Remote update (`update`)
+
+Safely checks Git status of the public repository and of the overlay of the saved selection (the WM and system layers live inside it under `layers/`; components are never pulled, they follow the commit pinned in `components.conf`). Repositories with uncommitted working tree changes are safely skipped to protect your work; clean repositories perform `git pull --ff-only`. If updates are found, it prompts interactively before synchronizing (or pass `-y` / `--yes` for unattended updates):
+
+```bash
+./bin/dotfiles update
+./bin/dotfiles update -y
+```
+
+### System diagnostics (`doctor`)
+
+Inspects link integrity, shells, and dependencies for base, auto-detects active WM layers and checks every added component (checkout present, at its pinned commit, links in place; a failure suggests `dotfiles add <name>`) to produce a composite diagnostics report:
+
+```bash
+./bin/dotfiles doctor             # Composite diagnostics across active layers
+./bin/dotfiles doctor --base-only # Isolated diagnostics for base repository only
+./bin/dotfiles doctor --all       # Audit all repositories available on disk
+```
+
+### Unlink / Clean (`unlink`)
+
+Safely removes managed GNU Stow symlinks and the links of added components that point into their checkout; component checkouts stay in `~/.local/share/dotfiles/`:
+
+```bash
+./bin/dotfiles unlink --apply
+```
+
+### Retiring a dropped selection
+
+<details>
+<summary><b>What gets retired and how failures are undone</b></summary>
+
+- When an applied `bootstrap`, `sync` or `setup` selects less than the receipt recorded (an opt-in layer, a feature, a WM layer, a lower profile such as `desktop` to `cli`, or the overlay changed or cleared with `--no-overlay`), the links of what was dropped are removed before the new selection is linked.
+- The plan names it first in one `Retiring:` line; a dry-run prints the line and changes nothing.
+- Only links into this checkout or the recorded overlay are removed (`stow --delete`), foreign files and links are left alone, and installed packages stay installed.
+- `--packages-only` never retires links.
+- Retiring and linking are one transaction: when any step after the retire fails, the retired links come back and whatever the run linked goes, so the home is left as it was.
+- The preflight already counts the links being retired as replaceable, so a new layer may take over a path a retired one linked.
+
+</details>
+
+### Switch the active checkout (`switch`)
+
+Moves a home to another checkout, for example from the previous multi-repository install under `~/.dotfiles` (base, `wm/<x>`, private, walls) to this monorepo, or between two monorepo checkouts such as `~/dev/personal/dotfiles` and `~/.dotfiles`. `setup` offers this same migration when it finds an old install, so you only need the command in scripts. Without `--apply` it only prints the plan:
+
+```bash
+./bin/dotfiles switch ~/dev/personal/dotfiles            # plan: what migrates and what does not
+./bin/dotfiles switch ~/dev/personal/dotfiles --apply    # switch (links only)
+./bin/dotfiles switch --rollback --apply                 # undo the last switch
+```
+
+<details>
+<summary><b>How the selection is translated and how rollback works</b></summary>
+
+- The current install is detected from `~/.local/bin/dotfiles` (or `~/.dotfiles/base`; `--from DIR` overrides it).
+- Its selection is translated: the base packages that are linked set the profile, `wm/<x>` becomes the WM layer `<x>` (its receipt keeps its profile), the old private install becomes the overlay (`--overlay DIR`, else the recorded overlay, else a sibling `DIR-private` or `dotfiles-private` next to the new checkout; the plan says which) with `development` mapped to the `dev` layer and each work component `<w>` to the overlay feature `work-<w>`, the old walls links become the `walls` component (a wallpaper a WM saved from the old walls checkout, `~/.local/state/<wm>/wallpaper`, is pointed at the same file of the component), the theme selected for the WM the shared theme points to becomes `~/.local/state/dotfiles/theme/selected`, and a `mimeapps.list` linked into the old checkout is kept as a real file with every association apps wrote through it.
+- A monorepo checkout keeps its recorded selection.
+- Whatever has no equivalent is listed as `No migrado:` (agent-harness and system keep their own installers) and its links stay.
+
+- Before anything changes, the new checkout's own dry-run checks collisions: a real file or a link that points anywhere but the replaced checkouts aborts the switch with nothing changed and every path listed.
+- Then a manifest of every link being replaced (path and old destination) and a snapshot of the state directory are saved under `~/.local/state/dotfiles/transactions/`; only links into the replaced checkouts are removed and the selection is applied through the new checkout's `bootstrap` (`--stow-only` unless `--with-packages`).
+- If any step fails, the target is restored as it was.
+- `switch --rollback --apply` restores the last switch later: old links, files and receipts come back, and files that appeared since are moved aside to `transactions/displaced-*`, never deleted, including inside directories the switch created.
+- A change interrupted before its manifest was written changed nothing and is discarded with a warning.
+- Neither checkout is ever modified.
+
+</details>
+
+### Optional system layer (`system`)
+
+Applies [`layers/system`](layers/system/README.md) (Ly display manager, Limine theme, DNS-over-TLS) to `/etc` and `/boot` under an explicit `sudo`. It is opt-in: `bootstrap`, `sync` and `update` never run it, and `update` only warns when a pulled change touched it. The applied selection is saved in `~/.local/state/dotfiles/system.receipt`:
+
+```bash
+./bin/dotfiles system setup --ly --dns --provider quad9 --install
+./bin/dotfiles system doctor
+```
+
+### Shell completion (`completion`)
+
+`./bin/dotfiles completion zsh` (or `bash`) prints the completion script.
+
+---
+
+## 🔒 Integration with Optional Private Dotfiles
+
+The base repository enforces a strict **3-tier configuration precedence**:
+
+```text
+Public Base Defaults  ──►  Optional Private Layer  ──►  Local Machine Overrides
+   (~/.config/...)            (private overlay)             (*.local.*)
+```
+
+1. **Git Multi-Identity:** `layers/core/home/git/.config/git/config` loads `~/.config/git/private.gitconfig` (if present) for personal/work emails and signing keys, followed by machine-specific `~/.config/git/local.gitconfig`.
+2. **Shell Environment:** `layers/core/home/zsh/.zshrc` automatically sources `~/.config/zsh/private.zsh` (if present) for private aliases, environment variables, and work paths, followed by `~/.config/zsh/local.zsh`.
+   `layers/core/home/zsh/.zprofile` puts `~/.local/bin` first on the `PATH` of login shells. Display managers such as ly start the graphical session through one, so the compositor and the apps it launches (desktop entries, keybindings) find the helpers installed there. It stays environment-only: if you already have a `~/.zprofile`, linking stops at the collision: move your file aside first (interactive settings belong in `~/.config/zsh/local.zsh`).
+3. **Fail-Closed & Independent:** The absence of the private layer never breaks the public setup. No secrets, credentials, or private keys are ever tracked in public repositories.
+4. **Overlay:** a private repository of your own can add layers: it uses the same format (`layers/<name>/layer.conf`, `packages/`, `home/`) and is applied with `--overlay ~/.dotfiles-private`. Each of its layers applies on its own once every layer it `requires` is selected (for example `requires=core`, or `requires=dev` to apply only with the opt-in `dev` layer); its features work like public ones. The overlay path is saved in the selection receipt, so `sync` and `update` re-apply and pull it; `--no-overlay` stops applying it. Overlay layer names cannot reuse a public layer name.
 
 ---
 
@@ -277,4 +413,4 @@ Architected and maintained by [Anthony Portugal](https://anthonyportugal.github.
 ## 📄 License
 
 Distributed under the [MIT License](LICENSE).
-Catppuccin color schemes and third-party notices are documented in `THIRD_PARTY_NOTICES.md`.
+Catppuccin color schemes and third-party notices are documented in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

@@ -115,9 +115,11 @@ Los perfiles son acumulativos:
 - **Plugins de Zsh:** Se consumen desde las rutas estándar del sistema
   (`/usr/share/zsh/plugins/`). No se manipula el shell de login automáticamente:
   su activación permanece como una decisión explícita vía `chsh`.
-- **Exclusión de desarrollo JavaScript:** No existe un perfil de Node.js, npm,
-  pnpm o Bun en este repositorio base. El runtime, gestores de paquetes y reglas
-  de agentes residen de forma estricta en el overlay privado.
+- **Herramientas de JavaScript:** Ningún perfil declara herramientas de
+  JavaScript. La feature opt-in `dev-js` de la capa `dev` instala únicamente
+  `pnpm`. Este repositorio público no declara paquetes de Node.js, npm ni Bun:
+  los runtimes (por ejemplo, Node.js mediante `pnpm runtime`) y las skills de
+  agentes se gestionan fuera de él.
 
 ## Backends del bootstrap
 
